@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ActivityQuestionBuilder from "@/components/ActivityQuestionBuilder";
+import { parseActivityImport } from "@/lib/activity-import";
 import ActivityStepEditor from "@/components/ActivityStepEditor";
 import ActivitySubmissionDashboard from "@/components/ActivitySubmissionDashboard";
 import ExternalResultImportModal from "@/components/ExternalResultImportModal";
@@ -23,10 +24,13 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
   patch: (updater: (current: ArenaData) => ArenaData) => void;
   notify: Notify;
 }) {
-  type ActivityModal = "editor" | "delivery" | "import" | "external-results" | null;
+  type ActivityModal = "delivery" | "import" | "external-results" | null;
   type EditorTab = "general" | "questions" | "flow";
 
   const [modal, setModal] = useState<ActivityModal>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const editorBaseline = useRef("");
   const [editorTab, setEditorTab] = useState<EditorTab>("general");
   const [activityId, setActivityId] = useState<string | undefined>();
   const [title, setTitle] = useState("");
@@ -53,6 +57,16 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
   const [sourceClassroomId, setSourceClassroomId] = useState("");
   const [sourceActivityId, setSourceActivityId] = useState("");
   const [activityBusy, setActivityBusy] = useState(false);
+  const lastClassroomId = useRef(classroomId);
+  useEffect(() => {
+    // Do not carry an unfinished draft to a different classroom.
+    if (lastClassroomId.current !== classroomId) {
+      lastClassroomId.current = classroomId;
+      resetDraft();
+      setEditorOpen(false);
+      setModal(null);
+    }
+  }, [classroomId]);
 
   const classActivities = useMemo(
     () => data.activities.filter((activity) => activity.classroomId === classroomId).slice().sort((a, b) => new Date(b.updatedAt ?? b.createdAt).getTime() - new Date(a.updatedAt ?? a.createdAt).getTime()),
@@ -86,6 +100,27 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
     };
   }
 
+  function baselineActivityInput(activity?: Activity): ActivityUpsertInput {
+    const kind = activity?.resource?.kind ?? "INTERNAL";
+    const order = activity?.individualOptionOrder ?? false;
+    return {
+      classroomId,
+      title: activity?.title ?? "",
+      topic: activity?.topic ?? undefined,
+      points: activity?.points ?? 10,
+      onTimeBonus: activity?.onTimeBonus ?? 5,
+      timeLimitMinutes: activity?.timeLimitMinutes ?? 0,
+      resource: {
+        kind,
+        platform: kind === "EXTERNAL" ? activity?.resource?.platform ?? undefined : undefined,
+        url: kind === "EXTERNAL" ? activity?.resource?.url ?? undefined : undefined,
+      },
+      questions: activity?.questions ?? [],
+      individualOptionOrder: order,
+      individualQuestionOrder: order && Boolean(activity?.individualQuestionOrder),
+    };
+  }
+
   function resetDraft() {
     setActivityId(undefined);
     setTitle("");
@@ -109,10 +144,51 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
 
   function openNewActivity() {
     resetDraft();
-    setModal("editor");
+    editorBaseline.current = JSON.stringify(baselineActivityInput());
+    setEditorOpen(true);
+  }
+
+  function closeEditor() {
+    if (activityBusy || stepsLoading) return;
+    if ((JSON.stringify(draftInput()) !== editorBaseline.current || stepsDirty)
+      && !window.confirm("Voltar às atividades? Alterações não salvas serão descartadas.")) return;
+    setEditorOpen(false);
+    resetDraft();
+  }
+
+  async function importQuestionFile(file?: File) {
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".json")) {
+      notify("Escolha um arquivo .json de questões no formato da plataforma.", "error");
+      return;
+    }
+    if (file.size > 1024 * 1024) {
+      notify("O arquivo JSON deve ter no máximo 1 MB.", "error");
+      return;
+    }
+    try {
+      const result = parseActivityImport(await file.text(), file.name);
+      if (result.errors.length || !result.activity) {
+        notify(result.errors.slice(0, 2).join(" ") || "Não foi possível importar o JSON.", "error");
+        return;
+      }
+      resetDraft();
+      editorBaseline.current = JSON.stringify(baselineActivityInput());
+      setTitle(result.activity.title);
+      setTopic(result.activity.topic);
+      setQuestions(result.activity.questions);
+      setEditorTab("questions");
+      setEditorOpen(true);
+      notify(result.warnings.length
+        ? "Importadas " + result.activity.questions.length + " questões como rascunho. Revise as respostas e " + result.warnings.length + " avisos antes de salvar."
+        : "Importadas " + result.activity.questions.length + " questões como rascunho. Revise e salve a atividade.");
+    } catch {
+      notify("Não foi possível ler o arquivo. Verifique o JSON e tente novamente.", "error");
+    }
   }
 
   function openActivity(activity: Activity, tab: EditorTab = "general") {
+    editorBaseline.current = JSON.stringify(baselineActivityInput(activity));
     setActivityId(activity.id);
     setTitle(activity.title);
     setTopic(activity.topic ?? "");
@@ -131,7 +207,7 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
     setStepsLoading(false);
     setStepsDirty(false);
     setEditorTab(tab);
-    setModal("editor");
+    setEditorOpen(true);
   }
 
   function validateDraft() {
@@ -170,8 +246,9 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
       }));
       setActivityId(saved.id);
       setQuestions(saved.questions ?? []);
+      editorBaseline.current = JSON.stringify({ ...draftInput(), questions: saved.questions ?? [] });
       notify(existing ? "Atividade atualizada no PostgreSQL." : "Atividade criada no PostgreSQL.");
-      if (closeAfter) setModal(null);
+      if (closeAfter) setEditorOpen(false);
       return saved;
     } catch (error) {
       notify(errorMessage(error), "error");
@@ -324,6 +401,7 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
 
   return (
     <div className="stack-lg">
+      {!editorOpen && <>
       <div className="page-action-bar">
         <div>
           <span className="eyebrow accent">CONTEXTO DA TURMA</span>
@@ -331,7 +409,10 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
           <p>Atividades, questões e XP desta página pertencem à turma selecionada no topo.</p>
         </div>
         <div className="page-action-buttons">
-          <button className="button" onClick={openImport}>Importar atividade</button>
+          <input ref={fileInputRef} type="file" accept=".json,application/json" hidden aria-label="Arquivo JSON para importar atividade"
+            onChange={event => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ""; void importQuestionFile(file); }} />
+          <button className="button" title="Importar questões em arquivo JSON validado (version 1.0)" onClick={() => fileInputRef.current?.click()}>Importar JSON</button>
+          <button className="button" onClick={openImport}>Copiar de outra turma</button>
           <button className="button primary" onClick={openNewActivity}>+ Nova atividade</button>
         </div>
       </div>
@@ -389,9 +470,20 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
           <EmptyState title="Nenhuma atividade nesta turma" text="Crie uma atividade do zero ou importe uma cópia de outra turma. Questões podem ser reutilizadas depois na Arena." actionLabel="Criar atividade" onAction={openNewActivity} />
         )}
       </Panel>
+      </>}
 
-      <Modal open={modal === "editor"} title={activityId ? "Editar atividade" : "Nova atividade"} subtitle={`Turma: ${classroomName}`} size="large" onClose={() => setModal(null)}>
-        <div className="modal-tabs">
+      {editorOpen && <section className="activity-editor-page" aria-label={activityId ? "Editor de atividade" : "Criação de atividade"}>
+        <header className="activity-editor-header">
+          <button type="button" className="button ghost activity-editor-back" onClick={closeEditor}>← Voltar às atividades</button>
+          <div>
+            <span className="eyebrow accent">ATIVIDADES · {classroomName}</span>
+            <h2>{activityId ? "Editar atividade" : "Nova atividade"}</h2>
+            <p>Configure, prepare questões e organize o roteiro no espaço completo da página.</p>
+          </div>
+          <span className="activity-editor-count">{questions.length} questões</span>
+        </header>
+        <div className="activity-editor-body">
+        <div className="modal-tabs" role="group" aria-label="Seções da atividade">
           <button className={editorTab === "general" ? "active" : ""} onClick={() => setEditorTab("general")}>Geral e XP</button>
           <button className={editorTab === "questions" ? "active" : ""} onClick={() => setEditorTab("questions")}>Questões <span>{questions.length}</span></button>
           <button
@@ -407,8 +499,8 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
           <div className="modal-section-stack">
             <div className="context-lock"><span>Turma</span><strong>{classroomName}</strong><small>A atividade será salva somente neste contexto.</small></div>
             <div className="form-grid">
-              <label className="field-label">Título</label>
-              <input className="input" placeholder="Ex.: Atividade 07 — Funções" value={title} onChange={(e) => setTitle(e.target.value)} />
+              <label className="field-label" htmlFor="activity-editor-title">Título</label>
+              <input id="activity-editor-title" className="input" placeholder="Ex.: Atividade 07 — Funções" value={title} onChange={(e) => setTitle(e.target.value)} />
               <div className="form-two">
                 <label>Tema / tópico<input className="input" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Ex.: Estruturas de repetição" /></label>
                 <label>Tipo<select className="select full" value={resourceKind} onChange={(e) => setResourceKind(e.target.value as "INTERNAL" | "EXTERNAL")}><option value="INTERNAL">Atividade interna</option><option value="EXTERNAL">Atividade / recurso externo</option></select></label>
@@ -448,10 +540,9 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
             }}
           />
         )}
-        <div className="modal-footer">
-          <button className="button ghost" onClick={() => setModal(null)}>
-            {editorTab === "flow" && stepsDirty ? "Fechar sem salvar" : "Cancelar"}
-          </button>
+        </div>
+        <div className="modal-footer activity-editor-footer">
+          <button className="button ghost" onClick={closeEditor}>Voltar sem salvar</button>
           {editorTab === "flow" ? (
             <button
               className="button primary"
@@ -477,7 +568,7 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
             </button>
           )}
         </div>
-      </Modal>
+      </section>}
 
       <Modal open={modal === "delivery"} title="Registrar entrega / participação" subtitle={deliveryActivity?.title} size="medium" onClose={() => setModal(null)}>
         {deliveryActivity && <>
@@ -515,7 +606,10 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
             <div className="copy-policy"><strong>Será criada uma cópia independente.</strong><p>Conteúdo, questões, roteiro, XP e recurso externo são copiados. Entregas, alunos, resultados, ScoreEvents e histórico não são copiados.</p></div>
             <div className="modal-footer"><button className="button ghost" onClick={() => setModal(null)}>Cancelar</button><button className="button primary" disabled={!sourceActivityId || activityBusy} onClick={() => { void importActivityCopy(); }}>Importar cópia</button></div>
           </div>
-        ) : <MiniEmpty text="Crie uma segunda turma para reutilizar atividades entre contextos. Em uma evolução futura, modelos também poderão vir de uma biblioteca." />}
+        ) : <div className="modal-section-stack">
+          <MiniEmpty text="Não há outra turma para copiar. Para usar um arquivo de questões, feche esta janela e escolha Importar JSON." />
+          <button className="button" onClick={() => { setModal(null); fileInputRef.current?.click(); }}>Selecionar arquivo JSON</button>
+        </div>}
       </Modal>
     </div>
   );
