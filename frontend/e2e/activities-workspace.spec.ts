@@ -50,7 +50,7 @@ test("Atividades: editor na página e importação JSON validada sem modal de cr
     await page.setViewportSize({ width: 1600, height: 900 });
     const desktopTitle = await newEditor.getByLabel("Título").boundingBox();
     const desktopTopic = await newEditor.getByLabel("Tema / tópico").boundingBox();
-    const desktopKind = await newEditor.getByLabel("Tipo").boundingBox();
+    const desktopKind = await newEditor.getByLabel("Tipo", { exact: true }).boundingBox();
     expect(desktopTitle && desktopTopic && desktopKind).toBeTruthy();
     if (desktopTitle && desktopTopic && desktopKind) {
       expect(Math.abs(desktopTitle.y - desktopTopic.y)).toBeLessThanOrEqual(3);
@@ -59,7 +59,7 @@ test("Atividades: editor na página e importação JSON validada sem modal de cr
     await page.setViewportSize({ width: 1024, height: 900 });
     const tabletTitle = await newEditor.getByLabel("Título").boundingBox();
     const tabletTopic = await newEditor.getByLabel("Tema / tópico").boundingBox();
-    const tabletKind = await newEditor.getByLabel("Tipo").boundingBox();
+    const tabletKind = await newEditor.getByLabel("Tipo", { exact: true }).boundingBox();
     expect(tabletTitle && tabletTopic && tabletKind).toBeTruthy();
     if (tabletTitle && tabletTopic && tabletKind) {
       expect(tabletTopic.y).toBeGreaterThan(tabletTitle.y + tabletTitle.height);
@@ -68,7 +68,7 @@ test("Atividades: editor na página e importação JSON validada sem modal de cr
     await page.setViewportSize({ width: 390, height: 844 });
     const mobileTitle = await newEditor.getByLabel("Título").boundingBox();
     const mobileTopic = await newEditor.getByLabel("Tema / tópico").boundingBox();
-    const mobileKind = await newEditor.getByLabel("Tipo").boundingBox();
+    const mobileKind = await newEditor.getByLabel("Tipo", { exact: true }).boundingBox();
     expect(mobileTitle && mobileTopic && mobileKind).toBeTruthy();
     if (mobileTitle && mobileTopic && mobileKind) {
       expect(mobileTopic.y).toBeGreaterThan(mobileTitle.y + mobileTitle.height);
