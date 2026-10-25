@@ -525,13 +525,6 @@
   .readerView>.readerScaled{margin-bottom:30px}
 }
 
-/* Teacher preview is part of the same editorial navigation axis as the
-   header/footer. Keep its actual width aligned on desktop and mobile. */
-.readerView>.teacherPreviewBar{
-  box-sizing:border-box;width:min(100%,840px);max-width:840px;
-  margin-inline:auto;
-}
-
 /* Specificity guard: legacy reader links were column layouts, and legacy
    span rules uppercased every nested label. Only the meta label is uppercase. */
 .readerView .readerFooter .readerPreviousLink{
@@ -554,9 +547,10 @@
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 
-/* Keep teacher preview and reader footer on the same editorial axis; an
-   existing E2E contract checks these widths on desktop. */
+/* Teacher preview shares the editorial axis and width with the reader
+   header/footer. The E2E contract verifies this on desktop. */
 .readerView>.teacherPreviewBar{
+  box-sizing:border-box;
   width:min(840px,100%);
   max-width:840px;
   margin:0 auto 26px;
