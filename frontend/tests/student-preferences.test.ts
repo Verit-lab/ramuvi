@@ -36,7 +36,8 @@ test("controles são compartilhados entre estudo e participação e persistem em
   assert.match(profile, /<StudentAccessibilityControls/);
   assert.doesNotMatch(study, /<StudentAccessibilityControls/);
   assert.match(study, /Configurações/);
-  assert.match(join, /!embedded && <div className="student-accessibility-row"><StudentAccessibilityControls \/><\/div>/);
+  assert.doesNotMatch(join, /<StudentAccessibilityControls/);
+  assert.doesNotMatch(join, /student-accessibility-row/);
   assert.match(study, /--study-content-scale/);
   assert.match(join, /--student-content-scale/);
   assert.doesNotMatch(study, /styles\.accessibilityMobile/);

@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import StudentActivitiesPanel from "@/components/StudentActivitiesPanel";
-import StudentAccessibilityControls, { useStudentPreferences } from "@/components/student/StudentAccessibilityControls";
+import { useStudentPreferences } from "@/components/student/StudentAccessibilityControls";
 import { recordSelfConfidence, type SelfConfidence } from "@/lib/learner-confidence-api";
 import {
   connectSessionSocket,
@@ -480,7 +480,6 @@ export default function StudentJoinFlow({ embedded = false, initialCode = "" }: 
 
   return (
     <main className="student-join-shell" style={{ "--student-content-scale": studentScale } as React.CSSProperties} data-student-motion={reducedMotion ? "reduce" : undefined}>
-      {!embedded && <div className="student-accessibility-row"><StudentAccessibilityControls /></div>}
       <section className="student-join-card">
         {!embedded && <div className="student-brand"><span>A</span><div><strong>ARENA DEV</strong><small>Participação ao vivo</small></div></div>}
 

@@ -36,6 +36,8 @@ test("Reader retains native semantic table with independently scrollable and key
 
 test("Settings separates appearance controls with mobile grouping and 48px targets", () => {
   assert.match(profile, /<StudentAccessibilityControls settingsPage \/>/);
+  const join = readFileSync("components/StudentJoinFlow.tsx", "utf8");
+  assert.doesNotMatch(join, /<StudentAccessibilityControls/);
   assert.match(controls, /Tamanho do conteúdo/);
   assert.match(controlCss, /\.controls\.settings\{[^}]*grid-template-columns/);
   assert.match(controlCss, /@media\(max-width:600px\)/);
