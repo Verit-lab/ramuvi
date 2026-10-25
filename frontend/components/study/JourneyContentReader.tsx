@@ -28,7 +28,14 @@ export default function JourneyContentReader({ content }: { content: JourneyCont
     {content.copyProtected && <p className={styles.readerProtectedNote}>O professor desativou a cópia deste conteúdo.</p>}
     {content.body ? (isPlainText
       ? <div className={styles.readerPlainText}>{content.body}</div>
-      : <div className={styles.readerMarkdown}><SafeMarkdown>{content.body}</SafeMarkdown></div>)
+      : <div className={styles.readerMarkdown}><SafeMarkdown components={{
+        table: ({ children }) => <div className={styles.readerTableFrame}>
+          <p className={styles.readerTableHint} aria-hidden="true">Deslize para os lados para ver a tabela completa</p>
+          <div className={styles.readerTableScroll} role="region" aria-label="Tabela do material. Deslize horizontalmente para consultar todas as colunas" tabIndex={0}>
+            <table>{children}</table>
+          </div>
+        </div>,
+      }}>{content.body}</SafeMarkdown></div>)
       : <div className={styles.readerEmpty}>Este conteúdo não possui texto incorporado.</div>}
 
     {externalUrl && <aside className={styles.readerSource}>

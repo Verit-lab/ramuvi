@@ -63,7 +63,6 @@ export default function StudyShell({ children }: { children: ReactNode }) {
       <header className={styles.mobileHeader}>
         <Link href="/learn" className={styles.brand} aria-label="Arena Dev — Estudos"><span className={styles.brandMark}>A</span><span className={styles.brandCopy}><strong>ARENA DEV</strong><small>ESTUDOS</small></span></Link>
         <div className={styles.mobileHeaderActions}>
-          <Link href="/learn/profile" className={`${styles.mobileProfile}${profileActive ? ` ${styles.activeNav}` : ""}`} aria-label="Configurações e perfil"><ProfileIcon/></Link>
           <button type="button" className={styles.mobileMenuButton} aria-label={mobileMenuOpen ? "Fechar navegação" : "Abrir navegação"} aria-expanded={mobileMenuOpen} aria-controls="student-mobile-navigation" onClick={() => setMobileMenuOpen((value) => !value)}><SidebarIcon/></button>
         </div>
       </header>

@@ -7,3 +7,20 @@
 .controls :is(button,select,input):focus-visible{outline:2px solid var(--ds-accent-text);outline-offset:2px}
 .compact{padding:5px 8px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
 @media(max-width:550px){.controls{gap:5px;font-size:.71rem}.scale button{min-width:40px;height:42px}.field select,.motion{min-height:42px}.compact{padding:6px}}
+
+/* Settings page: distinct labelled groups instead of scattered microcontrols. */
+.scaleField{display:flex;min-width:0;align-items:center}
+.controls.settings{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start;gap:20px 24px;padding:16px 0 0;background:transparent;font-size:.9rem}
+.settings .scaleField,.settings .field{display:grid;gap:10px;align-content:start}
+.controlLabel,.settings .field>span{color:var(--text);font-size:.875rem;font-weight:700;line-height:1.4}
+.settings .scale{width:max-content;max-width:100%}
+.settings .scale button{min-width:48px;min-height:48px;font-size:1rem}
+.settings .field select{min-height:48px;width:100%;max-width:16rem;padding:10px 12px;font-size:1rem}
+.settings .motion{grid-column:1/-1;gap:12px;padding:12px 0;margin-top:0;font-size:1rem}
+.settings .motion input{width:22px;height:22px;flex:0 0 22px}
+@media(max-width:600px){
+  .controls.settings{grid-template-columns:minmax(0,1fr);gap:18px;font-size:1rem}
+  .settings .scale button{min-width:56px;min-height:48px}
+  .settings .field select{max-width:none}
+  .settings .motion{padding-top:6px}
+}
