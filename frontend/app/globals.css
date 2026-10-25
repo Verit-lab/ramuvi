@@ -2749,3 +2749,31 @@ html[data-theme="light"] .classroom-lifecycle-confirmation {
 
 .student-leave-session{min-height:44px;padding:0 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font:inherit;font-size:.8rem;cursor:pointer}
 .student-leave-session:hover{border-color:var(--ds-accent-text)}
+
+/* v0.11: Activity creation is a full-page workspace; lightweight dialogs remain. */
+.activity-editor-page{min-width:0;width:100%;max-width:1120px;margin:0 auto}
+.activity-editor-header{display:flex;gap:18px;flex-wrap:wrap;align-items:center;justify-content:space-between;padding:22px 24px;border:1px solid var(--ds-border);border-radius:14px 14px 0 0;background:var(--ds-surface-raised)}
+.activity-editor-header>div{flex:1 1 360px;min-width:0}
+.activity-editor-header h2{font-size:clamp(1.3rem,2.4vw,1.85rem);margin:.3em 0}
+.activity-editor-header p{color:var(--muted);font-size:.9rem;line-height:1.5}
+.activity-editor-count{padding:8px 13px;border-radius:999px;border:1px solid var(--ds-border);white-space:nowrap;color:var(--ds-text-primary);font-weight:650}
+.activity-editor-back{min-height:44px}
+.activity-editor-body{min-width:0;padding:22px 24px 8px;border-left:1px solid var(--ds-border);border-right:1px solid var(--ds-border);background:var(--ds-surface-subtle)}
+.activity-editor-page .modal-tabs{display:flex;gap:10px;flex-wrap:wrap}
+.activity-editor-page .modal-tabs button{min-height:44px;padding:10px 16px;font-size:.9rem}
+.activity-editor-page .modal-tabs button.active{background:var(--ds-surface-raised);outline:1px solid var(--ds-border)}
+.activity-editor-page .form-grid,.activity-editor-page .form-two,.activity-editor-page .form-two>*{min-width:0}
+.activity-editor-footer{position:sticky;bottom:0;z-index:3;margin:0;padding:14px 24px calc(14px + env(safe-area-inset-bottom));border:1px solid var(--ds-border);border-radius:0 0 14px 14px;background:var(--ds-surface-raised);box-shadow:0 -8px 20px rgba(0,0,0,.08)}
+.activity-editor-footer button{min-height:44px}
+@media(max-width:700px){
+ .activity-editor-header{padding:18px 16px;align-items:flex-start}
+ .activity-editor-header>div{flex-basis:100%;order:2}
+ .activity-editor-count{order:1}
+ .activity-editor-back{order:0}
+ .activity-editor-body{padding:18px 14px 8px}
+ .activity-editor-page .form-two{grid-template-columns:minmax(0,1fr)}
+ .activity-editor-footer{padding:12px 14px calc(12px + env(safe-area-inset-bottom))}
+ .activity-editor-footer .button{flex:1;min-width:0}
+ .activity-editor-page input,.activity-editor-page select,.activity-editor-page textarea{max-width:100%;font-size:1rem}
+ .page-action-buttons{flex-wrap:wrap}
+}
