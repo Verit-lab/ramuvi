@@ -49,6 +49,13 @@
 
 - [Defeitos, causas, correções e evidência](11.7_COHERENCE_AA.md): papéis tipográficos, cor da turma por tema, textos abaixo de 12px nos painéis ao vivo. Sem redesign; axe e CSP `wss:` pendentes.
 
+## 11.13 — Devolutiva publicada para o aluno (ajuste de estabilização)
+
+- [Escopo, contratos existentes, critérios de aceite e limites](11.13_STUDENT_PUBLISHED_FEEDBACK.md).
+- Exibição do feedback já publicado pela correção docente v0.6, recibo de entrega e respostas somente leitura; nenhuma autocorreção, novo backend, migration ou gabarito.
+- A correção objetiva automática e a publicação configurável são apenas **D12-AR-01** da [v0.12](../v0.12/STUDENT_ASSESSMENT_REVIEW_DESIGN.md), sujeitas ao Figma-first A0–A4.
+- Sem alteração no NO-GO da issue #110 ou na pré-release publicada; revalidar Safari/iOS e VoiceOver.
+
 ## Congelamento da candidata
 
 1. A pré-release `v0.11.0-rc.1` congela o SHA da candidata. Gates de campo executam **somente** sobre esse SHA (ou uma `rc.N` posterior).

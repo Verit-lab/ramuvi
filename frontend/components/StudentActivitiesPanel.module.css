@@ -95,3 +95,16 @@
   .runnerBrand,.runnerBrand>div{min-width:0}
   .runnerActions{flex:0 0 auto;gap:8px}
 }
+
+/* v0.11: explicit delivery receipt and teacher-published feedback only. */
+.runnerReview{box-sizing:border-box;width:min(1080px,100%);margin:0 auto 24px;padding:clamp(14px,2.2vw,22px);display:grid;gap:10px;border:1px solid var(--ds-border-control);border-radius:14px;background:var(--ds-surface-subtle);color:var(--ds-text-primary)}
+.runnerReview>strong{font-size:clamp(16px,1.25vw,19px);line-height:1.45}
+.runnerReview>p{margin:0;font-size:14px;line-height:1.55}
+.runnerReviewPending{color:var(--ds-text-secondary)}
+.runnerPublishedFeedback{display:grid;gap:6px;margin-top:3px;padding:14px;border-inline-start:4px solid var(--ds-accent-text);border-radius:8px;background:var(--ds-surface-raised)}
+.runnerPublishedFeedback>strong{font-size:14px}
+.runnerPublishedFeedback p{margin:0;overflow-wrap:anywhere;white-space:pre-wrap;font-size:14px;line-height:1.6}
+.runnerRefreshReview{justify-self:start;min-height:44px;padding:8px 12px;border:1px solid var(--ds-border-control);border-radius:9px;background:var(--ds-surface-raised);color:var(--ds-text-primary);font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.runnerRefreshReview:focus-visible{outline:2px solid var(--ds-accent-text);outline-offset:3px}
+.runnerRefreshReview:disabled{opacity:.55;cursor:not-allowed}
+@media(max-width:720px){.runnerReview{margin-bottom:20px;padding:14px}.runnerRefreshReview{width:100%}}

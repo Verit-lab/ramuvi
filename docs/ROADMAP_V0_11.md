@@ -8,6 +8,12 @@
 **11.1 integrada:** backend V57 e testes [execução e limites](v0.11/11.1_EXECUTION_STATUS.md). **11.2 validada e integrada** (leitor seguro e apresentação docente): [status 11.2](v0.11/11.2_EXECUTION_STATUS.md). **11.3 concluída e integrada:** [execução](v0.11/11.3_EXECUTION_STATUS.md) e [validação de fechamento](v0.11/11.3_VALIDATION_CLOSURE_2026-10-10.md).
 **Referências:** [ROADMAP_V0_10.md](ROADMAP_V0_10.md), [Projeção de materiais da Arena](ux/arena-material-projector-proposal.md), ADR-0045/0046/0052/0059.
 
+## Ajuste de estabilização 11.13 — Devolutiva publicada (25/10/2026)
+
+O contrato de v0.6 já possui publicação explícita de feedback; o frontend do aluno não o exibia. O ajuste 11.13 **apenas** apresenta recibo de entrega, consulta somente leitura e devolutiva que o professor já publicou, com atualização manual. Sem novo endpoint, gabarito, nota, migration, políticas docentes ou correção automática. [Escopo e aceite](v0.11/11.13_STUDENT_PUBLISHED_FEEDBACK.md).
+
+A correção automática e a liberação escolhida pelo professor continuam na [v0.12, D12-AR-01](ROADMAP_V0_12.md), sujeitas ao Figma A0–A4. A publicação estável da v0.11 continua NO-GO até os oito gates, e nenhuma correção pontual altera essa fronteira.
+
 ## Objetivo geral
 
 Evoluir a Arena e a Jornada sem duplicar material canônico, conservando a separação **estudo sequencial (Jornada)** / **atividades e entregas** / **condução síncrona (Arena)**. Consolidar conteúdo, autoria, proveniência e uso pedagógico de materiais e questões de forma progressiva, mantendo interfaces acessíveis e estado autoritativo.
