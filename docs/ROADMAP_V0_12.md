@@ -74,6 +74,14 @@ Origem prevista: Plano de Curso + PTD → extração assistida → revisão doce
 - **Aceite:** Figma com as quatro combinações dos toggles e estados de salvamento/erro/permissão; testes automatizados das quatro combinações; E2E desktop/mobile com mouse, teclado, macOS e Windows/Linux; regressão do Reader sem restrições.
 - **Piloto previsto:** UC 05 — Desenvolvimento Desktop / Projeto 01 Registro de Visitantes, convertido para Markdown canônico importável.
 
+## 2.2 D12-AR-01 — Correção e devolutiva após entrega (25/10/2026)
+
+**Escopo proposto v0.12, Figma-first e sem implementação autorizada.** A v0.11 passa a exibir apenas `publishedFeedback` e recibo da entrega, aproveitando a infraestrutura v0.6 e sem revelar gabaritos. A ampliação D12-AR-01 compreende apuração **determinística no backend** de `MULTIPLE_CHOICE` e `TRUE_FALSE`, política docente de liberação `TEACHER_RELEASE` ou `AFTER_SUBMISSION`, visualização por questão e explicações publicáveis. Questões discursivas, código e práticas continuam sob avaliação humana; acertos parciais não são nota final, XP nem Mastery.
+
+**Gates obrigatórios:** Figma Professor/Aluno com estados de envio, espera, liberação, erro, avaliação mista, conteúdo longo e Safari/iPhone; autorização servidor-side e proteção do gabarito contra acesso por tentativa ainda ativa; snapshot/versionamento das respostas corretas apesar de edições docentes; idempotência; regra de liberação que considere outros alunos ainda respondendo; testes backend, E2E WebKit/Chromium e aceite pedagógico. O envio imediato é opção do professor, nunca política presumida; liberação após encerramento global fica fora deste primeiro corte.
+
+[Especificação e critérios completos](v0.12/STUDENT_ASSESSMENT_REVIEW_DESIGN.md) · [Issue #121, planejamento e gates](https://github.com/wesscosta/arena-dev/issues/121). A implementação só poderá começar depois da aprovação A0–A4, preservando a [devolutiva simples da v0.11](v0.11/11.13_STUDENT_PUBLISHED_FEEDBACK.md).
+
 ## 3. Linha B — Active Learning já previsto anteriormente
 
 O [handoff v0.9](HANDOFF_V0_9.md) definiu a direção **v0.12 — Active Learning**, que deve ser mantida no planejamento:

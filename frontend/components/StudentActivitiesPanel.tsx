@@ -19,6 +19,7 @@ import ParticipantDeadlineTimer from "./ParticipantDeadlineTimer";
 import { DialogCloseButton } from "@/components/ui";
 import StudentAccessibilityControls from "@/components/student/StudentAccessibilityControls";
 import { persistChangedQuestionDrafts } from "@/lib/submission-drafts";
+import { studentActivityReview } from "@/lib/student-activity-review";
 
 function contentValue(value: unknown) {
   if (value == null) return "";
@@ -309,6 +310,7 @@ export default function StudentActivitiesPanel({ access, disabled }: { access: S
   const questionKey = question ? "q:" + question.id : "";
   const options = question ? optionsOf(question) : [];
   const editable = open?.submissionStatus === "IN_PROGRESS";
+  const review = open ? studentActivityReview(open) : null;
   const total = open?.questions.length ?? 0;
   const isLast = questionIndex === total - 1;
 
@@ -327,7 +329,7 @@ export default function StudentActivitiesPanel({ access, disabled }: { access: S
           <span className={styles.status}>{statusLabel(activity.submissionStatus)}</span>
         </div>
         <button type="button" className={`${styles.action} ${activity.submissionStatus === "NOT_STARTED" ? styles.primary : ""}`} disabled={disabled || busy} onClick={() => void openActivity(activity)}>
-          {activity.submissionStatus === "NOT_STARTED" ? "Iniciar atividade" : activity.submissionStatus === "IN_PROGRESS" ? "Continuar atividade" : "Visualizar entrega"}
+          {activity.submissionStatus === "NOT_STARTED" ? "Iniciar atividade" : activity.submissionStatus === "IN_PROGRESS" ? "Continuar atividade" : activity.feedbackPublishedAt && activity.publishedFeedback?.trim() ? "Ver devolutiva" : "Visualizar entrega"}
         </button>
 
         {open?.id === activity.id && <div className={styles.runner} role="dialog" aria-modal="true" aria-label={`Atividade ${open.title}`}>
@@ -362,6 +364,16 @@ export default function StudentActivitiesPanel({ access, disabled }: { access: S
               </div>
 
               {error && <div className={styles.runnerError} role="alert">{error} Sua atividade permanece aberta para tentar novamente.</div>}
+              {review && <section className={styles.runnerReview} aria-label="Devolutiva da atividade">
+                <strong>{review.title}</strong>
+                <p>Suas respostas foram registradas e podem ser consultadas abaixo, mas não podem mais ser alteradas.</p>
+                {review.publishedFeedback
+                  ? <div className={styles.runnerPublishedFeedback}><strong>Feedback publicado pelo professor</strong><p>{review.publishedFeedback}</p></div>
+                  : <p className={styles.runnerReviewPending}>{review.pendingMessage}</p>}
+                <button type="button" className={styles.runnerRefreshReview} disabled={busy} onClick={() => void load()}>
+                  {busy ? "Atualizando..." : "Atualizar devolutiva"}
+                </button>
+              </section>}
               {question ? <section className={styles.runnerQuestion}>
                 <div className={styles.questionLabel}>QUESTÃO {String(questionIndex + 1).padStart(2, "0")}</div>
                 <p className={styles.runnerStatement}>{question.statement}</p>
@@ -377,7 +389,7 @@ export default function StudentActivitiesPanel({ access, disabled }: { access: S
             <footer className={styles.runnerFooter}>
               <button type="button" className={styles.runnerSecondary} disabled={busy || questionIndex === 0} onClick={() => void goToQuestion(questionIndex - 1)}>← Anterior</button>
               <span aria-hidden="true" />
-              {!isLast ? <button type="button" className={styles.runnerPrimary} disabled={busy} onClick={() => void goToQuestion(questionIndex + 1)}>Próxima →</button> : editable ? <button type="button" className={styles.runnerPrimary} disabled={busy} onClick={() => void submit()}>{busy ? "Salvando..." : "Revisar e enviar"}</button> : <button type="button" className={styles.runnerPrimary} onClick={() => setOpenId(null)}>Concluir</button>}
+              {!isLast ? <button type="button" className={styles.runnerPrimary} disabled={busy} onClick={() => void goToQuestion(questionIndex + 1)}>Próxima →</button> : editable ? <button type="button" className={styles.runnerPrimary} disabled={busy} onClick={() => void submit()}>{busy ? "Salvando..." : "Enviar atividade"}</button> : <button type="button" className={styles.runnerPrimary} onClick={() => setOpenId(null)}>Fechar entrega</button>}
             </footer>
           </div>}
 
