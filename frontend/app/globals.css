@@ -2859,3 +2859,7 @@ html[data-theme="light"] .classroom-lifecycle-confirmation {
 .classroom-workspace .activity-editor-page .question-count-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 @media(max-width:900px){.classroom-workspace .page-action-buttons{width:100%;justify-content:flex-start}.classroom-workspace .activity-editor-header{align-items:flex-start}.classroom-workspace .activity-editor-page .question-count-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.classroom-workspace .page-action-buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.classroom-workspace .page-action-buttons .button{white-space:normal}.classroom-workspace .activity-editor-header>div{flex:1 1 100%}.classroom-workspace .activity-editor-body{padding:1rem 0 0}.classroom-workspace .activity-editor-page .question-count-grid{grid-template-columns:1fr}.classroom-page-header{align-items:flex-start}.classroom-page-header>button{min-height:44px}.classroom-workspace .activity-editor-steps{grid-template-columns:1fr}}
+
+/* Shared teacher content geometry also applies outside the classroom tabs.
+   The live Arena deliberately remains fullscreen. */
+.app-shell-no-sidebar .content:not(.arena-content-full){max-width:1480px;margin-inline:auto}
