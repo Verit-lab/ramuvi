@@ -272,6 +272,22 @@ test.describe("Classroom overview MVP contract", () => {
           }
         }
 
+        if (viewport.width >= 768) {
+          await page.getByRole("button", { name: "Abrir menu do professor" }).click();
+          const menuBox = await page.getByRole("menu").boundingBox();
+          const newClassBox = await page.getByRole("button", { name: "+ Nova turma" }).boundingBox();
+          expect(menuBox && newClassBox).toBeTruthy();
+          if (menuBox && newClassBox) {
+            const xOverlap = Math.min(menuBox.x + menuBox.width, newClassBox.x + newClassBox.width)
+              - Math.max(menuBox.x, newClassBox.x);
+            const yOverlap = Math.min(menuBox.y + menuBox.height, newClassBox.y + newClassBox.height)
+              - Math.max(menuBox.y, newClassBox.y);
+            expect(xOverlap <= 0 || yOverlap <= 0,
+              `menu do professor não deve obstruir Nova turma em ${viewport.width}px`).toBe(true);
+          }
+          await page.keyboard.press("Escape");
+        }
+
         if (viewport.width === 1440) {
           await page.screenshot({
             path: `test-results/classroom-overview-${theme}-1440.png`,

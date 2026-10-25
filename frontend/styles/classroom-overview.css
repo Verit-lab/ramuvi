@@ -189,6 +189,8 @@
 .classroom-card-grid {
   width: 100%;
   display: grid;
+  /* Cap the five-card row on ultrawide without stretching any card beyond 380px. */
+  max-width: min(100%, calc(5 * 23.75rem + 4 * var(--space-3)));
   grid-template-columns: repeat(5, minmax(0, 1fr));
   align-items: stretch;
   gap: var(--space-3);
@@ -425,6 +427,14 @@
 @media (max-width: 80rem) {
   .classroom-card-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+/* On wider desktops, the professor popover should not partially cover
+   the 'Nova turma' action immediately underneath the topbar. */
+@media (min-width: 48rem) {
+  .app-topbar-actions [role="menu"] {
+    top: 0;
+    right: calc(100% + var(--space-3));
   }
 }
 @media (max-width: 55rem) {
