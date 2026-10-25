@@ -25,13 +25,15 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
   notify: Notify;
 }) {
   type ActivityModal = "delivery" | "import" | "external-results" | null;
-  type EditorTab = "general" | "questions" | "flow";
+  type EditorTab = "general" | "questions" | "review" | "flow";
 
   const [modal, setModal] = useState<ActivityModal>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorBaseline = useRef("");
   const [editorTab, setEditorTab] = useState<EditorTab>("general");
+  const [importNotice, setImportNotice] = useState<string | null>(null);
+  const [pendingManualQuestion, setPendingManualQuestion] = useState(false);
   const [activityId, setActivityId] = useState<string | undefined>();
   const [title, setTitle] = useState("");
   const [topic, setTopic] = useState("");
@@ -140,6 +142,8 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
     setStepsLoading(false);
     setStepsDirty(false);
     setEditorTab("general");
+    setImportNotice(null);
+    setPendingManualQuestion(false);
   }
 
   function openNewActivity() {
@@ -150,10 +154,16 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
 
   function closeEditor() {
     if (activityBusy || stepsLoading) return;
-    if ((JSON.stringify(draftInput()) !== editorBaseline.current || stepsDirty)
+    if ((JSON.stringify(draftInput()) !== editorBaseline.current || stepsDirty || pendingManualQuestion)
       && !window.confirm("Voltar às atividades? Alterações não salvas serão descartadas.")) return;
     setEditorOpen(false);
     resetDraft();
+  }
+
+  function goToEditorStep(step: "general" | "questions" | "review") {
+    if (step === "review" && pendingManualQuestion) { notify("Conclua a edição clicando em Adicionar questão antes de conferir.", "error"); return; }
+    if (editorTab === "flow" && stepsDirty && !window.confirm("Descartar as alterações não salvas do roteiro?")) return;
+    setEditorTab(step);
   }
 
   async function importQuestionFile(file?: File) {
@@ -178,6 +188,7 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
       setTopic(result.activity.topic);
       setQuestions(result.activity.questions);
       setEditorTab("questions");
+      setImportNotice(`${result.activity.questions.length} ${result.activity.questions.length === 1 ? "questão importada" : "questões importadas"} do arquivo ${file.name}. Revise o conteúdo antes de salvar.${result.warnings.length ? ` ${result.warnings.length} aviso(s) na validação.` : ""}`);
       setEditorOpen(true);
       notify(result.warnings.length
         ? "Importadas " + result.activity.questions.length + " questões como rascunho. Revise as respostas e " + result.warnings.length + " avisos antes de salvar."
@@ -199,6 +210,8 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
     setPlatform(activity.resource?.platform ?? "");
     setResourceUrl(activity.resource?.url ?? "");
     setQuestions(activity.questions ?? []);
+    setPendingManualQuestion(false);
+    setImportNotice(null);
     setIndividualOptionOrder(activity.individualOptionOrder ?? false);
     setIndividualQuestionOrder(activity.individualQuestionOrder ?? false);
     setOrderLocked(activity.orderLocked ?? false);
@@ -247,6 +260,7 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
       setActivityId(saved.id);
       setQuestions(saved.questions ?? []);
       editorBaseline.current = JSON.stringify({ ...draftInput(), questions: saved.questions ?? [] });
+      setImportNotice(null);
       notify(existing ? "Atividade atualizada no PostgreSQL." : "Atividade criada no PostgreSQL.");
       if (closeAfter) setEditorOpen(false);
       return saved;
@@ -402,7 +416,7 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
   return (
     <div className="stack-lg">
       {!editorOpen && <>
-      <div className="page-action-bar">
+      <header className="page-action-bar classroom-page-header">
         <div>
           <span className="eyebrow accent">CONTEXTO DA TURMA</span>
           <h2>{classroomName}</h2>
@@ -411,11 +425,11 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
         <div className="page-action-buttons">
           <input ref={fileInputRef} type="file" accept=".json,application/json" hidden aria-label="Arquivo JSON para importar atividade"
             onChange={event => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ""; void importQuestionFile(file); }} />
-          <button className="button" title="Importar questões em arquivo JSON validado (version 1.0)" onClick={() => fileInputRef.current?.click()}>Importar JSON</button>
-          <button className="button" onClick={openImport}>Copiar de outra turma</button>
+          <button type="button" className="button" title="Selecionar arquivo JSON versionado com questões para revisar e salvar" onClick={() => fileInputRef.current?.click()}>Importar questões (.json)</button>
+          <button type="button" className="button" onClick={openImport}>Copiar de outra turma</button>
           <button className="button primary" onClick={openNewActivity}>+ Nova atividade</button>
         </div>
-      </div>
+      </header>
 
       <div className="metrics-grid activity-metrics">
         <Metric label="Atividades" value={classActivities.length.toString()} hint="nesta turma" />
@@ -473,63 +487,112 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
       </>}
 
       {editorOpen && <section className="activity-editor-page" aria-label={activityId ? "Editor de atividade" : "Criação de atividade"}>
-        <header className="activity-editor-header">
-          <button type="button" className="button ghost activity-editor-back" onClick={closeEditor}>← Voltar às atividades</button>
+        <header className="activity-editor-header classroom-page-header">
           <div>
             <span className="eyebrow accent">ATIVIDADES · {classroomName}</span>
             <h2>{activityId ? "Editar atividade" : "Nova atividade"}</h2>
-            <p>Configure, prepare questões e organize o roteiro no espaço completo da página.</p>
+            <p>Cadastre os dados, adicione questões e confira antes de salvar. Roteiro ao vivo é opcional.</p>
           </div>
           <span className="activity-editor-count">{questions.length} questões</span>
         </header>
         <div className="activity-editor-body">
-        <div className="modal-tabs" role="group" aria-label="Seções da atividade">
-          <button className={editorTab === "general" ? "active" : ""} onClick={() => setEditorTab("general")}>Geral e XP</button>
-          <button className={editorTab === "questions" ? "active" : ""} onClick={() => setEditorTab("questions")}>Questões <span>{questions.length}</span></button>
-          <button
-            className={editorTab === "flow" ? "active" : ""}
-            disabled={activityBusy || stepsLoading}
-            onClick={() => { void openFlowTab(); }}
-          >
-            Roteiro
-            {stepsActivityId === activityId && <span>{activitySteps.length}</span>}
-          </button>
-        </div>
+        <nav className="activity-editor-steps" aria-label="Etapas do cadastro">
+          {([
+            ["general", "1", "Dados da atividade"],
+            ["questions", "2", "Preparar questões"],
+            ["review", "3", "Conferir e salvar"],
+          ] as const).map(([step, number, label]) => (
+            <button key={step} type="button" className={editorTab === step ? "active" : ""}
+              aria-current={editorTab === step ? "step" : undefined}
+              onClick={() => goToEditorStep(step)}>
+              <span className="activity-editor-step-number">{number}</span><span>{label}</span>
+            </button>
+          ))}
+          {editorTab === "flow" && <span className="activity-editor-flow-indicator">Roteiro ao vivo (opcional)</span>}
+        </nav>
+        {importNotice && <div className="activity-import-notice" role="status"><span>{importNotice}</span><button type="button" className="button" onClick={() => { setEditorTab("questions"); requestAnimationFrame(() => document.getElementById("activity-existing-questions")?.scrollIntoView({ block: "start" })); }}>Revisar questões importadas</button></div>}
         {editorTab === "general" ? (
           <div className="modal-section-stack">
             <div className="context-lock"><span>Turma</span><strong>{classroomName}</strong><small>A atividade será salva somente neste contexto.</small></div>
-            <div className="form-grid">
-              <label className="field-label" htmlFor="activity-editor-title">Título</label>
-              <input id="activity-editor-title" className="input" placeholder="Ex.: Atividade 07 — Funções" value={title} onChange={(e) => setTitle(e.target.value)} />
-              <div className="form-two">
-                <label>Tema / tópico<input className="input" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Ex.: Estruturas de repetição" /></label>
-                <label>Tipo<select className="select full" value={resourceKind} onChange={(e) => setResourceKind(e.target.value as "INTERNAL" | "EXTERNAL")}><option value="INTERNAL">Atividade interna</option><option value="EXTERNAL">Atividade / recurso externo</option></select></label>
-              </div>
-              {resourceKind === "EXTERNAL" && <div className="form-two"><label>Plataforma<input className="input" value={platform} onChange={(e) => setPlatform(e.target.value)} placeholder="Wayground, Forms, Kahoot..." /></label><label>Link<input className="input" type="url" value={resourceUrl} onChange={(e) => setResourceUrl(e.target.value)} placeholder="https://..." /></label></div>}
-              <div className="form-two"><label>XP da entrega<input className="input" type="number" min="0" value={points} onChange={(e) => setPoints(Math.max(0, Number(e.target.value) || 0))} /></label><label>Bônus no prazo<input className="input" type="number" min="0" value={bonus} onChange={(e) => setBonus(Math.max(0, Number(e.target.value) || 0))} /></label></div>
-              <fieldset className="activity-order-settings">
-                <legend>Prazo da resolução</legend>
-                <label>Tempo total da tentativa (minutos)
-                  <input className="input" type="number" min="0" max="480" step="1" value={timeLimitMinutes}
-                    disabled={orderLocked} onChange={(event) => setTimeLimitMinutes(Number(event.target.value))} />
+            <div className="activity-editor-general-fields">
+              <div className="activity-editor-core-fields">
+                <label htmlFor="activity-editor-title">Título
+                  <input id="activity-editor-title" className="input" placeholder="Ex.: Atividade 07 — Funções" value={title} onChange={(e) => setTitle(e.target.value)} />
                 </label>
-                <small>0 = sem limite (padrão). De 1 a 480 minutos a partir do primeiro início da tentativa. O prazo não reinicia ao atualizar a página.</small>
-                {orderLocked && <small>Uma tentativa já foi iniciada; a duração não pode ser alterada.</small>}
-              </fieldset>
-              <fieldset className="activity-order-settings" disabled={orderLocked}>
-                <legend>{INDIVIDUAL_ORDER_SECTION}</legend>
-                <ToggleField label={INDIVIDUAL_OPTION_ORDER_LABEL} description={INDIVIDUAL_ORDER_HELP} checked={individualOptionOrder} disabled={orderLocked} onChange={(checked) => { setIndividualOptionOrder(checked); if (!checked) setIndividualQuestionOrder(false); }} />
-                <label className="activity-order-questions"><input type="checkbox" checked={individualOptionOrder && individualQuestionOrder} disabled={orderLocked || !individualOptionOrder} onChange={(e) => setIndividualQuestionOrder(e.target.checked)} /> {INDIVIDUAL_QUESTION_ORDER_LABEL}</label>
-                {orderLocked && <small className="activity-order-locked">{INDIVIDUAL_ORDER_LOCKED}</small>}
-              </fieldset>
+                <label>Tema / tópico
+                  <input className="input" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Ex.: Estruturas de repetição" />
+                </label>
+                <label>Tipo
+                  <select aria-label="Tipo" className="select full" value={resourceKind} onChange={(e) => setResourceKind(e.target.value as "INTERNAL" | "EXTERNAL")}><option value="INTERNAL">Atividade interna</option><option value="EXTERNAL">Atividade / recurso externo</option></select>
+                </label>
+              </div>
+              {resourceKind === "EXTERNAL" && <div className="activity-editor-external-fields form-two">
+                <label>Plataforma<input className="input" value={platform} onChange={(e) => setPlatform(e.target.value)} placeholder="Wayground, Forms, Kahoot..." /></label>
+                <label>Link<input className="input" type="url" value={resourceUrl} onChange={(e) => setResourceUrl(e.target.value)} placeholder="https://..." /></label>
+              </div>}
             </div>
-            <div className="activity-summary-line"><span>{questions.length} questão(ões) vinculadas</span><button className="text-button" onClick={() => setEditorTab("questions")}>Gerenciar questões →</button></div>
           </div>
-        ) : editorTab === "questions" ? (
-          <ActivityQuestionBuilder questions={questions} setQuestions={setQuestions} defaultTheme={topic || title} notify={notify} />
-        ) : stepsLoading ? (
+        ) : editorTab === "review" ? (
+          <div className="activity-editor-review">
+            <div className="activity-editor-review-intro">
+              <h3>Confira antes de salvar</h3>
+              <p>Revise os dados e configure XP, prazo e embaralhamento. A atividade será salva somente na turma selecionada.</p>
+            </div>
+            <div className="activity-editor-review-columns">
+              <section className="activity-editor-review-summary" aria-label="Resumo da atividade">
+                <h4>Dados da atividade</h4>
+                <dl>
+                  <div><dt>Turma</dt><dd>{classroomName}</dd></div>
+                  <div><dt>Título</dt><dd>{title.trim() || "Ainda não informado"}</dd></div>
+                  <div><dt>Tópico</dt><dd>{topic.trim() || "Não informado"}</dd></div>
+                  <div><dt>Modalidade</dt><dd>{resourceKind === "INTERNAL" ? "Atividade interna" : "Recurso externo"}</dd></div>
+                  <div><dt>Questões</dt><dd>{questions.length}</dd></div>
+                  {resourceKind === "EXTERNAL" && <>
+                    <div><dt>Plataforma</dt><dd>{platform.trim() || "Não informada"}</dd></div>
+                    <div><dt>Link</dt><dd>{resourceUrl.trim() || "Não informado"}</dd></div>
+                  </>}
+                </dl>
+                {!title.trim() && <p className="activity-editor-warning">Para salvar, preencha o título na etapa Dados.</p>}
+                {resourceKind === "INTERNAL" && questions.length === 0 && <p className="activity-editor-warning">Nenhuma questão adicionada. Você pode salvar uma atividade vazia, mas os alunos ainda não terão questões para responder.</p>}
+              </section>
+              <section className="activity-editor-review-settings" aria-label="Configurações da atividade">
+                <h4>Configurações da atividade</h4>
+                <p>Valores iniciais preenchidos. Ajuste conforme a proposta pedagógica antes de salvar.</p>
+                <div className="activity-editor-settings-fields">
+                  <label>XP da entrega
+                    <input className="input" type="number" min="0" value={points} onChange={(e) => setPoints(Math.max(0, Number(e.target.value) || 0))} />
+                  </label>
+                  <label>Bônus no prazo
+                    <input className="input" type="number" min="0" value={bonus} onChange={(e) => setBonus(Math.max(0, Number(e.target.value) || 0))} />
+                  </label>
+                </div>
+                <fieldset className="activity-order-settings">
+                  <legend>Prazo da resolução</legend>
+                  <label>Tempo total da tentativa (minutos)
+                    <input className="input" type="number" min="0" max="480" step="1" value={timeLimitMinutes}
+                      disabled={orderLocked} onChange={(event) => setTimeLimitMinutes(Number(event.target.value))} />
+                  </label>
+                  <small>0 = sem limite (padrão). De 1 a 480 minutos a partir do primeiro início da tentativa. O prazo não reinicia ao atualizar a página.</small>
+                  {orderLocked && <small>Uma tentativa já foi iniciada; a duração não pode ser alterada.</small>}
+                </fieldset>
+                <fieldset className="activity-order-settings" disabled={orderLocked}>
+                  <legend>{INDIVIDUAL_ORDER_SECTION}</legend>
+                  <ToggleField label={INDIVIDUAL_OPTION_ORDER_LABEL} description={INDIVIDUAL_ORDER_HELP} checked={individualOptionOrder} disabled={orderLocked} onChange={(checked) => { setIndividualOptionOrder(checked); if (!checked) setIndividualQuestionOrder(false); }} />
+                  <label className="activity-order-questions"><input type="checkbox" checked={individualOptionOrder && individualQuestionOrder} disabled={orderLocked || !individualOptionOrder} onChange={(e) => setIndividualQuestionOrder(e.target.checked)} /> {INDIVIDUAL_QUESTION_ORDER_LABEL}</label>
+                  {orderLocked && <small className="activity-order-locked">{INDIVIDUAL_ORDER_LOCKED}</small>}
+                </fieldset>
+              </section>
+            </div>
+            <div className="activity-editor-optional">
+              <div><strong>Roteiro ao vivo (opcional)</strong><p>Organize a sequência de apresentação apenas se for conduzir esta atividade na Arena. O cadastro comum não exige roteiro.</p></div>
+              <button type="button" className="button" disabled={activityBusy || stepsLoading} onClick={() => { void openFlowTab(); }}>
+                {activityId ? "Editar roteiro ao vivo" : "Salvar dados e preparar roteiro"}
+              </button>
+            </div>
+          </div>
+        ) : editorTab === "flow" && stepsLoading ? (
           <div className="loading-screen compact">Carregando roteiro...</div>
-        ) : (
+        ) : editorTab === "flow" ? (
           <ActivityStepEditor
             steps={activitySteps}
             questions={questions}
@@ -539,33 +602,37 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
               setStepsDirty(true);
             }}
           />
-        )}
+        ) : null}
+        {/* Keep this mounted across steps so an unfinished manually typed question is not lost. */}
+        <div hidden={editorTab !== "questions"} className="activity-editor-question-step">
+          <div className="activity-editor-step-intro"><h3>Como você deseja preparar as questões?</h3><p>Você pode criá-las diretamente, importar um JSON validado ou preparar um prompt para IA. Tudo fica em rascunho até salvar.</p></div>
+          <ActivityQuestionBuilder questions={questions} setQuestions={setQuestions} defaultTheme={topic || title} notify={notify} onPendingManualChange={setPendingManualQuestion} />
+        </div>
         </div>
         <div className="modal-footer activity-editor-footer">
-          <button className="button ghost" onClick={closeEditor}>Voltar sem salvar</button>
-          {editorTab === "flow" ? (
-            <button
-              className="button primary"
-              disabled={!activityId || activityBusy || stepsLoading || !stepsDirty}
-              onClick={() => { void saveFlow(); }}
-            >
-              {activityBusy ? "Salvando..." : stepsDirty ? "Salvar roteiro" : "Roteiro salvo"}
-            </button>
-          ) : (
-            <button
-              className="button primary"
-              disabled={activityBusy}
-              onClick={() => {
-                if (!title.trim()) {
-                  setEditorTab("general");
-                  notify("As questões já estão no rascunho. Informe o título da atividade para salvar.");
-                  return;
-                }
+          {editorTab !== "flow" && <button type="button" className="button ghost" onClick={closeEditor}>Cancelar</button>}
+          {editorTab === "general" ? (
+            <button type="button" className="button primary" onClick={() => {
+                if (!title.trim()) { notify("Informe o título para continuar.", "error"); document.getElementById("activity-editor-title")?.focus(); return; }
+                setEditorTab(resourceKind === "EXTERNAL" ? "review" : "questions");
+              }}>{resourceKind === "EXTERNAL" ? "Conferir atividade →" : "Continuar para questões →"}</button>
+          ) : editorTab === "questions" ? (
+            <><button type="button" className="button ghost" onClick={() => setEditorTab("general")}>← Dados</button>
+              <button type="button" className="button primary" onClick={() => goToEditorStep("review")}>Conferir atividade →</button></>
+          ) : editorTab === "review" ? (
+            <><button type="button" className="button ghost" onClick={() => setEditorTab(resourceKind === "EXTERNAL" ? "general" : "questions")}>{resourceKind === "EXTERNAL" ? "← Dados" : "← Questões"}</button>
+              <button type="button" className="button primary" disabled={activityBusy} onClick={() => {
+                if (!title.trim()) { setEditorTab("general"); notify("Informe o título da atividade para salvar.", "error"); return; }
                 void saveActivity(true);
-              }}
-            >
-              {activityBusy ? "Salvando..." : title.trim() ? "Salvar atividade" : "Definir título e salvar"}
-            </button>
+              }}>{activityBusy ? "Salvando..." : title.trim() ? "Salvar atividade" : "Definir título e salvar"}</button></>
+          ) : (
+            <><button type="button" className="button ghost" disabled={activityBusy || stepsLoading} onClick={() => {
+              if (stepsDirty && !window.confirm("Descartar alterações não salvas no roteiro?")) return;
+              setEditorTab("review");
+            }}>← Voltar à revisão</button>
+              <button type="button" className="button primary" disabled={!activityId || activityBusy || stepsLoading || !stepsDirty} onClick={() => { void saveFlow(); }}>
+                {activityBusy ? "Salvando..." : stepsDirty ? "Salvar roteiro" : "Roteiro salvo"}
+              </button></>
           )}
         </div>
       </section>}

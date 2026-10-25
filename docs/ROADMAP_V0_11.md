@@ -14,6 +14,14 @@ O contrato de v0.6 já possui publicação explícita de feedback; o frontend do
 
 A correção automática e a liberação escolhida pelo professor continuam na [v0.12, D12-AR-01](ROADMAP_V0_12.md), sujeitas ao Figma A0–A4. A publicação estável da v0.11 continua NO-GO até os oito gates, e nenhuma correção pontual altera essa fronteira.
 
+## Estabilização 11.14 — experiência de cadastro de atividades
+
+A [PR #114](https://github.com/wesscosta/arena-dev/pull/114) já entregou o editor principal fora de modal e a importação JSON. O piloto mostrou a UI antiga ainda visível em captura e excesso de etapas aninhadas na criação de questões. A fatia [11.14](v0.11/11.14_ACTIVITIES_GUIDED_EDITOR.md) aprimora a **mesma área de página**, com três passos claros, roteiro opcional, importação visível, proteção de rascunho e configurações não essenciais recolhidas. Sem inventar backend nem antecipar o redesign Figma-first da v0.12. CI + Safari físico obrigatórios; v0.11 segue NO-GO operacional.
+
+## Estabilização 11.15 — páginas de turma e Histórico unificado
+
+O piloto identificou largura isolada de 1120px e superfícies artificiais no editor de Atividades, além de UX inconsistente com Jornada e duas listas de Histórico. O ajuste [11.15](v0.11/11.15_CLASSROOM_LAYOUT_AND_HISTORY.md) uniformiza a geometria das páginas administrativas do professor (até 2880px fluidos, com padding responsivo de 16–56px e espaço vertical de 18–56px; Arena fullscreen independente), cabeçalho/editor, áreas de Jornada e implementa um feed cronológico com filtros Tudo/XP/Condução e uma busca, preservando auditabilidade de ScoreEvent e SessionEvent. Sem migration ou nova regra docente; os oito gates #110 continuam necessários.
+
 ## Objetivo geral
 
 Evoluir a Arena e a Jornada sem duplicar material canônico, conservando a separação **estudo sequencial (Jornada)** / **atividades e entregas** / **condução síncrona (Arena)**. Consolidar conteúdo, autoria, proveniência e uso pedagógico de materiais e questões de forma progressiva, mantendo interfaces acessíveis e estado autoritativo.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   buildQuestionPrompt,
   EMPTY_QUESTION_COUNTS,
@@ -23,13 +23,15 @@ export default function ActivityQuestionBuilder({
   setQuestions,
   defaultTheme,
   notify,
+  onPendingManualChange,
 }: {
   questions: ActivityQuestion[];
   setQuestions: (questions: ActivityQuestion[]) => void;
   defaultTheme: string;
   notify: Notify;
+  onPendingManualChange?: (pending: boolean) => void;
 }) {
-  const [tab, setTab] = useState<Tab>("ai");
+  const [tab, setTab] = useState<Tab>("manual");
   const [manualType, setManualType] = useState<QuestionType>("MULTIPLE_CHOICE");
   const [manualDifficulty, setManualDifficulty] = useState<QuestionDifficulty>("INTERMEDIATE");
   const [manualStatement, setManualStatement] = useState("");
@@ -58,6 +60,11 @@ export default function ActivityQuestionBuilder({
     () => QUESTION_TYPES.reduce((sum, item) => sum + counts[item.value], 0),
     [counts],
   );
+
+  const hasPendingManual = Boolean(manualStatement.trim() || manualAnswer.trim() || manualExplanation.trim()
+    || manualCode.trim() || manualLanguage.trim() || manualCriteria.trim()
+    || manualOptions.some((option) => option.trim()));
+  useEffect(() => { onPendingManualChange?.(hasPendingManual); }, [hasPendingManual, onPendingManualChange]);
 
   function resetManual() {
     setManualStatement("");
@@ -127,6 +134,7 @@ export default function ActivityQuestionBuilder({
 
   function readJsonFile(file?: File) {
     if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".json") || file.size > 1024 * 1024) { notify("Envie um arquivo .json de até 1 MB.", "error"); return; }
     const reader = new FileReader();
     reader.onload = () => {
       setJsonInput(String(reader.result ?? ""));
@@ -182,14 +190,15 @@ export default function ActivityQuestionBuilder({
 
   return (
     <div className="question-builder">
-      <div className="tool-tabs" role="tablist" aria-label="Formas de adicionar questões">
-        <button className={tab === "ai" ? "active" : ""} onClick={() => setTab("ai")}>Gerar com IA</button>
-        <button className={tab === "import" ? "active" : ""} onClick={() => setTab("import")}>Importar JSON</button>
-        <button className={tab === "manual" ? "active" : ""} onClick={() => setTab("manual")}>Criar manualmente</button>
+      <div className="activity-question-methods" role="group" aria-label="Escolha a forma de preparar as questões">
+        <button type="button" aria-pressed={tab === "manual"} className={tab === "manual" ? "active" : ""} onClick={() => setTab("manual")}><strong>Criar manualmente</strong><span>Escreva uma questão e suas respostas.</span></button>
+        <button type="button" aria-pressed={tab === "import"} className={tab === "import" ? "active" : ""} onClick={() => setTab("import")}><strong>Adicionar via JSON</strong><span>Valide e adicione questões prontas.</span></button>
+        <button type="button" aria-pressed={tab === "ai"} className={tab === "ai" ? "active" : ""} onClick={() => setTab("ai")}><strong>Preparar com IA</strong><span>Monte um prompt e depois importe o resultado.</span></button>
       </div>
 
       {tab === "ai" && (
         <div className="question-tool-body">
+          <p className="tool-note">A plataforma prepara um prompt para usar na IA de sua escolha, mas não gera questões automaticamente. Depois, importe o JSON retornado.</p>
           <div className="prompt-presets">
             <span>Modelo rápido</span>
             {Object.keys(QUESTION_PRESETS).map((name) => (
@@ -219,13 +228,13 @@ export default function ActivityQuestionBuilder({
             <button className="button" onClick={generatePrompt}>Gerar prompt</button>
             <button className="button primary" onClick={copyPrompt}>Copiar prompt</button>
           </div>
-          {generatedPrompt && <textarea className="input textarea prompt-output" rows={10} readOnly value={generatedPrompt} aria-label="Prompt gerado" />}
+          {generatedPrompt && <><textarea className="input textarea prompt-output" rows={10} readOnly value={generatedPrompt} aria-label="Prompt gerado" /><button type="button" className="button" onClick={() => setTab("import")}>Já tenho o resultado. Importar JSON →</button></>}
         </div>
       )}
 
       {tab === "import" && (
         <div className="question-tool-body">
-          <p className="tool-note">Cole a resposta JSON da IA ou carregue um arquivo <b>.json</b>. O Arena Dev valida o pacote antes de adicionar as questões.</p>
+          <p className="tool-note">Cole a resposta JSON da IA ou selecione um arquivo <b>.json</b>. O Arena Dev valida o pacote antes de adicionar as questões ao rascunho.</p>
           <textarea className="input textarea json-area" rows={12} value={jsonInput} onChange={(event) => { setJsonInput(event.target.value); setImportErrors([]); setImportWarnings([]); setLastImportedCount(0); }} placeholder={'{\n  "version": "1.0",\n  "questions": [...]\n}'} />
           {importErrors.length > 0 && <div className="validation-box"><strong>Revise antes de importar</strong>{importErrors.map((error) => <span key={error}>{error}</span>)}</div>}
           {importWarnings.length > 0 && <div className="validation-box" role="status"><strong>{lastImportedCount > 0 ? "Importado com avisos" : "Avisos"}</strong>{importWarnings.map((warning) => <span key={warning}>{warning}</span>)}</div>}
@@ -274,7 +283,7 @@ export default function ActivityQuestionBuilder({
         </div>
       )}
 
-      <div className="questions-preview">
+      <div className="questions-preview" id="activity-existing-questions">
         <div className="attendance-head"><strong>Questões da atividade</strong><span>{questions.length} questão(ões)</span></div>
         {questions.map((question, index) => (
           <div className="question-preview-card" key={question.id}>

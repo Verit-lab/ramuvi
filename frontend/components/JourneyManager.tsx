@@ -448,7 +448,7 @@ export default function JourneyManager({ classroomId, classroomName, notify, ini
 
   return (
     <div className={styles.workspace}>
-      <header className={styles.header}>
+      <header className={`${styles.header} classroom-page-header`}>
         <div>
           <span className={styles.eyebrow}>JORNADAS · CONTEÚDOS</span>
           <h2>Jornadas de aprendizagem</h2>

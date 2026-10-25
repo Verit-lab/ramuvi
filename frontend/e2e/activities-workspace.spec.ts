@@ -43,7 +43,48 @@ test("Atividades: editor na página e importação JSON validada sem modal de cr
     await expect(newEditor).toBeVisible();
     await expect(page.getByRole("dialog", { name: "Nova atividade" })).toHaveCount(0);
     await expect(newEditor.getByLabel("Título")).toBeVisible();
-    await newEditor.getByRole("button", { name: /Voltar às atividades/ }).click();
+    await expect(newEditor.getByRole("button", { name: /Voltar às atividades/ })).toHaveCount(0);
+    await expect(newEditor.getByLabel("XP da entrega")).toHaveCount(0);
+    await expect(newEditor.getByText("Configurações opcionais")).toHaveCount(0);
+    await expect(newEditor.getByRole("navigation", { name: "Etapas do cadastro" })).toBeVisible();
+    await page.setViewportSize({ width: 1600, height: 900 });
+    const desktopTitle = await newEditor.getByLabel("Título").boundingBox();
+    const desktopTopic = await newEditor.getByLabel("Tema / tópico").boundingBox();
+    const desktopKind = await newEditor.getByLabel("Tipo", { exact: true }).boundingBox();
+    expect(desktopTitle && desktopTopic && desktopKind).toBeTruthy();
+    if (desktopTitle && desktopTopic && desktopKind) {
+      expect(Math.abs(desktopTitle.y - desktopTopic.y)).toBeLessThanOrEqual(3);
+      expect(Math.abs(desktopTopic.y - desktopKind.y)).toBeLessThanOrEqual(3);
+    }
+    await page.setViewportSize({ width: 1024, height: 900 });
+    const tabletTitle = await newEditor.getByLabel("Título").boundingBox();
+    const tabletTopic = await newEditor.getByLabel("Tema / tópico").boundingBox();
+    const tabletKind = await newEditor.getByLabel("Tipo", { exact: true }).boundingBox();
+    expect(tabletTitle && tabletTopic && tabletKind).toBeTruthy();
+    if (tabletTitle && tabletTopic && tabletKind) {
+      expect(tabletTopic.y).toBeGreaterThan(tabletTitle.y + tabletTitle.height);
+      expect(Math.abs(tabletTopic.y - tabletKind.y)).toBeLessThanOrEqual(3);
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mobileTitle = await newEditor.getByLabel("Título").boundingBox();
+    const mobileTopic = await newEditor.getByLabel("Tema / tópico").boundingBox();
+    const mobileKind = await newEditor.getByLabel("Tipo", { exact: true }).boundingBox();
+    expect(mobileTitle && mobileTopic && mobileKind).toBeTruthy();
+    if (mobileTitle && mobileTopic && mobileKind) {
+      expect(mobileTopic.y).toBeGreaterThan(mobileTitle.y + mobileTitle.height);
+      expect(mobileKind.y).toBeGreaterThan(mobileTopic.y + mobileTopic.height);
+    }
+    await page.setViewportSize({ width: 1600, height: 900 });
+    await expect(newEditor.getByRole("button", { name: /Continuar para questões/ })).toBeVisible();
+    await newEditor.getByLabel("Título").fill("Atividade de teste");
+    await newEditor.getByRole("button", { name: /Continuar para questões/ }).click();
+    await expect(newEditor.getByRole("button", { name: /Criar manualmente/ })).toHaveAttribute("aria-pressed", "true");
+    await expect(newEditor.getByText("Como você deseja preparar as questões?")).toBeVisible();
+    await newEditor.getByRole("textbox", { name: "Enunciado", exact: true }).fill("Questão ainda em edição");
+    await newEditor.getByRole("button", { name: /Conferir atividade/ }).click();
+    await expect(newEditor.getByRole("heading", { name: "Confira antes de salvar" })).toHaveCount(0);
+    page.once("dialog", dialog => dialog.accept());
+    await newEditor.getByRole("button", { name: "Cancelar" }).click();
     await expect(page.getByRole("heading", { name: "Atividades da turma" })).toBeVisible();
 
     const packageJson = JSON.stringify({
@@ -59,8 +100,39 @@ test("Atividades: editor na página e importação JSON validada sem modal de cr
     });
     const editor = page.getByRole("region", { name: "Criação de atividade" });
     await expect(editor).toBeVisible();
-    await editor.getByRole("button", { name: "Geral e XP" }).click();
+    await expect(editor.getByText(/questão importada do arquivo/)).toBeVisible();
+    await editor.getByRole("button", { name: /Dados da atividade/ }).click();
     await expect(editor.getByLabel("Título")).toHaveValue("Revisão SQL");
+    await editor.getByRole("button", { name: /Conferir e salvar/ }).click();
+    await expect(editor.getByRole("heading", { name: "Confira antes de salvar" })).toBeVisible();
+    await expect(editor.getByRole("region", { name: "Configurações da atividade" })).toBeVisible();
+    for (const width of [390, 1024, 1600, 1920, 2560]) {
+      await page.setViewportSize({ width, height: 900 });
+      const geometry = await editor.evaluate((root) => {
+        const steps = root.querySelector<HTMLElement>(".activity-editor-steps")!.getBoundingClientRect();
+        const review = root.querySelector<HTMLElement>(".activity-editor-review")!.getBoundingClientRect();
+        const panels = Array.from(root.querySelector<HTMLElement>(".activity-editor-review-columns")!.children)
+          .map((node) => node.getBoundingClientRect());
+        return {
+          stepsX: steps.x, stepsWidth: steps.width, reviewX: review.x, reviewWidth: review.width,
+          panelY: panels.map((box) => box.y),
+          overflow: document.documentElement.scrollWidth - window.innerWidth,
+        };
+      });
+      expect(Math.abs(geometry.stepsX - geometry.reviewX), `alinhamento da revisão em ${width}px`).toBeLessThanOrEqual(2);
+      expect(Math.abs(geometry.stepsWidth - geometry.reviewWidth), `largura da revisão em ${width}px`).toBeLessThanOrEqual(2);
+      expect(geometry.overflow, `overflow em ${width}px`).toBeLessThanOrEqual(1);
+      if (width > 1120) {
+        expect(Math.abs(geometry.panelY[0] - geometry.panelY[1]), `duas colunas em ${width}px`).toBeLessThanOrEqual(2);
+      } else {
+        expect(geometry.panelY[1], `revisão empilhada em ${width}px`).toBeGreaterThan(geometry.panelY[0]);
+      }
+    }
+    await page.setViewportSize({ width: 1600, height: 900 });
+    await expect(editor.getByLabel("XP da entrega")).toHaveValue("10");
+    await editor.getByLabel("XP da entrega").fill("15");
+    await expect(editor.getByLabel("Bônus no prazo")).toHaveValue("5");
+    await expect(editor.getByLabel("Tempo total da tentativa (minutos)")).toHaveValue("0");
     await editor.getByRole("button", { name: "Salvar atividade" }).click();
     await expect(page.getByRole("heading", { name: "Revisão SQL" })).toBeVisible();
 

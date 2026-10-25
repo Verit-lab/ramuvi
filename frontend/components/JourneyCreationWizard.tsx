@@ -163,7 +163,7 @@ export default function JourneyCreationWizard({
 
   return (
     <section className={styles.screen} aria-labelledby="journey-creation-title">
-        <header className={styles.screenHeader}>
+        <header className={`${styles.screenHeader} classroom-creation-header`}>
           <button type="button" className={styles.backLink} onClick={leave}>← Jornadas de {classroomName}</button>
           <span className={styles.eyebrow}>NOVA JORNADA</span>
           <h2 id="journey-creation-title" ref={headingRef} tabIndex={-1}>{mode === "choose" ? "Como você quer começar?" : mode === "preview" ? "Revise a estrutura sugerida" : "Prepare o ponto de partida"}</h2>
