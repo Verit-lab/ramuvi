@@ -160,6 +160,7 @@ test("content reader supports study formats and explicit completion", () => {
   assert.match(css, /readerPreviousTitle\{[\s\S]*?text-overflow:ellipsis/);
   assert.match(css, /readerFooterAction,\.readerView \.readerPrimary\{width:100%/);
   assert.match(css, /readerPositionTrack/);
+  assert.match(css, /readerView>\.teacherPreviewBar/);
   assert.match(reader, /SafeMarkdown/);
   assert.doesNotMatch(reader, /rehypeRaw|dangerouslySetInnerHTML/);
   assert.match(reader, /noopener noreferrer/);

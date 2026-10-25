@@ -546,3 +546,11 @@
   font-size:.875rem;letter-spacing:normal;text-transform:none;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
+
+/* Keep teacher preview and reader footer on the same editorial axis; an
+   existing E2E contract checks these widths on desktop. */
+.readerView>.teacherPreviewBar{
+  width:min(840px,100%);
+  max-width:840px;
+  margin:0 auto 26px;
+}
