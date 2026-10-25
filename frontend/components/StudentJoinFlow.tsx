@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import StudentActivitiesPanel from "@/components/StudentActivitiesPanel";
 import { useStudentPreferences } from "@/components/student/StudentAccessibilityControls";
 import { recordSelfConfidence, type SelfConfidence } from "@/lib/learner-confidence-api";
@@ -17,6 +18,7 @@ import {
   type StudentJoinAccess,
 } from "@/lib/realtime-api";
 import { deviceClaimStorageKey, normalizeJoinCode, restoreStudentAccess, studentAccessStorageKey } from "@/lib/app-state";
+import { studyDeviceClaims } from "@/lib/study-api";
 import { emptyLiveStageState, type LiveStageState } from "@/lib/live-stage-api";
 import { stageFromEvent } from "@/lib/material-section-sync";
 import {
@@ -48,6 +50,7 @@ export default function StudentJoinFlow({ embedded = false, initialCode = "" }: 
   const [recognizedDevice, setRecognizedDevice] = useState<DeviceRecognition | null>(null);
   const [deviceToken, setDeviceToken] = useState<string | null>(null);
   const [rememberDevice, setRememberDevice] = useState(true);
+  const [hasRememberedClassroom, setHasRememberedClassroom] = useState(false);
   const [buzzer, setBuzzer] = useState<PublicBuzzerState>({ status: "IDLE", presses: [] });
   const [buzzerParticipant, setBuzzerParticipant] = useState<BuzzerParticipantState>({ roundId: null, position: null });
   const [boss, setBoss] = useState<PublicBossState | null>(null);
@@ -164,6 +167,13 @@ export default function StudentJoinFlow({ embedded = false, initialCode = "" }: 
       window.removeEventListener("offline", onOffline);
     };
   }, []);
+
+  // Return-path shortcut uses the existing revocable device claim, not
+  // an unverified name/email as a password.
+  useEffect(() => {
+    if (embedded) return;
+    setHasRememberedClassroom(studyDeviceClaims().length > 0);
+  }, [embedded]);
 
   useEffect(() => {
     const queryCode = new URLSearchParams(window.location.search).get("code");
@@ -325,6 +335,7 @@ export default function StudentJoinFlow({ embedded = false, initialCode = "" }: 
       if (result.deviceToken) {
         window.localStorage.setItem(deviceClaimStorageKey(session.classroomId), result.deviceToken);
         setDeviceToken(result.deviceToken);
+        setHasRememberedClassroom(true);
       }
       setRecognizedDevice(null);
       setAccess(result.access);
@@ -358,6 +369,7 @@ export default function StudentJoinFlow({ embedded = false, initialCode = "" }: 
     if (!session) return;
     const token = deviceToken;
     window.localStorage.removeItem(deviceClaimStorageKey(session.classroomId));
+    setHasRememberedClassroom(studyDeviceClaims().length > 0);
     setRecognizedDevice(null);
     setDeviceToken(null);
     if (token) void revokeRememberedDevice(token).catch(() => undefined);
@@ -482,6 +494,20 @@ export default function StudentJoinFlow({ embedded = false, initialCode = "" }: 
     <main className="student-join-shell" style={{ "--student-content-scale": studentScale } as React.CSSProperties} data-student-motion={reducedMotion ? "reduce" : undefined}>
       <section className="student-join-card">
         {!embedded && <div className="student-brand"><span>A</span><div><strong>ARENA DEV</strong><small>Participação ao vivo</small></div></div>}
+
+        {!embedded && !session && hasRememberedClassroom && !code.trim() && (
+          <section className="student-return-access" aria-label="Voltar para minhas turmas">
+            <div>
+              <span className="student-return-kicker">ACESSO SALVO NESTE DISPOSITIVO</span>
+              <h2>Já estuda por aqui?</h2>
+              <p>Retome suas Jornadas ou encontre uma aula em andamento sem digitar outro código. O vínculo continua sujeito à validade do acesso salvo.</p>
+            </div>
+            <div className="student-return-actions">
+              <Link href="/learn" className="student-return-primary">Continuar meus estudos</Link>
+              <Link href="/learn/live" className="student-return-secondary">Aulas das minhas turmas</Link>
+            </div>
+          </section>
+        )}
 
         {!session && (
           <form className="student-join-form" onSubmit={submitCode}>

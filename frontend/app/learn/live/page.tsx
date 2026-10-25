@@ -1,21 +1,23 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import StudentJoinFlow from "@/components/StudentJoinFlow";
-import { fetchAllStudyLiveSessions, type LiveSessionSummary } from "@/lib/study-api";
+import { fetchAllStudyLiveSessions, studyDeviceClaims, type LiveSessionSummary } from "@/lib/study-api";
 import styles from "@/components/study/study.module.css";
 
 export default function LivePage() {
   const [sessions, setSessions] = useState<LiveSessionSummary[]>([]);
   const [selectedCode, setSelectedCode] = useState("");
   const [loading, setLoading] = useState(true);
+  const [hasRememberedClassroom, setHasRememberedClassroom] = useState(false);
 
   function refresh() {
     setLoading(true);
     void fetchAllStudyLiveSessions().then(setSessions).finally(() => setLoading(false));
   }
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => { setHasRememberedClassroom(studyDeviceClaims().length > 0); refresh(); }, []);
 
   if (selectedCode) return <>
     <button type="button" className={styles.liveBack} onClick={() => { setSelectedCode(""); refresh(); }}>← Voltar para aulas ao vivo</button>
@@ -37,8 +39,16 @@ export default function LivePage() {
       )}</div>
     </section>}
 
+    {!loading && hasRememberedClassroom && sessions.length === 0 && (
+      <section className={styles.liveRemembered} aria-label="Turmas lembradas neste dispositivo">
+        <strong>Nenhuma aula ao vivo encontrada neste momento.</strong>
+        <p>Se o vínculo salvo ainda estiver válido, você poderá continuar as Jornadas. Caso tenha expirado, entre novamente com um código.</p>
+        <Link href="/learn/journeys">Ver minhas Jornadas</Link>
+      </section>
+    )}
+
     <section className={styles.liveManual}>
-      {sessions.length > 0 && <div className={styles.liveDivider}><span>OU ENTRE COM CÓDIGO</span></div>}
+      {(sessions.length > 0 || hasRememberedClassroom) && <div className={styles.liveDivider}><span>OUTRA AULA? ENTRE COM CÓDIGO</span></div>}
       <div className={styles.embeddedJoin}><StudentJoinFlow embedded /></div>
     </section>
   </>;
