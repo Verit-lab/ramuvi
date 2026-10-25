@@ -2834,8 +2834,9 @@ html[data-theme="light"] .classroom-lifecycle-confirmation {
 
 /* v0.11: one content geometry for the entire classroom workspace, including nested editors. */
 /* A navegação ocupa a largura total; o conteúdo usa uma margem interna uniforme. */
-.classroom-workspace{width:100%;max-width:1480px;min-width:0;margin-inline:auto;box-sizing:border-box;--classroom-content-gutter:clamp(1rem,1.8vw,1.5rem)}
-.classroom-workspace > :not(.classroom-section-nav){box-sizing:border-box;padding-inline:var(--classroom-content-gutter);padding-bottom:var(--classroom-content-gutter)}
+/* Ampliar o workspace no desktop sem comprometer a leitura ou o iPhone. */
+.classroom-workspace{width:100%;max-width:var(--teacher-content-max);min-width:0;margin-inline:auto;box-sizing:border-box;--classroom-content-gutter:clamp(1rem,2.55vw,3.5rem);--classroom-content-gutter-block:clamp(1.125rem,2.25vw,3rem)}
+.classroom-workspace > :not(.classroom-section-nav){box-sizing:border-box;padding-inline:var(--classroom-content-gutter);padding-block:var(--classroom-content-gutter-block) clamp(1.5rem,2.85vw,3.5rem)}
 .classroom-workspace>*,.classroom-workspace .stack-lg,.classroom-workspace .activity-editor-page{min-width:0}
 .classroom-workspace .activity-editor-page{width:100%;max-width:none;margin:0}
 .classroom-workspace .activity-editor-header{background:transparent;border:0;border-bottom:1px solid var(--ds-border);border-radius:0;padding:1rem 0 1.25rem}
@@ -2864,4 +2865,4 @@ html[data-theme="light"] .classroom-lifecycle-confirmation {
 
 /* Shared teacher content geometry also applies outside the classroom tabs.
    The live Arena deliberately remains fullscreen. */
-.app-shell-no-sidebar .content:not(.arena-content-full){max-width:1480px;margin-inline:auto}
+.app-shell-no-sidebar .content:not(.arena-content-full){max-width:var(--teacher-content-max);padding-inline:var(--teacher-outer-gutter);margin-inline:auto}

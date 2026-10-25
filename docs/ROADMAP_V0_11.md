@@ -20,7 +20,7 @@ A [PR #114](https://github.com/wesscosta/arena-dev/pull/114) já entregou o edit
 
 ## Estabilização 11.15 — páginas de turma e Histórico unificado
 
-O piloto identificou largura isolada de 1120px e superfícies artificiais no editor de Atividades, além de UX inconsistente com Jornada e duas listas de Histórico. O ajuste [11.15](v0.11/11.15_CLASSROOM_LAYOUT_AND_HISTORY.md) uniformiza a geometria das páginas administrativas do professor (1480px fluido, exceto Arena fullscreen), cabeçalho/editor, áreas de Jornada e implementa um feed cronológico com filtros Tudo/XP/Condução e uma busca, preservando auditabilidade de ScoreEvent e SessionEvent. Sem migration ou nova regra docente; os oito gates #110 continuam necessários.
+O piloto identificou largura isolada de 1120px e superfícies artificiais no editor de Atividades, além de UX inconsistente com Jornada e duas listas de Histórico. O ajuste [11.15](v0.11/11.15_CLASSROOM_LAYOUT_AND_HISTORY.md) uniformiza a geometria das páginas administrativas do professor (até 2880px fluidos, com padding responsivo de 16–56px e espaço vertical de 18–56px; Arena fullscreen independente), cabeçalho/editor, áreas de Jornada e implementa um feed cronológico com filtros Tudo/XP/Condução e uma busca, preservando auditabilidade de ScoreEvent e SessionEvent. Sem migration ou nova regra docente; os oito gates #110 continuam necessários.
 
 ## Objetivo geral
 

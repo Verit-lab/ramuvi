@@ -115,11 +115,27 @@ async function assertClassroomGutter(page: Page, view: string) {
     const workspace = document.querySelector<HTMLElement>(".classroom-workspace")!;
     const content = workspace.querySelector<HTMLElement>(":scope > :not(.classroom-section-nav)")!;
     const style = getComputedStyle(content);
-    return { left: Number.parseFloat(style.paddingLeft), right: Number.parseFloat(style.paddingRight) };
+    return {
+      left: Number.parseFloat(style.paddingLeft),
+      right: Number.parseFloat(style.paddingRight),
+      top: Number.parseFloat(style.paddingTop),
+      bottom: Number.parseFloat(style.paddingBottom),
+      width: workspace.getBoundingClientRect().width,
+      viewport: window.innerWidth,
+    };
   });
   expect(inset.left, `padding à esquerda em ${view}`).toBeGreaterThanOrEqual(15);
   expect(inset.right, `padding à direita em ${view}`).toBeGreaterThanOrEqual(15);
   expect(Math.abs(inset.left - inset.right), `padding simétrico em ${view}`).toBeLessThanOrEqual(1);
+  expect(inset.top, `respiro superior em ${view}`).toBeGreaterThanOrEqual(15);
+  expect(inset.bottom, `respiro inferior em ${view}`).toBeGreaterThanOrEqual(19);
+  if (inset.viewport >= 1366) {
+    expect(inset.left, `padding desktop em ${view}`).toBeGreaterThanOrEqual(30);
+  }
+  if (inset.viewport >= 1920) {
+    expect(inset.width, `workspace ampliado em ${view}`).toBeGreaterThan(1700);
+    expect(inset.width).toBeLessThanOrEqual(2880);
+  }
 }
 
 async function assertHomeLayout(page: Page, viewport: { width: number; height: number }) {
@@ -215,6 +231,34 @@ test.describe.serial("Classroom Home responsive contract", () => {
     });
     await api.dispose();
   });
+  test("classroom layout scales through desktop and ultrawide without wasting width", async ({ browser }) => {
+    test.setTimeout(65_000);
+    const context = await browser.newContext({ viewport: { width: 1366, height: 900 } });
+    const page = await context.newPage();
+    try {
+      await loginAndOpenClassroom(page, fixture.classroom.name);
+      for (const width of [1366, 1920, 2560, 3440]) {
+        await page.setViewportSize({ width, height: 900 });
+        await assertClassroomGutter(page, `desktop ${width}px`);
+        const metrics = await page.evaluate(() => {
+          const workspace = document.querySelector<HTMLElement>(".classroom-workspace")!;
+          const rect = workspace.getBoundingClientRect();
+          return {
+            width: rect.width,
+            overflow: document.documentElement.scrollWidth - window.innerWidth,
+            outerGutter: Math.abs(rect.left - (window.innerWidth - rect.right)),
+          };
+        });
+        expect(metrics.overflow, `overflow desktop em ${width}px`).toBeLessThanOrEqual(1);
+        expect(metrics.outerGutter, `centralização desktop em ${width}px`).toBeLessThanOrEqual(1.5);
+        if (width >= 2560) expect(metrics.width).toBeGreaterThan(2300);
+        if (width === 3440) expect(metrics.width).toBeLessThanOrEqual(2880);
+      }
+    } finally {
+      await context.close();
+    }
+  });
+
   test("reloads the idle Home through all target breakpoints and themes without overflow or collisions", async ({
     browser,
   }, testInfo) => {
