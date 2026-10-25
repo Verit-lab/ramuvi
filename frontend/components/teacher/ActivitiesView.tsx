@@ -40,7 +40,6 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
   const [points, setPoints] = useState(10);
   const [bonus, setBonus] = useState(5);
   const [timeLimitMinutes, setTimeLimitMinutes] = useState(0);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [resourceKind, setResourceKind] = useState<"INTERNAL" | "EXTERNAL">("INTERNAL");
   const [platform, setPlatform] = useState("");
   const [resourceUrl, setResourceUrl] = useState("");
@@ -131,7 +130,6 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
     setPoints(10);
     setBonus(5);
     setTimeLimitMinutes(0);
-    setAdvancedOpen(false);
     setResourceKind("INTERNAL");
     setPlatform("");
     setResourceUrl("");
@@ -208,7 +206,6 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
     setPoints(activity.points);
     setBonus(activity.onTimeBonus);
     setTimeLimitMinutes(activity.timeLimitMinutes ?? 0);
-    setAdvancedOpen(Boolean(activity.timeLimitMinutes || activity.individualOptionOrder || activity.individualQuestionOrder));
     setResourceKind(activity.resource?.kind ?? "INTERNAL");
     setPlatform(activity.resource?.platform ?? "");
     setResourceUrl(activity.resource?.url ?? "");
@@ -491,7 +488,6 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
 
       {editorOpen && <section className="activity-editor-page" aria-label={activityId ? "Editor de atividade" : "Criação de atividade"}>
         <header className="activity-editor-header classroom-page-header">
-          <button type="button" className="button ghost activity-editor-back" onClick={closeEditor}>← Voltar às atividades</button>
           <div>
             <span className="eyebrow accent">ATIVIDADES · {classroomName}</span>
             <h2>{activityId ? "Editar atividade" : "Nova atividade"}</h2>
@@ -518,53 +514,75 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
         {editorTab === "general" ? (
           <div className="modal-section-stack">
             <div className="context-lock"><span>Turma</span><strong>{classroomName}</strong><small>A atividade será salva somente neste contexto.</small></div>
-            <div className="form-grid">
-              <label className="field-label" htmlFor="activity-editor-title">Título</label>
-              <input id="activity-editor-title" className="input" placeholder="Ex.: Atividade 07 — Funções" value={title} onChange={(e) => setTitle(e.target.value)} />
-              <div className="form-two">
-                <label>Tema / tópico<input className="input" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Ex.: Estruturas de repetição" /></label>
-                <label>Tipo<select className="select full" value={resourceKind} onChange={(e) => setResourceKind(e.target.value as "INTERNAL" | "EXTERNAL")}><option value="INTERNAL">Atividade interna</option><option value="EXTERNAL">Atividade / recurso externo</option></select></label>
-              </div>
-              {resourceKind === "EXTERNAL" && <div className="form-two"><label>Plataforma<input className="input" value={platform} onChange={(e) => setPlatform(e.target.value)} placeholder="Wayground, Forms, Kahoot..." /></label><label>Link<input className="input" type="url" value={resourceUrl} onChange={(e) => setResourceUrl(e.target.value)} placeholder="https://..." /></label></div>}
-              <details className="activity-editor-advanced" open={advancedOpen} onToggle={(event) => setAdvancedOpen(event.currentTarget.open)}>
-                <summary>Configurações opcionais <small>XP, prazo da tentativa e ordem individual</small></summary>
-                <div className="activity-editor-advanced-body">
-              <div className="form-two"><label>XP da entrega<input className="input" type="number" min="0" value={points} onChange={(e) => setPoints(Math.max(0, Number(e.target.value) || 0))} /></label><label>Bônus no prazo<input className="input" type="number" min="0" value={bonus} onChange={(e) => setBonus(Math.max(0, Number(e.target.value) || 0))} /></label></div>
-              <fieldset className="activity-order-settings">
-                <legend>Prazo da resolução</legend>
-                <label>Tempo total da tentativa (minutos)
-                  <input className="input" type="number" min="0" max="480" step="1" value={timeLimitMinutes}
-                    disabled={orderLocked} onChange={(event) => setTimeLimitMinutes(Number(event.target.value))} />
+            <div className="activity-editor-general-fields">
+              <div className="activity-editor-core-fields">
+                <label htmlFor="activity-editor-title">Título
+                  <input id="activity-editor-title" className="input" placeholder="Ex.: Atividade 07 — Funções" value={title} onChange={(e) => setTitle(e.target.value)} />
                 </label>
-                <small>0 = sem limite (padrão). De 1 a 480 minutos a partir do primeiro início da tentativa. O prazo não reinicia ao atualizar a página.</small>
-                {orderLocked && <small>Uma tentativa já foi iniciada; a duração não pode ser alterada.</small>}
-              </fieldset>
-              <fieldset className="activity-order-settings" disabled={orderLocked}>
-                <legend>{INDIVIDUAL_ORDER_SECTION}</legend>
-                <ToggleField label={INDIVIDUAL_OPTION_ORDER_LABEL} description={INDIVIDUAL_ORDER_HELP} checked={individualOptionOrder} disabled={orderLocked} onChange={(checked) => { setIndividualOptionOrder(checked); if (!checked) setIndividualQuestionOrder(false); }} />
-                <label className="activity-order-questions"><input type="checkbox" checked={individualOptionOrder && individualQuestionOrder} disabled={orderLocked || !individualOptionOrder} onChange={(e) => setIndividualQuestionOrder(e.target.checked)} /> {INDIVIDUAL_QUESTION_ORDER_LABEL}</label>
-                {orderLocked && <small className="activity-order-locked">{INDIVIDUAL_ORDER_LOCKED}</small>}
-              </fieldset>
-                </div>
-              </details>
+                <label>Tema / tópico
+                  <input className="input" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Ex.: Estruturas de repetição" />
+                </label>
+                <label>Tipo
+                  <select className="select full" value={resourceKind} onChange={(e) => setResourceKind(e.target.value as "INTERNAL" | "EXTERNAL")}><option value="INTERNAL">Atividade interna</option><option value="EXTERNAL">Atividade / recurso externo</option></select>
+                </label>
+              </div>
+              {resourceKind === "EXTERNAL" && <div className="activity-editor-external-fields form-two">
+                <label>Plataforma<input className="input" value={platform} onChange={(e) => setPlatform(e.target.value)} placeholder="Wayground, Forms, Kahoot..." /></label>
+                <label>Link<input className="input" type="url" value={resourceUrl} onChange={(e) => setResourceUrl(e.target.value)} placeholder="https://..." /></label>
+              </div>}
             </div>
-            <div className="activity-summary-line"><span>{questions.length} questão(ões) vinculadas</span><button className="text-button" onClick={() => setEditorTab("questions")}>Gerenciar questões →</button></div>
           </div>
         ) : editorTab === "review" ? (
           <div className="activity-editor-review">
-            <h3>Confira antes de salvar</h3>
-            <p>Os dados serão salvos na turma selecionada. Nenhuma atividade é publicada para outra turma por este cadastro.</p>
-            <dl>
-              <div><dt>Turma</dt><dd>{classroomName}</dd></div>
-              <div><dt>Título</dt><dd>{title.trim() || "Ainda não informado"}</dd></div>
-              <div><dt>Tópico</dt><dd>{topic.trim() || "Não informado"}</dd></div>
-              <div><dt>Modalidade</dt><dd>{resourceKind === "INTERNAL" ? "Atividade interna" : "Recurso externo"}</dd></div>
-              <div><dt>Questões</dt><dd>{questions.length}</dd></div>
-              <div><dt>XP da entrega</dt><dd>{points} XP + {bonus} de bônus no prazo</dd></div>
-              <div><dt>Prazo</dt><dd>{timeLimitMinutes === 0 ? "Sem limite" : timeLimitMinutes + " minutos por tentativa"}</dd></div>
-            </dl>
-            {!title.trim() && <p className="activity-editor-warning">Para salvar, preencha o título na etapa Dados.</p>}
-            {resourceKind === "INTERNAL" && questions.length === 0 && <p className="activity-editor-warning">Nenhuma questão adicionada. Você pode salvar uma atividade vazia, mas os alunos ainda não terão questões para responder.</p>}
+            <div className="activity-editor-review-intro">
+              <h3>Confira antes de salvar</h3>
+              <p>Revise os dados e configure XP, prazo e embaralhamento. A atividade será salva somente na turma selecionada.</p>
+            </div>
+            <div className="activity-editor-review-columns">
+              <section className="activity-editor-review-summary" aria-label="Resumo da atividade">
+                <h4>Dados da atividade</h4>
+                <dl>
+                  <div><dt>Turma</dt><dd>{classroomName}</dd></div>
+                  <div><dt>Título</dt><dd>{title.trim() || "Ainda não informado"}</dd></div>
+                  <div><dt>Tópico</dt><dd>{topic.trim() || "Não informado"}</dd></div>
+                  <div><dt>Modalidade</dt><dd>{resourceKind === "INTERNAL" ? "Atividade interna" : "Recurso externo"}</dd></div>
+                  <div><dt>Questões</dt><dd>{questions.length}</dd></div>
+                  {resourceKind === "EXTERNAL" && <>
+                    <div><dt>Plataforma</dt><dd>{platform.trim() || "Não informada"}</dd></div>
+                    <div><dt>Link</dt><dd>{resourceUrl.trim() || "Não informado"}</dd></div>
+                  </>}
+                </dl>
+                {!title.trim() && <p className="activity-editor-warning">Para salvar, preencha o título na etapa Dados.</p>}
+                {resourceKind === "INTERNAL" && questions.length === 0 && <p className="activity-editor-warning">Nenhuma questão adicionada. Você pode salvar uma atividade vazia, mas os alunos ainda não terão questões para responder.</p>}
+              </section>
+              <section className="activity-editor-review-settings" aria-label="Configurações da atividade">
+                <h4>Configurações da atividade</h4>
+                <p>Valores iniciais preenchidos. Ajuste conforme a proposta pedagógica antes de salvar.</p>
+                <div className="activity-editor-settings-fields">
+                  <label>XP da entrega
+                    <input className="input" type="number" min="0" value={points} onChange={(e) => setPoints(Math.max(0, Number(e.target.value) || 0))} />
+                  </label>
+                  <label>Bônus no prazo
+                    <input className="input" type="number" min="0" value={bonus} onChange={(e) => setBonus(Math.max(0, Number(e.target.value) || 0))} />
+                  </label>
+                </div>
+                <fieldset className="activity-order-settings">
+                  <legend>Prazo da resolução</legend>
+                  <label>Tempo total da tentativa (minutos)
+                    <input className="input" type="number" min="0" max="480" step="1" value={timeLimitMinutes}
+                      disabled={orderLocked} onChange={(event) => setTimeLimitMinutes(Number(event.target.value))} />
+                  </label>
+                  <small>0 = sem limite (padrão). De 1 a 480 minutos a partir do primeiro início da tentativa. O prazo não reinicia ao atualizar a página.</small>
+                  {orderLocked && <small>Uma tentativa já foi iniciada; a duração não pode ser alterada.</small>}
+                </fieldset>
+                <fieldset className="activity-order-settings" disabled={orderLocked}>
+                  <legend>{INDIVIDUAL_ORDER_SECTION}</legend>
+                  <ToggleField label={INDIVIDUAL_OPTION_ORDER_LABEL} description={INDIVIDUAL_ORDER_HELP} checked={individualOptionOrder} disabled={orderLocked} onChange={(checked) => { setIndividualOptionOrder(checked); if (!checked) setIndividualQuestionOrder(false); }} />
+                  <label className="activity-order-questions"><input type="checkbox" checked={individualOptionOrder && individualQuestionOrder} disabled={orderLocked || !individualOptionOrder} onChange={(e) => setIndividualQuestionOrder(e.target.checked)} /> {INDIVIDUAL_QUESTION_ORDER_LABEL}</label>
+                  {orderLocked && <small className="activity-order-locked">{INDIVIDUAL_ORDER_LOCKED}</small>}
+                </fieldset>
+              </section>
+            </div>
             <div className="activity-editor-optional">
               <div><strong>Roteiro ao vivo (opcional)</strong><p>Organize a sequência de apresentação apenas se for conduzir esta atividade na Arena. O cadastro comum não exige roteiro.</p></div>
               <button type="button" className="button" disabled={activityBusy || stepsLoading} onClick={() => { void openFlowTab(); }}>
@@ -592,17 +610,17 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
         </div>
         </div>
         <div className="modal-footer activity-editor-footer">
+          {editorTab !== "flow" && <button type="button" className="button ghost" onClick={closeEditor}>Cancelar</button>}
           {editorTab === "general" ? (
-            <><button type="button" className="button ghost" onClick={closeEditor}>Cancelar</button>
-              <button type="button" className="button primary" onClick={() => {
+            <button type="button" className="button primary" onClick={() => {
                 if (!title.trim()) { notify("Informe o título para continuar.", "error"); document.getElementById("activity-editor-title")?.focus(); return; }
                 setEditorTab(resourceKind === "EXTERNAL" ? "review" : "questions");
-              }}>{resourceKind === "EXTERNAL" ? "Conferir atividade →" : "Continuar para questões →"}</button></>
+              }}>{resourceKind === "EXTERNAL" ? "Conferir atividade →" : "Continuar para questões →"}</button>
           ) : editorTab === "questions" ? (
             <><button type="button" className="button ghost" onClick={() => setEditorTab("general")}>← Dados</button>
               <button type="button" className="button primary" onClick={() => goToEditorStep("review")}>Conferir atividade →</button></>
           ) : editorTab === "review" ? (
-            <><button type="button" className="button ghost" onClick={() => setEditorTab("questions")}>← Questões</button>
+            <><button type="button" className="button ghost" onClick={() => setEditorTab(resourceKind === "EXTERNAL" ? "general" : "questions")}>{resourceKind === "EXTERNAL" ? "← Dados" : "← Questões"}</button>
               <button type="button" className="button primary" disabled={activityBusy} onClick={() => {
                 if (!title.trim()) { setEditorTab("general"); notify("Informe o título da atividade para salvar.", "error"); return; }
                 void saveActivity(true);

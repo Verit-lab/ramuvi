@@ -2811,7 +2811,7 @@ html[data-theme="light"] .classroom-lifecycle-confirmation {
 .activity-editor-page .question-preview-card strong{font-size:.85rem}
 .activity-editor-page .question-meta span{font-size:.72rem}
 .activity-editor-page .question-tool-body .button{min-height:44px}
-.activity-editor-review{display:grid;gap:16px;max-width:900px}
+.activity-editor-review{display:grid;gap:clamp(1rem,1.6vw,1.5rem);width:100%;max-width:1440px;margin-inline:auto;min-width:0}
 .activity-editor-review dl{display:grid;gap:0;margin:0;border:1px solid var(--ds-border-control);border-radius:11px;overflow:hidden}
 .activity-editor-review dl>div{display:grid;grid-template-columns:minmax(120px,30%) minmax(0,1fr);gap:14px;padding:12px 14px;border-bottom:1px solid var(--ds-border-control);font-size:.88rem}
 .activity-editor-review dl>div:last-child{border-bottom:0}
@@ -2825,12 +2825,6 @@ html[data-theme="light"] .classroom-lifecycle-confirmation {
 @media(max-width:760px){.activity-editor-steps{grid-template-columns:1fr}.activity-editor-steps>button{min-height:48px}.activity-question-methods{grid-template-columns:1fr}.activity-question-methods>button{min-height:60px}.activity-editor-optional{flex-direction:column;align-items:stretch}.activity-editor-review dl>div{grid-template-columns:1fr;gap:3px}.activity-editor-footer{flex-wrap:wrap}.activity-editor-footer .button{min-height:48px}}
 .activity-import-notice{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.activity-import-notice .button{min-height:44px}.activity-editor-question-step[hidden]{display:none!important}#activity-existing-questions{scroll-margin-top:100px}
 
-.activity-editor-advanced{border:1px solid var(--ds-border-control);border-radius:11px;background:var(--ds-surface-raised);min-width:0}
-.activity-editor-advanced>summary{min-height:52px;padding:12px 15px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:.9rem;font-weight:750;list-style-position:inside}
-.activity-editor-advanced>summary small{color:var(--ds-text-secondary);font-size:.79rem;font-weight:400}
-.activity-editor-advanced-body{display:flex;flex-direction:column;gap:13px;padding:14px;border-top:1px solid var(--ds-border-control)}
-.activity-editor-advanced-body .form-two{margin-bottom:0}
-@media(max-width:760px){.activity-editor-advanced>summary{flex-direction:column;align-items:flex-start}.activity-editor-advanced-body{padding:12px}}
 
 /* v0.11: one content geometry for the entire classroom workspace, including nested editors. */
 /* A navegação ocupa a largura total; o conteúdo usa uma margem interna uniforme. */
@@ -2866,3 +2860,37 @@ html[data-theme="light"] .classroom-lifecycle-confirmation {
 /* Shared teacher content geometry also applies outside the classroom tabs.
    The live Arena deliberately remains fullscreen. */
 .app-shell-no-sidebar .content:not(.arena-content-full){max-width:var(--teacher-content-max);padding-inline:var(--teacher-outer-gutter);margin-inline:auto}
+
+/* v0.11: three essential fields reflow without shrinking into narrow columns. */
+.activity-editor-general-fields{display:grid;gap:clamp(.75rem,1.4vw,1.25rem);width:100%;min-width:0}
+.activity-editor-core-fields{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr) minmax(0,.85fr);gap:clamp(.75rem,1.4vw,1.25rem);width:100%;max-width:1720px;min-width:0}
+.activity-editor-core-fields>label,.activity-editor-external-fields>label,.activity-editor-settings-fields>label{display:flex;flex-direction:column;gap:.5rem;min-width:0;font-size:.875rem;font-weight:600;color:var(--ds-text-secondary)}
+.activity-editor-core-fields input,.activity-editor-core-fields select,.activity-editor-external-fields input,.activity-editor-settings-fields input{width:100%;max-width:none;min-width:0;min-height:44px;box-sizing:border-box}
+.activity-editor-external-fields{width:100%;max-width:1720px;gap:clamp(.75rem,1.4vw,1.25rem)}
+/* Revision step: readable, balanced layout with visible settings, not a disclosure. */
+.activity-editor-review-intro{display:grid;gap:.45rem}
+.activity-editor-review-intro h3{margin:0;font-size:clamp(1.1rem,1.3vw,1.35rem)}
+.activity-editor-review-intro p{margin:0;color:var(--ds-text-secondary);font-size:.9rem;line-height:1.55}
+.activity-editor-review-columns{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);gap:clamp(1rem,1.8vw,1.75rem);align-items:start;min-width:0}
+.activity-editor-review-summary,.activity-editor-review-settings{display:grid;align-content:start;gap:1rem;min-width:0;padding:clamp(1rem,1.5vw,1.5rem);border:1px solid var(--ds-border-control);border-radius:var(--radius-lg);background:var(--ds-surface-raised)}
+.activity-editor-review-summary h4,.activity-editor-review-settings h4{font-size:1rem;line-height:1.4;margin:0;color:var(--ds-text-primary)}
+.activity-editor-review-settings>p{margin:0;color:var(--ds-text-secondary);font-size:.875rem;line-height:1.55}
+.activity-editor-settings-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}
+.activity-editor-review-settings .activity-order-settings{min-width:0;margin:0}
+.activity-editor-review-settings .activity-order-settings input{max-width:100%;font-size:1rem}
+.activity-editor-review .activity-editor-optional{min-width:0;margin:0}
+@media(max-width:1240px){
+  .activity-editor-core-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .activity-editor-core-fields>label:first-child{grid-column:1/-1}
+}
+@media(max-width:1120px){
+  .activity-editor-review{max-width:820px}
+  .activity-editor-review-columns{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:680px){
+  .activity-editor-core-fields{grid-template-columns:minmax(0,1fr)}
+  .activity-editor-core-fields>label:first-child{grid-column:auto}
+  .activity-editor-external-fields{grid-template-columns:minmax(0,1fr)}
+  .activity-editor-review-summary,.activity-editor-review-settings{padding:1rem}
+  .activity-editor-settings-fields{grid-template-columns:minmax(0,1fr)}
+}

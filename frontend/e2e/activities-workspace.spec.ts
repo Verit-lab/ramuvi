@@ -43,7 +43,38 @@ test("Atividades: editor na página e importação JSON validada sem modal de cr
     await expect(newEditor).toBeVisible();
     await expect(page.getByRole("dialog", { name: "Nova atividade" })).toHaveCount(0);
     await expect(newEditor.getByLabel("Título")).toBeVisible();
+    await expect(newEditor.getByRole("button", { name: /Voltar às atividades/ })).toHaveCount(0);
+    await expect(newEditor.getByLabel("XP da entrega")).toHaveCount(0);
+    await expect(newEditor.getByText("Configurações opcionais")).toHaveCount(0);
     await expect(newEditor.getByRole("navigation", { name: "Etapas do cadastro" })).toBeVisible();
+    await page.setViewportSize({ width: 1600, height: 900 });
+    const desktopTitle = await newEditor.getByLabel("Título").boundingBox();
+    const desktopTopic = await newEditor.getByLabel("Tema / tópico").boundingBox();
+    const desktopKind = await newEditor.getByLabel("Tipo").boundingBox();
+    expect(desktopTitle && desktopTopic && desktopKind).toBeTruthy();
+    if (desktopTitle && desktopTopic && desktopKind) {
+      expect(Math.abs(desktopTitle.y - desktopTopic.y)).toBeLessThanOrEqual(3);
+      expect(Math.abs(desktopTopic.y - desktopKind.y)).toBeLessThanOrEqual(3);
+    }
+    await page.setViewportSize({ width: 1024, height: 900 });
+    const tabletTitle = await newEditor.getByLabel("Título").boundingBox();
+    const tabletTopic = await newEditor.getByLabel("Tema / tópico").boundingBox();
+    const tabletKind = await newEditor.getByLabel("Tipo").boundingBox();
+    expect(tabletTitle && tabletTopic && tabletKind).toBeTruthy();
+    if (tabletTitle && tabletTopic && tabletKind) {
+      expect(tabletTopic.y).toBeGreaterThan(tabletTitle.y + tabletTitle.height);
+      expect(Math.abs(tabletTopic.y - tabletKind.y)).toBeLessThanOrEqual(3);
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mobileTitle = await newEditor.getByLabel("Título").boundingBox();
+    const mobileTopic = await newEditor.getByLabel("Tema / tópico").boundingBox();
+    const mobileKind = await newEditor.getByLabel("Tipo").boundingBox();
+    expect(mobileTitle && mobileTopic && mobileKind).toBeTruthy();
+    if (mobileTitle && mobileTopic && mobileKind) {
+      expect(mobileTopic.y).toBeGreaterThan(mobileTitle.y + mobileTitle.height);
+      expect(mobileKind.y).toBeGreaterThan(mobileTopic.y + mobileTopic.height);
+    }
+    await page.setViewportSize({ width: 1600, height: 900 });
     await expect(newEditor.getByRole("button", { name: /Continuar para questões/ })).toBeVisible();
     await newEditor.getByLabel("Título").fill("Atividade de teste");
     await newEditor.getByRole("button", { name: /Continuar para questões/ }).click();
@@ -53,7 +84,7 @@ test("Atividades: editor na página e importação JSON validada sem modal de cr
     await newEditor.getByRole("button", { name: /Conferir atividade/ }).click();
     await expect(newEditor.getByRole("heading", { name: "Confira antes de salvar" })).toHaveCount(0);
     page.once("dialog", dialog => dialog.accept());
-    await newEditor.getByRole("button", { name: /Voltar às atividades/ }).click();
+    await newEditor.getByRole("button", { name: "Cancelar" }).click();
     await expect(page.getByRole("heading", { name: "Atividades da turma" })).toBeVisible();
 
     const packageJson = JSON.stringify({
@@ -74,6 +105,11 @@ test("Atividades: editor na página e importação JSON validada sem modal de cr
     await expect(editor.getByLabel("Título")).toHaveValue("Revisão SQL");
     await editor.getByRole("button", { name: /Conferir e salvar/ }).click();
     await expect(editor.getByRole("heading", { name: "Confira antes de salvar" })).toBeVisible();
+    await expect(editor.getByRole("region", { name: "Configurações da atividade" })).toBeVisible();
+    await expect(editor.getByLabel("XP da entrega")).toHaveValue("10");
+    await editor.getByLabel("XP da entrega").fill("15");
+    await expect(editor.getByLabel("Bônus no prazo")).toHaveValue("5");
+    await expect(editor.getByLabel("Tempo total da tentativa (minutos)")).toHaveValue("0");
     await editor.getByRole("button", { name: "Salvar atividade" }).click();
     await expect(page.getByRole("heading", { name: "Revisão SQL" })).toBeVisible();
 
