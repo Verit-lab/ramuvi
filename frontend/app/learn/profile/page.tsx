@@ -90,7 +90,7 @@ export default function ProfilePage() {
     <section className={styles.profilePreferences} aria-labelledby="study-preferences-heading">
       <h2 id="study-preferences-heading">Aparência e acessibilidade</h2>
       <p>Tamanho do conteúdo, tema e movimento. O tamanho ajusta os materiais e a área de estudo, sem ampliar o menu de navegação.</p>
-      <StudentAccessibilityControls />
+      <StudentAccessibilityControls settingsPage />
     </section>
     <h2 className={styles.profileSectionHeading}>Cadastro e dispositivos</h2>
     {!profiles && <div className={`${styles.empty} ${styles.skeleton}`}>Carregando seu cadastro…</div>}

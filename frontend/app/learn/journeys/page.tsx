@@ -135,10 +135,10 @@ export default function JourneysPage() {
       <button type="button" className={styles.redeemButton} onClick={() => {
         setRedeemOpen((value) => !value);
         resetRedemption();
-      }}>+ Adicionar com código</button>
+      }} aria-expanded={redeemOpen} aria-controls="journey-redeem-form">{redeemOpen ? "Fechar formulário" : "+ Adicionar com código"}</button>
     </div>
 
-    {redeemOpen && !preview && <form className={styles.redeemPanel} onSubmit={(event) => {
+    {redeemOpen && !preview && <form id="journey-redeem-form" className={styles.redeemPanel} onSubmit={(event) => {
       event.preventDefault();
       void redeem();
     }}>
@@ -163,7 +163,7 @@ export default function JourneysPage() {
       {redeemMessage && <p>{redeemMessage}</p>}
     </form>}
 
-    {redeemOpen && preview && <form className={styles.redeemPanel} onSubmit={(event) => void bootstrap(event)}>
+    {redeemOpen && preview && <form id="journey-redeem-form" className={styles.redeemPanel} onSubmit={(event) => void bootstrap(event)}>
       <div>
         <strong>{preview.title}</strong>
         <span>{preview.classroomName} · informe sua matrícula ou nome completo para vincular esta Jornada ao seu perfil.</span>
@@ -188,19 +188,34 @@ export default function JourneysPage() {
       {redeemMessage && <p>{redeemMessage}</p>}
     </form>}
 
-    <div className={styles.libraryFilters}>
-      <input aria-label="Buscar jornadas" placeholder="Buscar jornadas..." value={query} onChange={(event) => setQuery(event.target.value)} />
-      <select aria-label="Filtrar por turma" value={classroom} onChange={(event) => setClassroom(event.target.value)}>
-        <option value="ALL">Todas as turmas</option>
-        {classrooms.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
-      </select>
-      <select aria-label="Filtrar por estado" value={status} onChange={(event) => setStatus(event.target.value)}>
-        <option value="ALL">Todos os estados</option>
-        <option value="NEW">Não iniciadas</option>
-        <option value="ACTIVE">Em andamento</option>
-        <option value="DONE">Concluídas</option>
-      </select>
-    </div>
+    {journeys.length > 0 && <div className={styles.libraryFilters} role="group" aria-label="Filtros de Jornadas">
+      <label className={styles.libraryFilterField}>
+        <span>Buscar</span>
+        <input aria-label="Buscar jornadas" type="search" placeholder="Nome da Jornada" value={query} onChange={(event) => setQuery(event.target.value)} />
+      </label>
+      <label className={styles.libraryFilterField}>
+        <span>Turma</span>
+        <span className={styles.librarySelect}>
+          <select aria-label="Filtrar por turma" value={classroom} onChange={(event) => setClassroom(event.target.value)}>
+            <option value="ALL">Todas as turmas</option>
+            {classrooms.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+          </select>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+        </span>
+      </label>
+      <label className={styles.libraryFilterField}>
+        <span>Progresso</span>
+        <span className={styles.librarySelect}>
+          <select aria-label="Filtrar por estado" value={status} onChange={(event) => setStatus(event.target.value)}>
+            <option value="ALL">Todos os estados</option>
+            <option value="NEW">Não iniciadas</option>
+            <option value="ACTIVE">Em andamento</option>
+            <option value="DONE">Concluídas</option>
+          </select>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+        </span>
+      </label>
+    </div>}
 
     {state === "loading" && <div className={styles.empty}>Carregando jornadas…</div>}
     {state === "error" && <div className={styles.error}>

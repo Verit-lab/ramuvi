@@ -19,13 +19,16 @@ export function useStudentPreferences() {
   return preferences;
 }
 
-export default function StudentAccessibilityControls({ compact = false }: { compact?: boolean }) {
+export default function StudentAccessibilityControls({ compact = false, settingsPage = false }: { compact?: boolean; settingsPage?: boolean }) {
   const { scale, theme, reducedMotion } = useStudentPreferences();
-  return <section className={compact ? styles.controls + " " + styles.compact : styles.controls} aria-label="Preferências de acessibilidade">
-    <div className={styles.scale} role="group" aria-label="Tamanho do conteúdo">
-      <button type="button" aria-label="Diminuir conteúdo" title="Diminuir conteúdo" disabled={scale === STUDENT_TEXT_LEVELS[0]} onClick={() => updateStudentPreferences({ scale: nextStudentScale(scale, -1) })}>A−</button>
-      <button type="button" title="Restaurar tamanho padrão" aria-label={"Restaurar tamanho padrão, atual " + Math.round(scale * 100) + "%"} onClick={() => updateStudentPreferences({ scale: 1 })}>{Math.round(scale * 100)}%</button>
-      <button type="button" aria-label="Ampliar conteúdo" title="Ampliar conteúdo" disabled={scale === STUDENT_TEXT_LEVELS[STUDENT_TEXT_LEVELS.length - 1]} onClick={() => updateStudentPreferences({ scale: nextStudentScale(scale, 1) })}>A+</button>
+  return <section className={styles.controls + (compact ? " " + styles.compact : "") + (settingsPage ? " " + styles.settings : "")} aria-label="Preferências de acessibilidade">
+    <div className={styles.scaleField}>
+      {settingsPage && <span className={styles.controlLabel}>Tamanho do conteúdo</span>}
+      <div className={styles.scale} role="group" aria-label="Tamanho do conteúdo">
+        <button type="button" aria-label="Diminuir conteúdo" title="Diminuir conteúdo" disabled={scale === STUDENT_TEXT_LEVELS[0]} onClick={() => updateStudentPreferences({ scale: nextStudentScale(scale, -1) })}>A−</button>
+        <button type="button" title="Restaurar tamanho padrão" aria-label={"Restaurar tamanho padrão, atual " + Math.round(scale * 100) + "%"} onClick={() => updateStudentPreferences({ scale: 1 })}>{Math.round(scale * 100)}%</button>
+        <button type="button" aria-label="Ampliar conteúdo" title="Ampliar conteúdo" disabled={scale === STUDENT_TEXT_LEVELS[STUDENT_TEXT_LEVELS.length - 1]} onClick={() => updateStudentPreferences({ scale: nextStudentScale(scale, 1) })}>A+</button>
+      </div>
     </div>
     <label className={styles.field}>
       <span>Tema</span>
