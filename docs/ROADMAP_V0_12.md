@@ -1,4 +1,6 @@
-# Arena Dev v0.12 — Redesign e Active Learning | roadmap
+# Arena Dev v0.12 — Redesign, arquitetura e Active Learning | roadmap
+
+**Baseline atual (25/10/2026):** a [v0.11.0 estável](https://github.com/wesscosta/arena-dev/releases/tag/v0.11.0) está publicada. A v0.12 passa a contemplar **duas frentes igualmente obrigatórias**: (A) auditoria e redesign UI/UX A0–A4 no Figma; (B) auditoria e refatoração arquitetural E0–E4, com DRY, SOLID, KISS, YAGNI, modularização, testes e performance. O diagnóstico técnico é permitido em paralelo ao Figma; alterações de interface continuam condicionadas ao aceite visual. [Plano D12-ENG-01](v0.12/ENGINEERING_AUDIT_AND_REFACTOR_PLAN.md). O estado de 20/10 abaixo é histórico.
 
 **Estado (20/10/2026):** em **auditoria e design Figma-first**, com [issue #48 de acompanhamento](https://github.com/wesscosta/arena-dev/issues/48); não implementado, não homologado. A v0.11 está na pré-release `v0.11.0-rc.7`; a `0.11.0` ainda exige o GO operacional da 11.6.
 **Fonte de verdade:** as decisões de produto e design da v0.12 vivem no Notion ([auditoria Figma-first e gate de implementação](https://app.notion.com/p/3f9f3eb198c38136b319e5807170f8bf)); este arquivo resume o que afeta o repositório.
@@ -8,7 +10,7 @@
 
 ## 0. Gate Figma-first (decisão de 14/10/2026)
 
-A v0.12 é conduzida como **auditoria e design no Figma primeiro**. O código da v0.12 parte da baseline **`v0.11.0-rc.7`** e não recebe mudanças da v0.12 até aprovação explícita do Design System e dos três pilotos. A 11.7 corrigiu defeitos contra o Design System atual (tokens de papel, controles de 44px, contraste AAA de texto); não é a nova linguagem visual e serve de ponto de partida para a migração.
+A v0.12 é conduzida como **auditoria visual Figma-first e auditoria técnica simultâneas**. O código parte da baseline estável **`v0.11.0`** e não recebe mudanças de JSX/CSS vinculadas ao redesign até aprovação explícita do Design System e dos três pilotos. A análise técnica E0/E1 é somente leitura; refatorações internas equivalentes exigem justificativa, testes e autorização própria por fatia, e mudanças de domínio seguem os gates específicos. A 11.7 corrigiu defeitos contra o Design System atual (tokens de papel, controles de 44px, contraste AAA de texto); não é a nova linguagem visual e serve de ponto de partida para a migração.
 
 **Processo:** Figma → revisão de UX/UI → protótipo → aceite explícito → código → testes.
 
@@ -82,7 +84,18 @@ Origem prevista: Plano de Curso + PTD → extração assistida → revisão doce
 
 [Especificação e critérios completos](v0.12/STUDENT_ASSESSMENT_REVIEW_DESIGN.md) · [Issue #121, planejamento e gates](https://github.com/wesscosta/arena-dev/issues/121). A implementação só poderá começar depois da aprovação A0–A4, preservando a [devolutiva simples da v0.11](v0.11/11.13_STUDENT_PUBLISHED_FEEDBACK.md).
 
-## 3. Linha B — Active Learning já previsto anteriormente
+## 2.3 Linha de engenharia — D12-ENG-01 (obrigatória, em paralelo ao design)
+
+A v0.12 não tratará DRY/SOLID como ajustes oportunistas durante a troca de telas: a organização do código tem prioridade equivalente à UI/UX, com diagnóstico e critérios de aceite próprios.
+
+- **E0/E1 (auditoria, sem alteração funcional):** investigar fronteiras de React/Next, backend Java, services/DTOs, estado e efeitos, CSS, dependências, duplicações reais, segurança, performance e acoplamento. Não classificar código apenas pelo número de linhas.
+- **E2 (priorização):** matriz P0–P3 com evidência, responsável, risco, ganho esperado, testes de caracterização e rollback; decisões aprovadas por domínio.
+- **E3 (refatoração aprovada):** simplificar orquestradores, extrair componentes/hooks e serviços, consolidar regras e tokens somente quando houver ganho demonstrado. Alteração de JSX/CSS dependente da nova UI fica bloqueada até A0–A4; migração/API exige decisão específica.
+- **E4 (validação):** comportamento equivalente, CI, backend/integração, Chromium/WebKit, acessibilidade, performance medida, autorização e regressão de dados, rollback e handoff. Incluir reprodução da [issue #36](https://github.com/wesscosta/arena-dev/issues/36) com centenas de turmas/sessões.
+
+**Plano completo:** [D12-ENG-01 — Auditoria arquitetural e refatoração segura](v0.12/ENGINEERING_AUDIT_AND_REFACTOR_PLAN.md). A0/A1 e E0/E1 podem acontecer em paralelo; a implementação ocorre apenas depois dos gates aplicáveis, em PRs pequenas.
+
+## 3. Linha C — Active Learning já previsto anteriormente (discovery separado)
 
 O [handoff v0.9](HANDOFF_V0_9.md) definiu a direção **v0.12 — Active Learning**, que deve ser mantida no planejamento:
 
@@ -117,6 +130,7 @@ As alternativas podem ser reavaliadas e rejeitadas por falta de benefício. Não
 6. Métricas com interpretação correta; evitar números demonstrativos apresentados como dados reais.
 7. Histórico de alterações visuais, CI regressivo, aceite pedagógico e plano de rollback.
 8. Escopo da v0.11 preservado sem novas funcionalidades nessa release.
+9. Frente de engenharia E0–E4 auditada, aprovada e aplicada em fatias com critérios DRY/SOLID, testes de equivalência, revisão de segurança e performance, sem reescrita indiscriminada.
 
 **Insumo da auditoria de 19/10/2026** ([Notion](https://app.notion.com/p/3fef3eb198c381148bdcf38b4cdee1ab)): estado na URL e decomposição do `ArenaApp` junto das telas piloto; SPI de mecânicas ao vivo; tokens em 3 camadas com lint bloqueando literais; identidade clara sem neon e fonte auto-hospedada; presets de gamificação por sessão e metas coletivas; "você foi chamado(a)" só para o sorteado; migrar testes de regex para comportamento.
 
