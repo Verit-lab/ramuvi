@@ -523,7 +523,7 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
                   <input className="input" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Ex.: Estruturas de repetição" />
                 </label>
                 <label>Tipo
-                  <select className="select full" value={resourceKind} onChange={(e) => setResourceKind(e.target.value as "INTERNAL" | "EXTERNAL")}><option value="INTERNAL">Atividade interna</option><option value="EXTERNAL">Atividade / recurso externo</option></select>
+                  <select aria-label="Tipo" className="select full" value={resourceKind} onChange={(e) => setResourceKind(e.target.value as "INTERNAL" | "EXTERNAL")}><option value="INTERNAL">Atividade interna</option><option value="EXTERNAL">Atividade / recurso externo</option></select>
                 </label>
               </div>
               {resourceKind === "EXTERNAL" && <div className="activity-editor-external-fields form-two">
