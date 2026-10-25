@@ -2833,7 +2833,9 @@ html[data-theme="light"] .classroom-lifecycle-confirmation {
 @media(max-width:760px){.activity-editor-advanced>summary{flex-direction:column;align-items:flex-start}.activity-editor-advanced-body{padding:12px}}
 
 /* v0.11: one content geometry for the entire classroom workspace, including nested editors. */
-.classroom-workspace{width:100%;max-width:1480px;min-width:0;margin-inline:auto;box-sizing:border-box}
+/* A navegação ocupa a largura total; o conteúdo usa uma margem interna uniforme. */
+.classroom-workspace{width:100%;max-width:1480px;min-width:0;margin-inline:auto;box-sizing:border-box;--classroom-content-gutter:clamp(1rem,1.8vw,1.5rem)}
+.classroom-workspace > :not(.classroom-section-nav){box-sizing:border-box;padding-inline:var(--classroom-content-gutter);padding-bottom:var(--classroom-content-gutter)}
 .classroom-workspace>*,.classroom-workspace .stack-lg,.classroom-workspace .activity-editor-page{min-width:0}
 .classroom-workspace .activity-editor-page{width:100%;max-width:none;margin:0}
 .classroom-workspace .activity-editor-header{background:transparent;border:0;border-bottom:1px solid var(--ds-border);border-radius:0;padding:1rem 0 1.25rem}

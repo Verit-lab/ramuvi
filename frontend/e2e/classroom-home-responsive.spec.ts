@@ -110,7 +110,20 @@ async function expectInsideViewport(page: Page, testId: string, viewportWidth: n
   expect(box.x + box.width).toBeLessThanOrEqual(viewportWidth + 1);
 }
 
+async function assertClassroomGutter(page: Page, view: string) {
+  const inset = await page.evaluate(() => {
+    const workspace = document.querySelector<HTMLElement>(".classroom-workspace")!;
+    const content = workspace.querySelector<HTMLElement>(":scope > :not(.classroom-section-nav)")!;
+    const style = getComputedStyle(content);
+    return { left: Number.parseFloat(style.paddingLeft), right: Number.parseFloat(style.paddingRight) };
+  });
+  expect(inset.left, `padding à esquerda em ${view}`).toBeGreaterThanOrEqual(15);
+  expect(inset.right, `padding à direita em ${view}`).toBeGreaterThanOrEqual(15);
+  expect(Math.abs(inset.left - inset.right), `padding simétrico em ${view}`).toBeLessThanOrEqual(1);
+}
+
 async function assertHomeLayout(page: Page, viewport: { width: number; height: number }) {
+  await assertClassroomGutter(page, `Início ${viewport.width}px`);
   await expect(page.getByText("INÍCIO DA TURMA", { exact: true })).toBeVisible();
   await expect(page.getByTestId("classroom-session-panel")).toBeVisible();
   await expect(page.getByTestId("classroom-session-action")).toBeVisible();
@@ -373,6 +386,7 @@ test.describe.serial("Classroom Home responsive contract", () => {
           expect(state.profileGap, `profile inset at ${width}px`).toBeGreaterThanOrEqual(-1);
           expect(state.profileGap).toBeLessThanOrEqual(18);
           expect(state.pageOverflow).toBeLessThanOrEqual(1);
+          await assertClassroomGutter(page, `${tabName} ${width}px`);
         }
         await testInfo.attach(`ios-classroom-${width}`, { body: await page.screenshot(), contentType: "image/png" });
       }
