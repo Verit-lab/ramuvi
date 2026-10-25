@@ -1,5 +1,8 @@
 # Arena Dev v0.11 — roadmap e execução incremental
 
+**Status de fechamento (25/10/2026):** desenvolvimento concluído e GO dos oito gates declarado pelo responsável para `v0.11.0`, [fonte de aceite](https://app.notion.com/p/403f3eb198c38111b3f7e0e30f624837). Tag/release condicionadas a CI 3/3 sobre o SHA estável, backup V66 verificado e gate final. Todo registro NO-GO abaixo constitui histórico anterior à decisão de 25/10. A v0.12 permanece Figma-first, sem implementação automática das propostas.
+
+
 **Fechamento de gestão (24/10/2026):** **desenvolvimento funcional CONCLUÍDO**; [issue #37](https://github.com/wesscosta/arena-dev/issues/37) encerrada, main 86fd31b com [CI 3/3](https://github.com/wesscosta/arena-dev/actions/runs/40123538842). A publicação estável permanece **NO-GO**, com oito gates pendentes na [issue #110](https://github.com/wesscosta/arena-dev/issues/110). A PR #108 de teste E2E adicional ainda aguarda integração. Não criar tag/release v0.11.0 antes do GO; v0.12 é Figma-first.
 
 **Estado:** **desenvolvimento v0.11 concluído**, 11.0–11.6 integradas à `main`, merge `2c1e011`; [CI 3/3 aprovado](https://github.com/wesscosta/arena-dev/actions/runs/38098271861). **Homologação operacional NO-GO** até os oito gates. [Fechamento técnico](v0.11/11.6_TECHNICAL_CLOSURE_NO_GO_2026-10-10.md). **v0.12 em separado:** [roadmap de redesign e Active Learning](ROADMAP_V0_12.md).

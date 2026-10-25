@@ -2,6 +2,17 @@
 
 **Arena Dev** é uma plataforma proprietária e self-hosted para condução, participação e gamificação de dinâmicas de sala, com foco em baixa fricção para o professor.
 
+## Estado do produto — 25/10/2026
+
+**v0.11.0 — release estável de fechamento (documento preparado para publicação após CI e gate final).** A aprovação operacional dos oito gates foi declarada pelo responsável em 25/10, registrada no [roteiro de aceite no Notion](https://app.notion.com/p/403f3eb198c38111b3f7e0e30f624837). Os relatórios físicos individuais não foram anexados a este repositório; a declaração do responsável não é observação independente dos testes pelo assistente. Baseline V66, backup/restauração isolada e validação CI no SHA da tag exigidos antes da publicação.
+
+- **Versão:** [v0.11.0](https://github.com/wesscosta/arena-dev/releases/tag/v0.11.0). A rc.8 é candidata histórica, não a baseline estável.
+- **Entregas recentes:** correções Safari/iOS de tabelas Markdown e formulários, leitor/Jornada e navegação mobile, devolutiva publicada ao aluno, editor de Atividades em três etapas fora de modal, importação JSON e cópia de outra turma, Histórico único com filtros XP/Condução e workspace docente unificado/responsivo.
+- **Segurança e operação:** autorização servidor-side, CSP, sincronização/reconexão/revogação no projetor, Flyway V66, suporte a backup e restauração; correção objetiva automática permanece **somente na v0.12**.
+- **Qualidade:** CI Java/PostgreSQL, frontend, TypeScript, build e E2E Chromium/WebKit no SHA final; homologação de campo informada pelo responsável. [Notas completas](docs/RELEASE_0_11.md) · [Índice técnico](docs/v0.11/README.md) · [v0.12 Figma-first](docs/ROADMAP_V0_12.md).
+
+<details><summary>Registro histórico em 24/10/2026, antes do GO do responsável</summary>
+
 ## Estado do produto — 24/10/2026
 
 **v0.11 — desenvolvimento funcional concluído.** A candidata **v0.11.0-rc.8** consolida o trabalho, mas a versão estável v0.11.0 **ainda não foi homologada**. [Notas da v0.11](docs/RELEASE_0_11.md) · [Roadmap](docs/ROADMAP_V0_11.md).
@@ -11,6 +22,8 @@
 - **Qualidade:** testes Java/PostgreSQL, frontend, TypeScript, build e E2E Chromium/WebKit emulados. [Regressão integrada 11.10](docs/v0.11/11.10_RELEASE_INTEGRATED_REGRESSION_2026-10-24.md).
 - **Homologação operacional NO-GO:** oito gates físicos/institucionais PENDING, incluindo Safari/iOS, Android PWA, VoiceOver/zoom, rede com dois projetores, piloto docente, backup/rollback, segurança e GO assinado. [Issue #110](https://github.com/wesscosta/arena-dev/issues/110) · [Roteiro 11.6](docs/v0.11/11.6_OPERATIONAL_HOMOLOGATION_PLAN.md).
 - **Gestão:** desenvolvimento concluído ([issue #37](https://github.com/wesscosta/arena-dev/issues/37)); estabilização pós-rc.8 de Atividades em página com importação JSON ([11.14](docs/v0.11/11.14_ACTIVITIES_GUIDED_EDITOR.md)), largura/padrão de páginas de turma e Histórico combinado XP/Condução ([11.15](docs/v0.11/11.15_CLASSROOM_LAYOUT_AND_HISTORY.md)); redesign v0.12 **Figma-first A0–A4** ([roadmap](docs/ROADMAP_V0_12.md)).
+
+</details>
 
 Comece pelo [status corrente](docs/STATUS_ATUAL.md), [notas de versão](docs/RELEASE_0_11.md) e [índice documental](docs/DOCUMENTATION_INDEX.md).
 

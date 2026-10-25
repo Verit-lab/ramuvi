@@ -1,5 +1,7 @@
 # Estado atual — Arena Dev
 
+**Fechamento preparado em 25/10/2026:** candidata estável `v0.11.0` após declaração explícita de GO e oito gates aprovados pelo responsável; [registro canônico da declaração](https://app.notion.com/p/403f3eb198c38111b3f7e0e30f624837). Confirmar tag e CI 3/3 do SHA final antes de considerar publicada. Os relatos físicos independentes não estão anexados a este repositório. A tabela abaixo preserva o estado histórico da rc.8 e das versões anteriores.
+
 **Fotografia inicial em 20/10/2026, revisada para encerramento funcional em 24/10/2026.** Este é o resumo operacional, não o diário histórico das implementações. Planejamento e decisões de produto vivem no Notion ([Arena Dev — Plataforma de Aprendizagem](https://app.notion.com/p/3bff3eb198c3818fa281fd0abb23b6ce)); este arquivo registra o estado do código.
 
 | Linha | Estado | Fonte de verdade |

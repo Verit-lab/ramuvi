@@ -1,5 +1,10 @@
 # Arena Dev v0.11 — execução e evidências
 
+**Marco de 25/10/2026, fechamento estável `v0.11.0`:** o responsável declarou o GO e os oito gates aprovados, com [registro de origem no Notion](https://app.notion.com/p/403f3eb198c38111b3f7e0e30f624837). O gate formal de release exige ainda CI 3/3 no SHA final, backup restaurável V66 e cópia privada de aceite; evidências de dispositivos e testes físicos não são reproduzidas nem inventadas aqui. [Notas da versão](../RELEASE_0_11.md). O histórico abaixo conserva estados pré-GO e RCs, não os trata como vigentes após a publicação.
+
+**Incrementos de estabilização:** 11.10–11.15, PRs #113–#123; Safari/iOS, leitor, entrada do aluno, Atividades em página com etapas e importação JSON, devolutiva publicada, Histórico unificado e geometria responsiva. Correção automática de questões permanece planejada em v0.12.
+
+
 **Adendo documental (24/10/2026):** [reavaliação dos gates v0.11/v0.12 e próximos incrementos](../PRODUCT_REASSESSMENT_2026-10-24.md). A main avançou até as PRs #100/#101, porém os **oito gates operacionais da 11.6 continuam sem GO**. As melhorias de UX, modo professor e avaliações derivadas da Jornada estão em discovery/Figma e não alteram os critérios de release da 11.6.
 
 **Baseline publicada:** `v0.10.0`. **v0.11 tecnicamente encerrada:** 11.0–11.6 integradas à `main`, último merge `2c1e011`, CI 3/3 aprovado no SHA. **11.6 operacional NO-GO:** testes físicos, piloto, segurança e rollback pendentes. **Sem tag/release estável v0.11.0.** Candidata congelada como pré-release **`v0.11.0-rc.1`** (19/10/2026), alvo dos 8 gates de campo. [Fechamento](11.6_TECHNICAL_CLOSURE_NO_GO_2026-10-10.md) · [v0.12](../ROADMAP_V0_12.md).

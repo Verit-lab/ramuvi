@@ -2893,3 +2893,16 @@ html[data-theme="light"] .classroom-lifecycle-confirmation {
   .activity-editor-review-summary,.activity-editor-review-settings{padding:1rem}
   .activity-editor-settings-fields{grid-template-columns:minmax(0,1fr)}
 }
+
+/* A atualização da PWA não pode interceptar login em telas estreitas.
+   No login o aviso participa do fluxo normal; nas demais telas permanece flutuante. */
+body:has(.teacher-login-shell) .pwa-install-prompt {
+  position: relative;
+  z-index: 1;
+  left: auto;
+  right: auto;
+  top: auto;
+  bottom: auto;
+  transform: none;
+  margin: clamp(1rem, 2vw, 1.5rem) auto 0;
+}
