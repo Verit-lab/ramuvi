@@ -2787,3 +2787,47 @@ html[data-theme="light"] .classroom-lifecycle-confirmation {
 .student-return-secondary{border:1px solid var(--ds-border-control);color:var(--ds-text-primary);background:var(--ds-surface-subtle)}
 .student-return-actions a:focus-visible{outline:2px solid var(--ds-accent-text);outline-offset:3px}
 @media(max-width:600px){.student-return-access{padding:14px}.student-return-access p{font-size:.875rem}}
+
+/* 11.14: guided, non-modal teacher activity editor. All controls use accessible sizes. */
+.activity-editor-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:20px}
+.activity-editor-steps>button{display:flex;align-items:center;gap:10px;min-width:0;min-height:54px;padding:10px 14px;text-align:left;border:1px solid var(--ds-border-control);border-radius:11px;background:var(--ds-surface-raised);color:var(--ds-text-secondary);font:inherit;font-weight:750;font-size:clamp(.79rem,1vw,.92rem);cursor:pointer}
+.activity-editor-steps>button:hover,.activity-editor-steps>button.active{border-color:var(--ds-accent-text);color:var(--ds-text-primary);background:var(--ds-surface-control)}
+.activity-editor-steps>button:focus-visible,.activity-question-methods>button:focus-visible{outline:2px solid var(--ds-accent-text);outline-offset:2px}
+.activity-editor-step-number{display:grid;place-items:center;flex:0 0 28px;height:28px;border:1px solid var(--ds-border-control);border-radius:50%;background:var(--ds-surface-subtle);font-size:.84rem}
+.activity-editor-steps>button.active .activity-editor-step-number{border-color:var(--ds-accent-text);color:var(--ds-accent-text)}
+.activity-editor-flow-indicator{grid-column:1/-1;font-size:.82rem;color:var(--ds-text-secondary);padding:6px 2px}
+.activity-editor-step-intro{margin-bottom:16px}
+.activity-editor-step-intro h3,.activity-editor-review h3{font-size:1.15rem;margin:0 0 6px}
+.activity-editor-step-intro p,.activity-editor-review>p{color:var(--ds-text-secondary);font-size:.9rem;line-height:1.55;margin:0}
+.activity-import-notice{margin-bottom:16px;border:1px solid var(--ds-accent-text);border-radius:9px;padding:12px 14px;color:var(--ds-text-primary);background:var(--ds-surface-control);font-size:.86rem;line-height:1.5}
+.activity-question-methods{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.activity-question-methods>button{display:flex;flex-direction:column;align-items:flex-start;gap:5px;padding:13px;min-height:78px;text-align:left;border:1px solid var(--ds-border-control);border-radius:10px;background:var(--ds-surface-raised);color:var(--ds-text-primary);font:inherit;cursor:pointer}
+.activity-question-methods>button.active{border-color:var(--ds-accent-text);background:var(--ds-surface-control)}
+.activity-question-methods>button strong{font-size:.9rem}
+.activity-question-methods>button span{font-size:.8rem;line-height:1.45;color:var(--ds-text-secondary)}
+.activity-editor-page .question-tool-body label,.activity-editor-page .question-tool-body .form-two label{font-size:.86rem}
+.activity-editor-page .question-tool-body label small,.activity-editor-page .tool-note{font-size:.8rem}
+.activity-editor-page .question-count-grid label span{font-size:.8rem}
+.activity-editor-page .question-preview-card strong{font-size:.85rem}
+.activity-editor-page .question-meta span{font-size:.72rem}
+.activity-editor-page .question-tool-body .button{min-height:44px}
+.activity-editor-review{display:grid;gap:16px;max-width:900px}
+.activity-editor-review dl{display:grid;gap:0;margin:0;border:1px solid var(--ds-border-control);border-radius:11px;overflow:hidden}
+.activity-editor-review dl>div{display:grid;grid-template-columns:minmax(120px,30%) minmax(0,1fr);gap:14px;padding:12px 14px;border-bottom:1px solid var(--ds-border-control);font-size:.88rem}
+.activity-editor-review dl>div:last-child{border-bottom:0}
+.activity-editor-review dt{color:var(--ds-text-secondary)}
+.activity-editor-review dd{margin:0;overflow-wrap:anywhere;font-weight:700}
+.activity-editor-warning{border:1px solid var(--ds-border-control);border-radius:9px;padding:12px;background:var(--ds-surface-raised)}
+.activity-editor-optional{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:16px;border:1px solid var(--ds-border-control);border-radius:11px;background:var(--ds-surface-raised)}
+.activity-editor-optional strong{font-size:.95rem}
+.activity-editor-optional p{margin:5px 0 0;color:var(--ds-text-secondary);font-size:.84rem;line-height:1.5}
+.activity-editor-optional .button{flex:none;min-height:44px}
+@media(max-width:760px){.activity-editor-steps{grid-template-columns:1fr}.activity-editor-steps>button{min-height:48px}.activity-question-methods{grid-template-columns:1fr}.activity-question-methods>button{min-height:60px}.activity-editor-optional{flex-direction:column;align-items:stretch}.activity-editor-review dl>div{grid-template-columns:1fr;gap:3px}.activity-editor-footer{flex-wrap:wrap}.activity-editor-footer .button{min-height:48px}}
+.activity-import-notice{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.activity-import-notice .button{min-height:44px}.activity-editor-question-step[hidden]{display:none!important}#activity-existing-questions{scroll-margin-top:100px}
+
+.activity-editor-advanced{border:1px solid var(--ds-border-control);border-radius:11px;background:var(--ds-surface-raised);min-width:0}
+.activity-editor-advanced>summary{min-height:52px;padding:12px 15px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:.9rem;font-weight:750;list-style-position:inside}
+.activity-editor-advanced>summary small{color:var(--ds-text-secondary);font-size:.79rem;font-weight:400}
+.activity-editor-advanced-body{display:flex;flex-direction:column;gap:13px;padding:14px;border-top:1px solid var(--ds-border-control)}
+.activity-editor-advanced-body .form-two{margin-bottom:0}
+@media(max-width:760px){.activity-editor-advanced>summary{flex-direction:column;align-items:flex-start}.activity-editor-advanced-body{padding:12px}}

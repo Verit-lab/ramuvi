@@ -43,6 +43,16 @@ test("Atividades: editor na página e importação JSON validada sem modal de cr
     await expect(newEditor).toBeVisible();
     await expect(page.getByRole("dialog", { name: "Nova atividade" })).toHaveCount(0);
     await expect(newEditor.getByLabel("Título")).toBeVisible();
+    await expect(newEditor.getByRole("navigation", { name: "Etapas do cadastro" })).toBeVisible();
+    await expect(newEditor.getByRole("button", { name: /Continuar para questões/ })).toBeVisible();
+    await newEditor.getByLabel("Título").fill("Atividade de teste");
+    await newEditor.getByRole("button", { name: /Continuar para questões/ }).click();
+    await expect(newEditor.getByRole("button", { name: /Criar manualmente/ })).toHaveAttribute("aria-pressed", "true");
+    await expect(newEditor.getByText("Como você deseja preparar as questões?")).toBeVisible();
+    await newEditor.getByLabel("Enunciado").fill("Questão ainda em edição");
+    await newEditor.getByRole("button", { name: /Conferir atividade/ }).click();
+    await expect(newEditor.getByRole("heading", { name: "Confira antes de salvar" })).toHaveCount(0);
+    page.once("dialog", dialog => dialog.accept());
     await newEditor.getByRole("button", { name: /Voltar às atividades/ }).click();
     await expect(page.getByRole("heading", { name: "Atividades da turma" })).toBeVisible();
 
@@ -59,8 +69,11 @@ test("Atividades: editor na página e importação JSON validada sem modal de cr
     });
     const editor = page.getByRole("region", { name: "Criação de atividade" });
     await expect(editor).toBeVisible();
-    await editor.getByRole("button", { name: "Geral e XP" }).click();
+    await expect(editor.getByText(/questão importada do arquivo/)).toBeVisible();
+    await editor.getByRole("button", { name: /Dados da atividade/ }).click();
     await expect(editor.getByLabel("Título")).toHaveValue("Revisão SQL");
+    await editor.getByRole("button", { name: /Conferir e salvar/ }).click();
+    await expect(editor.getByRole("heading", { name: "Confira antes de salvar" })).toBeVisible();
     await editor.getByRole("button", { name: "Salvar atividade" }).click();
     await expect(page.getByRole("heading", { name: "Revisão SQL" })).toBeVisible();
 

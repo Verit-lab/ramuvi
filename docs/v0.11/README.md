@@ -49,6 +49,12 @@
 
 - [Defeitos, causas, correções e evidência](11.7_COHERENCE_AA.md): papéis tipográficos, cor da turma por tema, textos abaixo de 12px nos painéis ao vivo. Sem redesign; axe e CSP `wss:` pendentes.
 
+## 11.14 — Editor docente de Atividades guiado (ajuste de estabilização)
+
+- [Diagnóstico das capturas, implementação guiada, importação e critérios de aceite](11.14_ACTIVITIES_GUIDED_EDITOR.md).
+- A criação já migrou para área de página na PR #114; esta fatia esclarece o fluxo em três etapas e separa importação de questões JSON, cópia de atividade entre turmas e roteiro ao vivo opcional.
+- Sem novo domínio, banco, API ou mudança de release estável; continuar validação Safari/iPhone físico da issue #110.
+
 ## 11.13 — Devolutiva publicada para o aluno (ajuste de estabilização)
 
 - [Escopo, contratos existentes, critérios de aceite e limites](11.13_STUDENT_PUBLISHED_FEEDBACK.md).
