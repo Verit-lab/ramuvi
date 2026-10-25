@@ -106,6 +106,29 @@ test("Atividades: editor na página e importação JSON validada sem modal de cr
     await editor.getByRole("button", { name: /Conferir e salvar/ }).click();
     await expect(editor.getByRole("heading", { name: "Confira antes de salvar" })).toBeVisible();
     await expect(editor.getByRole("region", { name: "Configurações da atividade" })).toBeVisible();
+    for (const width of [390, 1024, 1600, 1920, 2560]) {
+      await page.setViewportSize({ width, height: 900 });
+      const geometry = await editor.evaluate((root) => {
+        const steps = root.querySelector<HTMLElement>(".activity-editor-steps")!.getBoundingClientRect();
+        const review = root.querySelector<HTMLElement>(".activity-editor-review")!.getBoundingClientRect();
+        const panels = Array.from(root.querySelector<HTMLElement>(".activity-editor-review-columns")!.children)
+          .map((node) => node.getBoundingClientRect());
+        return {
+          stepsX: steps.x, stepsWidth: steps.width, reviewX: review.x, reviewWidth: review.width,
+          panelY: panels.map((box) => box.y),
+          overflow: document.documentElement.scrollWidth - window.innerWidth,
+        };
+      });
+      expect(Math.abs(geometry.stepsX - geometry.reviewX), `alinhamento da revisão em ${width}px`).toBeLessThanOrEqual(2);
+      expect(Math.abs(geometry.stepsWidth - geometry.reviewWidth), `largura da revisão em ${width}px`).toBeLessThanOrEqual(2);
+      expect(geometry.overflow, `overflow em ${width}px`).toBeLessThanOrEqual(1);
+      if (width > 1120) {
+        expect(Math.abs(geometry.panelY[0] - geometry.panelY[1]), `duas colunas em ${width}px`).toBeLessThanOrEqual(2);
+      } else {
+        expect(geometry.panelY[1], `revisão empilhada em ${width}px`).toBeGreaterThan(geometry.panelY[0]);
+      }
+    }
+    await page.setViewportSize({ width: 1600, height: 900 });
     await expect(editor.getByLabel("XP da entrega")).toHaveValue("10");
     await editor.getByLabel("XP da entrega").fill("15");
     await expect(editor.getByLabel("Bônus no prazo")).toHaveValue("5");
