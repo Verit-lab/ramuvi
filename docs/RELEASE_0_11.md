@@ -6,7 +6,7 @@
 - **Aluno:** Safari/iPhone, tabelas e campos móveis, navegação da Jornada, acessibilidade do ingresso e acesso a turmas já reconhecidas; devolutiva docente publicada após entrega.
 - **Professor:** editor de Atividades em página, Dados → Questões → Conferir e salvar, importação JSON validada sem persistir automaticamente, cópia de outras turmas, correção de largura, padding e uso fluido em desktop e ultrawide.
 - **Histórico:** feed cronológico único com filtros Tudo, XP e Condução, mantendo o ledger de XP e a reversão separada de eventos operacionais.
-- **Robustez:** cards compactos nas telas ultrawide, menu do professor sem obstruir a ação Nova turma, regressões de layout monitoradas no Playwright.
+- **Robustez:** cards compactos nas telas ultrawide, menu do professor sem obstruir a ação Nova turma e aviso de atualização PWA sem bloquear o login em mobile; regressões de layout monitoradas no Playwright.
 - **Escopo preservado:** sem autocorreção/gabarito novo; políticas e motor de correção objetiva [D12-AR-01](v0.12/STUDENT_ASSESSMENT_REVIEW_DESIGN.md) permanecem na v0.12 após design Figma-first.
 
 ## Histórico das candidatas (não representam a versão estável)

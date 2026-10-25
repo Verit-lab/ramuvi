@@ -4,6 +4,33 @@ const apiBaseUrl = process.env.E2E_API_URL ?? "http://127.0.0.1:8080";
 const username = process.env.E2E_TEACHER_USERNAME ?? "professor";
 const password = process.env.E2E_TEACHER_PASSWORD ?? "arena-dev-change-me";
 
+
+test("avisos da PWA não bloqueiam a autenticação do professor no iPhone", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "Entrar", exact: true })).toBeVisible();
+  await page.evaluate(() => {
+    const notice = document.createElement("aside");
+    notice.className = "pwa-install-prompt";
+    notice.setAttribute("role", "status");
+    notice.setAttribute("aria-label", "Atualização da Arena Dev");
+    const message = document.createElement("strong");
+    message.textContent = "Nova versão disponível";
+    notice.append(message);
+    document.body.insertBefore(notice, document.body.firstChild);
+  });
+  const notice = page.getByRole("status", { name: "Atualização da Arena Dev" });
+  await expect(notice).toBeVisible();
+  expect(await notice.evaluate((element) => getComputedStyle(element).position)).toBe("relative");
+  const submit = page.getByRole("button", { name: "Entrar", exact: true });
+  await submit.scrollIntoViewIfNeeded();
+  expect(await submit.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+    return hit === element || element.contains(hit);
+  })).toBe(true);
+});
+
 test("PWA instala shell seguro; offline não reutiliza HTML antigo nem dados da API", async ({ browser }) => {
   const context = await browser.newContext({ serviceWorkers: "allow" });
   const page = await context.newPage();
