@@ -2774,3 +2774,16 @@ html[data-theme="light"] .classroom-lifecycle-confirmation {
  .activity-editor-page input,.activity-editor-page select,.activity-editor-page textarea{max-width:100%;font-size:1rem}
  .page-action-buttons{flex-wrap:wrap}
 }
+
+
+/* v0.11 student return path — a remembered device is a convenience, not login. */
+.student-return-access{display:grid;gap:14px;padding:16px;margin:0 0 20px;border:1px solid var(--ds-border-control);border-radius:14px;background:var(--ds-surface-raised)}
+.student-return-kicker{display:block;color:var(--ds-accent-text);font-size:.72rem;font-weight:800;letter-spacing:.1em}
+.student-return-access h2{margin:4px 0 6px;font-size:clamp(1.1rem,4vw,1.4rem);line-height:1.3}
+.student-return-access p{margin:0;color:var(--ds-text-secondary);font-size:.9rem;line-height:1.5}
+.student-return-actions{display:grid;gap:10px}
+.student-return-actions a{display:flex;align-items:center;justify-content:center;min-height:48px;padding:10px 14px;border-radius:10px;font-size:.94rem;font-weight:750;text-align:center;text-decoration:none}
+.student-return-primary{background:var(--accent);color:var(--accent-contrast,#06110c)}
+.student-return-secondary{border:1px solid var(--ds-border-control);color:var(--ds-text-primary);background:var(--ds-surface-subtle)}
+.student-return-actions a:focus-visible{outline:2px solid var(--ds-accent-text);outline-offset:3px}
+@media(max-width:600px){.student-return-access{padding:14px}.student-return-access p{font-size:.875rem}}
