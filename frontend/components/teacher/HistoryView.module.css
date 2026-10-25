@@ -1,11 +1,11 @@
 .workspace{display:grid;gap:var(--space-5);min-width:0}
 .feed{min-width:0;padding:clamp(1rem,2vw,1.5rem);border:1px solid var(--ds-border);border-radius:var(--radius-lg);background:var(--ds-surface-subtle)}
-.toolbar{display:flex;align-items:center;gap:var(--space-4);justify-content:space-between;flex-wrap:wrap}
-.filters{display:flex;gap:var(--space-2);flex-wrap:wrap}
+.toolbar{display:grid;grid-template-columns:minmax(0,34rem) minmax(0,1fr);align-items:center;gap:var(--space-4)}
+.filters{display:flex;gap:var(--space-2);justify-content:flex-end;flex-wrap:wrap;min-width:0}
 .filters button{min-height:44px;padding:.6rem .8rem;display:flex;align-items:center;gap:.6rem;border:1px solid var(--ds-border);border-radius:var(--radius-md);background:var(--ds-surface-raised);color:var(--ds-text-secondary);font:inherit;font-size:.88rem;font-weight:700;cursor:pointer}
 .filters button.active{border-color:var(--ds-accent-text);color:var(--ds-text-primary);background:var(--ds-surface-control)}
 .filters small{color:var(--ds-text-secondary);font-size:.78rem;font-variant-numeric:tabular-nums}
-.searchField{flex:1 1 20rem;max-width:34rem}
+.searchField{display:block;min-width:0;width:100%;max-width:34rem}
 .searchField input{width:100%;min-height:44px;font-size:1rem;box-sizing:border-box}
 .visuallyHidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
 .feedHeader{display:flex;justify-content:space-between;gap:var(--space-3);margin-top:var(--space-5);padding-bottom:var(--space-3);border-bottom:1px solid var(--ds-border);color:var(--ds-text-secondary);font-size:.83rem}
@@ -29,5 +29,6 @@
 .error{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;margin-top:var(--space-4);padding:var(--space-3);border:1px solid var(--ds-danger-text);border-radius:var(--radius-md);color:var(--ds-danger-text);font-size:.85rem}
 .empty{padding:2rem 1rem;color:var(--ds-text-secondary);text-align:center}
 .filters button:focus-visible,.reverseButton:focus-visible{outline:2px solid var(--ds-accent-text);outline-offset:3px}
-@media(max-width:760px){.searchField{flex-basis:100%;max-width:none}.filters{width:100%}.filters button{flex:1;justify-content:center}.row{grid-template-columns:.75rem minmax(0,1fr)}.scoreActions,.actionLabel{grid-column:2;justify-self:start}.feedHeader{flex-direction:column}.feed{padding:.85rem}}
+@media(max-width:1080px){.toolbar{grid-template-columns:minmax(0,1fr)}.searchField{max-width:none}.filters{width:100%;justify-content:flex-start}}
+@media(max-width:760px){.filters button{flex:1;justify-content:center}.row{grid-template-columns:.75rem minmax(0,1fr)}.scoreActions,.actionLabel{grid-column:2;justify-self:start}.feedHeader{flex-direction:column}.feed{padding:.85rem}}
 @media(max-width:380px){.filters{display:grid;grid-template-columns:1fr}.filters button{justify-content:space-between}}

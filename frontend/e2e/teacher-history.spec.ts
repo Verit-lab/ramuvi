@@ -146,7 +146,24 @@ test("the classroom history is one chronological feed with XP and conduction fil
     await expect(history.getByText("Ainda não há lançamentos de XP.")).toBeVisible();
     await filters.getByRole("button", { name: /Ações e dinâmicas/ }).click();
     await expect(history.getByText("Ainda não há ações registradas nesta turma.")).toBeVisible();
-    await expect(history.getByRole("searchbox", { name: "Buscar no histórico" })).toBeVisible();
+    const search = history.getByRole("searchbox", { name: "Buscar no histórico" });
+    await expect(search).toBeVisible();
+    const desktopSearch = await search.boundingBox();
+    const desktopFilters = await filters.boundingBox();
+    expect(desktopSearch).not.toBeNull();
+    expect(desktopFilters).not.toBeNull();
+    if (desktopSearch && desktopFilters) {
+      expect(desktopSearch.x + desktopSearch.width).toBeLessThanOrEqual(desktopFilters.x + 2);
+      expect(Math.abs(desktopSearch.y - desktopFilters.y)).toBeLessThanOrEqual(3);
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mobileSearch = await search.boundingBox();
+    const mobileFilters = await filters.boundingBox();
+    expect(mobileSearch).not.toBeNull();
+    expect(mobileFilters).not.toBeNull();
+    if (mobileSearch && mobileFilters) {
+      expect(mobileSearch.y + mobileSearch.height).toBeLessThanOrEqual(mobileFilters.y + 2);
+    }
     await expect(history.getByRole("button", { name: /Atualizar eventos/ })).toBeEnabled();
     await filters.getByRole("button", { name: /Tudo/ }).click();
     await expect(history.getByText("Nenhum evento foi registrado nesta turma.")).toBeVisible();

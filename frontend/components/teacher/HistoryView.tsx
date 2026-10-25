@@ -68,6 +68,11 @@ export function HistoryView({ classroomId, events, students, onReverse }: {
       </header>
       <div className={styles.feed}>
         <div className={styles.toolbar}>
+          <label className={styles.searchField}>
+            <span className={styles.visuallyHidden}>Buscar no histórico</span>
+            <input type="search" className="input" value={query} onChange={(event) => setQuery(event.target.value)}
+              placeholder="Buscar aluno, dinâmica, categoria ou descrição..." />
+          </label>
           <div className={styles.filters} role="group" aria-label="Filtrar eventos do histórico">
             {filters.map((option) => (
               <button key={option.value} type="button" className={filter === option.value ? styles.active : ""}
@@ -76,11 +81,6 @@ export function HistoryView({ classroomId, events, students, onReverse }: {
               </button>
             ))}
           </div>
-          <label className={styles.searchField}>
-            <span className={styles.visuallyHidden}>Buscar no histórico</span>
-            <input type="search" className="input" value={query} onChange={(event) => setQuery(event.target.value)}
-              placeholder="Buscar aluno, dinâmica, categoria ou descrição..." />
-          </label>
         </div>
         {error && <div className={styles.error} role="alert">
           Os eventos de condução não puderam ser carregados. Os lançamentos de XP continuam disponíveis. {error}
