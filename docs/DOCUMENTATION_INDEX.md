@@ -2,7 +2,12 @@
 
 Este índice separa **fontes operacionais vigentes**, **propostas**, **diários de execução** e **histórico**. Um plano não é evidência de implementação; testes locais não são autorização de release.
 
-## Leitura atual (v0.10 publicada)
+## Leitura atual — v0.11.0
+
+- [Release v0.11.0](RELEASE_0_11.md), [status](STATUS_ATUAL.md), [execução/homologação](v0.11/README.md), [aceite operacional](https://app.notion.com/p/403f3eb198c38111b3f7e0e30f624837). A autorização dos oito gates foi declarada pelo responsável em 25/10; a CI e o gate formal são pré-requisitos para o tag final.
+- [Roadmap v0.12](ROADMAP_V0_12.md): auditoria e aprovação Figma A0–A4 antes de implementar o redesign.
+
+## Leitura histórica (v0.10 publicada)
 
 | Pergunta | Fonte |
 | --- | --- |

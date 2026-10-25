@@ -1,4 +1,16 @@
-# Arena Dev v0.11.0 — Material Presentation e Jornada (pré-release)
+# Arena Dev v0.11.0 — Materiais, Jornada, Atividades e experiência docente
+
+**Fechamento estável de 25/10/2026:** a v0.11 consolida o leitor seguro da Biblioteca/Projetor, controle e reconciliação de seção, segurança e responsividade mobile, Jornada com liberação gradual, Atividades com cadastro guiado e importação, entrega/devolutiva ao aluno, Histórico XP/Condução e layout do professor uniforme. Baseline Flyway **V66**, sem novas migrações no ajuste final. A autorização dos oito gates foi **declarada pelo responsável** e registrada no [roteiro de homologação](https://app.notion.com/p/403f3eb198c38111b3f7e0e30f624837); os relatórios físicos detalhados não foram anexados ao repositório. Publicação condicionada à CI 3/3 do SHA final, backup/restauração e gate formal.
+
+## Estabilização pós-rc.8
+- **Aluno:** Safari/iPhone, tabelas e campos móveis, navegação da Jornada, acessibilidade do ingresso e acesso a turmas já reconhecidas; devolutiva docente publicada após entrega.
+- **Professor:** editor de Atividades em página, Dados → Questões → Conferir e salvar, importação JSON validada sem persistir automaticamente, cópia de outras turmas, correção de largura, padding e uso fluido em desktop e ultrawide.
+- **Histórico:** feed cronológico único com filtros Tudo, XP e Condução, mantendo o ledger de XP e a reversão separada de eventos operacionais.
+- **Robustez:** cards compactos nas telas ultrawide, menu do professor sem obstruir a ação Nova turma, regressões de layout monitoradas no Playwright.
+- **Escopo preservado:** sem autocorreção/gabarito novo; políticas e motor de correção objetiva [D12-AR-01](v0.12/STUDENT_ASSESSMENT_REVIEW_DESIGN.md) permanecem na v0.12 após design Figma-first.
+
+## Histórico das candidatas (não representam a versão estável)
+
 
 **Situação em 24/10/2026:** desenvolvimento funcional encerrado; candidata **v0.11.0-rc.8**, com homologação operacional **NO-GO**. A rc.8 substitui rc.7 como candidata técnica após a tag no SHA validado. A última versão estável permanece v0.10.0.
 
