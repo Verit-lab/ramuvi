@@ -25,6 +25,10 @@
 
 **Atenção:** LOC e quantidade de arquivos são indicadores de investigação, nunca prova de baixa qualidade. Todo diagnóstico deverá citar o método afetado, dependências, evidência reproduzível, risco e ganho esperado.
 
+## Legado da auditoria SOLID de 20/10/2026: revalidar, não presumir
+
+A [auditoria SOLID documentada no Notion](https://app.notion.com/p/3fff3eb198c38142964fe89bb9be729e) identificou, em uma versão anterior à v0.11.0 final, hipóteses e achados sobre perda de grupos não salvos, concorrência no Boss/roteiro, reconciliação de palco no aluno, tipos de eventos de WebSocket, fallbacks que mascaram corrupção de estado, duplicação de leitura de opções, ciclos de dependência Java e testes de frontend excessivamente apoiados em regex de código. Para E0/E1, **inspecionar e reproduzir cada achado no commit da v0.11.0 estável** antes de classificá-lo como problema vigente. Vários módulos e contagens podem ter evoluído após 20/10; não converter automaticamente achados históricos em pendências reais.
+
 ## Etapas E0–E4 e artefatos
 
 | Etapa | Entregável | Gate |
