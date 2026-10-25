@@ -232,6 +232,75 @@ test("professor entra na Arena e participante reconecta à sessão", async ({
   }
 });
 
+// Regression for a real iPhone report: Accessibility popover previously
+// anchored to the trigger and overflowed left of the viewport. Chrome + WebKit
+// CI emulate viewports; the physical Safari gate stays separately required.
+test("atividade no celular: acessibilidade por ícone não sai da tela", async ({ browser }) => {
+  const { api, csrfHeaders } = await authenticatedApi();
+  const participantContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const participantPage = await participantContext.newPage();
+  try {
+    const fixture = await createSessionFixture(api, csrfHeaders, "ACCESS");
+    const activity = await api.post("/api/activities", {
+      headers: csrfHeaders,
+      data: {
+        classroomId: fixture.classroom.id,
+        title: "Acessibilidade QA " + fixture.suffix,
+        topic: "Acessibilidade",
+        points: 10,
+        onTimeBonus: 0,
+        resource: { kind: "INTERNAL", platform: null, url: null },
+        questions: [{
+          id: null, type: "OPEN", statement: "Descreva o que aprendeu.",
+          difficulty: "EASY", points: 10, options: [],
+          answer: null, expectedAnswer: "Resumo",
+          explanation: null, code: null, language: null,
+          expectedOutcome: null, evaluationCriteria: [],
+        }],
+      },
+    });
+    await expectOk(activity, "Atividade para teste mobile");
+    await joinParticipant(participantPage, fixture.joinCode.code, fixture.classroomName, fixture.registration, fixture.studentNickname);
+    await participantPage.getByRole("button", { name: "Iniciar atividade" }).click();
+    await expect(participantPage.getByRole("dialog", { name: /Atividade Acessibilidade QA/ })).toBeVisible();
+    const toggle = participantPage.locator('summary[aria-label="Acessibilidade"]');
+    await expect(toggle).toBeVisible();
+    await expect(toggle).toHaveAttribute("title", "Ajustar acessibilidade");
+
+    for (const width of [320, 390, 430]) {
+      await participantPage.setViewportSize({ width, height: 844 });
+      await toggle.click();
+      const panel = participantPage.getByRole("group", { name: "Opções de acessibilidade da atividade" });
+      await expect(panel).toBeVisible();
+      await expect(panel.getByLabel("Tema da interface")).toBeVisible();
+      const bounds = await panel.evaluate((el) => {
+        const rect = el.getBoundingClientRect();
+        return {
+          left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom,
+          width: document.documentElement.clientWidth, height: window.innerHeight,
+        };
+      });
+      expect(bounds.left, "menu não pode sair pela esquerda").toBeGreaterThanOrEqual(0);
+      expect(bounds.right, "menu não pode sair pela direita").toBeLessThanOrEqual(bounds.width + 1);
+      expect(bounds.top).toBeGreaterThanOrEqual(0);
+      expect(bounds.bottom, "menu deve ser totalmente visível ou rolável na área disponível").toBeLessThanOrEqual(bounds.height + 1);
+      // The panel must not expand the application horizontally.
+      const pageOverflow = await participantPage.evaluate(() =>
+        document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(pageOverflow).toBeLessThanOrEqual(2);
+      await participantPage.keyboard.press("Escape");
+      await expect(panel).not.toBeVisible();
+      await expect(toggle).toBeFocused();
+    }
+    await toggle.click();
+    await participantPage.getByRole("button", { name: "Fechar atividade" }).click();
+    await expect(participantPage.getByRole("group", { name: "Opções de acessibilidade da atividade" })).not.toBeVisible();
+  } finally {
+    await participantContext.close();
+    await api.dispose();
+  }
+});
+
 test("roteiro preparado sincroniza slide, questão, nuvem, votação e timeline", async ({
   browser,
 }) => {
