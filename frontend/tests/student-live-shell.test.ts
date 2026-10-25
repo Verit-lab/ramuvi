@@ -14,6 +14,8 @@ test("student live shell discovers sessions but keeps the public join runtime sh
   assert.match(live, /<StudentJoinFlow embedded/);
   assert.match(join, /initialCode/);
   assert.match(join, /!embedded && <div className="student-brand"/);
+  assert.match(join, /!embedded && <Link href="\/learn\/live"/);
+  assert.match(join, /Já entrei neste dispositivo/);
 });
 
 test("study home surfaces live context without turning journeys into live access", () => {

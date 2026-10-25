@@ -2774,3 +2774,8 @@ html[data-theme="light"] .classroom-lifecycle-confirmation {
  .activity-editor-page input,.activity-editor-page select,.activity-editor-page textarea{max-width:100%;font-size:1rem}
  .page-action-buttons{flex-wrap:wrap}
 }
+
+/* Returning learners can discover their current lessons without re-entering a code. */
+.student-returning-link{display:flex;align-items:center;justify-content:center;min-height:48px;padding:10px 12px;border:1px solid var(--ds-border-control);border-radius:12px;background:var(--ds-surface-raised);color:var(--ds-accent-text);font-size:13px;font-weight:750;line-height:1.45;text-decoration:none;text-align:center}
+.student-returning-link:hover{background:var(--ds-surface-hover)}
+.student-returning-link:focus-visible{outline:2px solid var(--ds-accent-text);outline-offset:3px}

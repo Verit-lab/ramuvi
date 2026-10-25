@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import StudentActivitiesPanel from "@/components/StudentActivitiesPanel";
 import { useStudentPreferences } from "@/components/student/StudentAccessibilityControls";
 import { recordSelfConfidence, type SelfConfidence } from "@/lib/learner-confidence-api";
@@ -486,7 +487,8 @@ export default function StudentJoinFlow({ embedded = false, initialCode = "" }: 
         {!session && (
           <form className="student-join-form" onSubmit={submitCode}>
             <div className="student-join-heading"><span>ENTRAR</span><h1>Código de acesso</h1><p>Use o código da aula ao vivo ou o código J-... de uma Jornada compartilhada pelo professor.</p></div>
-            <input className="student-code-input" aria-label="Código da sessão" value={code} onChange={(event) => setCode(event.target.value.toUpperCase())} maxLength={8} placeholder="ABC123" autoFocus />
+            {!embedded && <Link href="/learn/live" className="student-returning-link">Já entrei neste dispositivo. Ver minhas aulas</Link>}
+            <input className="student-code-input" aria-label="Código da sessão" value={code} onChange={(event) => setCode(event.target.value.toUpperCase())} maxLength={8} placeholder="ABC123" />
             <button className="student-primary-button" disabled={loading || !code.trim()}>{loading ? "Validando..." : "Continuar"}</button>
           </form>
         )}
