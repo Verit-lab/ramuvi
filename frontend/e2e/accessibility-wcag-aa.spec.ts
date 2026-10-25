@@ -77,7 +77,7 @@ async function createJourneyWithCode() {
   expect(second.ok()).toBe(true);
   const { id: secondResourceId } = await second.json() as { id: string };
   const journey = await api.post("/api/journeys", { data: { classroomId: classroom.id, title: "Jornada WCAG", stages: [{
-    title: "Etapa 01. Verificar ambiente", unlockRule: "IMMEDIATE", completionRule: "MANUAL", sectionTitle: "Pré-requisitos",
+    title: "Sistema de Gerenciamento de Banco de Dados — SGBD: preparação do ambiente e verificação de dependências", unlockRule: "IMMEDIATE", completionRule: "MANUAL", sectionTitle: "Pré-requisitos",
     itemType: "CONTENT", learningResourceId: resourceId }, {
     title: "Etapa 02. Configurar o editor", unlockRule: "IMMEDIATE", completionRule: "MANUAL", sectionTitle: "Pré-requisitos",
     itemType: "CONTENT", learningResourceId: secondResourceId }] }, headers });
@@ -255,16 +255,72 @@ test("prévia do professor ocupa a coluna, setas navegam e Editar jornada abre a
 
   // Arrow keys walk the Journey like the footer links.
   await page.keyboard.press("ArrowLeft");
-  await expect(page.getByText("Conteúdo 1 de 2")).toBeVisible();
+  await expect(page.getByLabel("Conteúdo 1 de 2 na Jornada")).toHaveText("1 de 2");
   await page.keyboard.press("ArrowRight");
   await expect(page).toHaveURL(new RegExp(`/content/${nextContentId}\\?preview=teacher`));
   await expect(page.getByRole("heading", { level: 1, name: "Configurar o editor" })).toBeVisible();
   await page.keyboard.press("ArrowLeft");
   await expect(page).toHaveURL(new RegExp(`/content/${contentId}\\?preview=teacher`));
-  await expect(page.getByText("Conteúdo 1 de 2")).toBeVisible();
+  await expect(page.getByLabel("Conteúdo 1 de 2 na Jornada")).toHaveText("1 de 2");
 
   await page.getByRole("link", { name: "Editar jornada" }).click();
   await expect(page.getByRole("textbox", { name: "Título", exact: true })).toHaveValue("Jornada WCAG");
   await expect(page).not.toHaveURL(/journey=/);
   await context.close();
+});
+
+
+// Emulation catches layout regressions; physical Safari remains a manual gate.
+test("leitor da Jornada: cabeçalho compacto e rodapé truncado no celular", async ({ browser }) => {
+  const { journeyId, contentId, nextContentId } = await createJourneyWithCode();
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const page = await context.newPage();
+  try {
+    await page.goto("/");
+    await page.getByLabel("Usuário").fill(teacherUsername);
+    await page.getByLabel("Senha").fill(teacherPassword);
+    await page.getByRole("button", { name: "Entrar", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Abrir menu do professor" })).toBeVisible();
+    await page.goto("/learn/journeys/" + journeyId + "/content/" + nextContentId + "?preview=teacher");
+
+    const nav = page.locator('header[aria-label="Navegação do conteúdo"]');
+    await expect(nav.getByRole("link", { name: /Voltar à Jornada/ })).toBeVisible();
+    await expect(nav.getByLabel("Conteúdo 2 de 2 na Jornada")).toHaveText("2 de 2");
+    const footer = page.locator('footer[aria-label="Navegação entre conteúdos"]');
+    const previous = footer.getByRole("link", { name: /Conteúdo anterior: Sistema de Gerenciamento/ });
+    await expect(previous).toBeVisible();
+    await expect(footer.getByRole("link", { name: /Voltar à Jornada/ })).toBeVisible();
+
+    for (const width of [390, 320]) {
+      await page.setViewportSize({ width, height: 844 });
+      const metrics = await page.evaluate(() => {
+        const head = document.querySelector('header[aria-label="Navegação do conteúdo"]')!;
+        const previousTitle = document.querySelector('footer[aria-label="Navegação entre conteúdos"] a span:last-child span:last-child')!;
+        const back = head.querySelector("a")!;
+        const previousLink = document.querySelector('footer[aria-label="Navegação entre conteúdos"] a')!;
+        return {
+          overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          headerHeight: head.getBoundingClientRect().height,
+          backTargetHeight: back.getBoundingClientRect().height,
+          previousTargetHeight: previousLink.getBoundingClientRect().height,
+          whiteSpace: getComputedStyle(previousTitle).whiteSpace,
+          ellipsis: getComputedStyle(previousTitle).textOverflow,
+          titleOverflows: previousTitle.scrollWidth > previousTitle.clientWidth,
+        };
+      });
+      expect(metrics.overflow).toBeLessThanOrEqual(2);
+      expect(metrics.headerHeight).toBeLessThanOrEqual(100);
+      expect(metrics.backTargetHeight).toBeGreaterThanOrEqual(44);
+      expect(metrics.previousTargetHeight).toBeGreaterThanOrEqual(44);
+      expect(metrics.whiteSpace).toBe("nowrap");
+      expect(metrics.ellipsis).toBe("ellipsis");
+      expect(metrics.titleOverflows).toBe(true);
+    }
+    await previous.click();
+    await expect(page).toHaveURL(new RegExp("/content/" + contentId));
+    await expect(page.getByLabel("Conteúdo 1 de 2 na Jornada")).toHaveText("1 de 2");
+    await expect(page.locator('footer[aria-label="Navegação entre conteúdos"]').getByRole("link", { name: /Próximo conteúdo/ })).toBeVisible();
+  } finally {
+    await context.close();
+  }
 });
