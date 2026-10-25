@@ -82,18 +82,55 @@ export default function ContentReaderPage() {
 
   return <div className={styles.readerView}>
     {teacherPreview && <div className={styles.teacherPreviewBar}><span><strong>Prévia do professor</strong> · leitura sem registrar progresso</span><a href={`/?journey=${journeyId}`}>Editar jornada</a></div>}
-    <header className={styles.readerTopbar}>
-      <Link href={`/learn/journeys/${journeyId}${teacherPreview ? "?preview=teacher" : ""}`}>← {navigation.moduleTitle}</Link>
-      <span>Conteúdo {navigation.position} de {navigation.total}</span>
+    <header className={styles.readerTopbar} aria-label="Navegação do conteúdo">
+      <div className={styles.readerTopbarRow}>
+        <Link className={styles.readerBackLink}
+          href={"/learn/journeys/" + journeyId + (teacherPreview ? "?preview=teacher" : "")}
+          aria-label={"Voltar à Jornada — " + navigation.moduleTitle}>
+          <span className={styles.readerBackArrow} aria-hidden="true">←</span>
+          <span>Voltar à Jornada</span>
+        </Link>
+        <span className={styles.readerPositionBadge}
+          aria-label={"Conteúdo " + navigation.position + " de " + navigation.total + " na Jornada"}
+          title={"Posição na Jornada: " + navigation.position + " de " + navigation.total}>
+          {navigation.position} de {navigation.total}
+        </span>
+      </div>
+      <div className={styles.readerPositionTrack} aria-hidden="true">
+        <span style={{ width: (navigation.total ? Math.min(100, navigation.position / navigation.total * 100) : 0) + "%" }} />
+      </div>
     </header>
     <div className={styles.readerScaled}>
       <div className={styles.readerHeading}><h1>{data.content.title}</h1>{studyExcerpt(data.content.description, 220) && !isExcerptOfBody(data.content.description, data.content.body) && <p>{studyExcerpt(data.content.description, 220)}</p>}</div>
       <JourneyContentReader content={data.content} />
     </div>
     {error && <div className={styles.error}>{error}</div>}
-    <footer className={styles.readerFooter}>
-      <div>{previousHref ? <Link href={previousHref} aria-keyshortcuts="ArrowLeft"><span>Anterior</span><strong>← {navigation.previous!.title}</strong></Link> : <span />}</div>
-      <div>{teacherPreview ? (navigation.next ? <Link className={styles.readerPrimary} href={`/learn/journeys/${journeyId}/content/${navigation.next.id}?preview=teacher`} aria-keyshortcuts="ArrowRight">Próximo conteúdo →</Link> : <Link className={styles.readerPrimary} href={`/learn/journeys/${journeyId}?preview=teacher`}>Voltar à jornada</Link>) : data.content.state === "COMPLETED" ? (navigation.next && navigation.next.state !== "LOCKED" ? <Link className={styles.readerPrimary} href={`/learn/journeys/${journeyId}/content/${navigation.next.id}`} aria-keyshortcuts="ArrowRight">Próximo conteúdo →</Link> : <Link className={styles.readerPrimary} href={`/learn/journeys/${journeyId}`}>Voltar à jornada</Link>) : <button type="button" className={styles.readerPrimary} disabled={completing} onClick={conclude}>{completing ? "Concluindo…" : navigation.next ? "Concluir e continuar →" : "Concluir conteúdo"}</button>}</div>
+    <footer className={styles.readerFooter} aria-label="Navegação entre conteúdos">
+      <div className={styles.readerFooterPrevious}>
+        {previousHref && <Link className={styles.readerPreviousLink} href={previousHref}
+          title={navigation.previous!.title} aria-label={"Conteúdo anterior: " + navigation.previous!.title}
+          aria-keyshortcuts="ArrowLeft">
+          <span className={styles.readerPreviousArrow} aria-hidden="true">←</span>
+          <span className={styles.readerPreviousText}>
+            <span className={styles.readerPreviousMeta}>Conteúdo anterior</span>
+            <span className={styles.readerPreviousTitle}>{navigation.previous!.title}</span>
+          </span>
+        </Link>}
+      </div>
+      <div className={styles.readerFooterAction}>
+        {teacherPreview
+          ? (navigation.next
+            ? <Link className={styles.readerPrimary} href={"/learn/journeys/" + journeyId + "/content/" + navigation.next.id + "?preview=teacher"} aria-keyshortcuts="ArrowRight">Próximo conteúdo <span aria-hidden="true">→</span></Link>
+            : <Link className={styles.readerPrimary} href={"/learn/journeys/" + journeyId + "?preview=teacher"}>Voltar à Jornada</Link>)
+          : data.content.state === "COMPLETED"
+            ? (navigation.next && navigation.next.state !== "LOCKED"
+              ? <Link className={styles.readerPrimary} href={"/learn/journeys/" + journeyId + "/content/" + navigation.next.id} aria-keyshortcuts="ArrowRight">Próximo conteúdo <span aria-hidden="true">→</span></Link>
+              : <Link className={styles.readerPrimary} href={"/learn/journeys/" + journeyId}>Voltar à Jornada</Link>)
+            : <button type="button" className={styles.readerPrimary} disabled={completing} onClick={conclude}>
+              {completing ? "Concluindo…" : navigation.next && navigation.next.state !== "LOCKED" ? "Concluir e continuar" : "Concluir conteúdo"}
+              {!completing && navigation.next && navigation.next.state !== "LOCKED" && <span aria-hidden="true">→</span>}
+            </button>}
+      </div>
     </footer>
   </div>;
 }
