@@ -49,7 +49,7 @@ test("Atividades: editor na página e importação JSON validada sem modal de cr
     await newEditor.getByRole("button", { name: /Continuar para questões/ }).click();
     await expect(newEditor.getByRole("button", { name: /Criar manualmente/ })).toHaveAttribute("aria-pressed", "true");
     await expect(newEditor.getByText("Como você deseja preparar as questões?")).toBeVisible();
-    await newEditor.getByLabel("Enunciado").fill("Questão ainda em edição");
+    await newEditor.getByRole("textbox", { name: "Enunciado", exact: true }).fill("Questão ainda em edição");
     await newEditor.getByRole("button", { name: /Conferir atividade/ }).click();
     await expect(newEditor.getByRole("heading", { name: "Confira antes de salvar" })).toHaveCount(0);
     page.once("dialog", dialog => dialog.accept());

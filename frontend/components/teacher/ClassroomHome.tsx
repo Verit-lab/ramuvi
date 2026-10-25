@@ -15,17 +15,15 @@ const CLASSROOM_TABS: { id: ClassroomTab; label: string; icon: ArenaGlyphName }[
   { id: "history", label: "Histórico", icon: "history" },
 ];
 
-export function ClassroomWorkspaceTabs({ tab, onTabChange, studentCount, activityCount, eventCount }: {
+export function ClassroomWorkspaceTabs({ tab, onTabChange, studentCount, activityCount }: {
   tab: ClassroomTab;
   onTabChange: (tab: ClassroomTab) => void;
   studentCount: number;
   activityCount: number;
-  eventCount: number;
 }) {
   const badgeFor = (id: ClassroomTab) => {
     if (id === "students") return studentCount;
     if (id === "activities") return activityCount;
-    if (id === "history") return eventCount;
     return undefined;
   };
 

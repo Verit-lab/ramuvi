@@ -49,6 +49,13 @@
 
 - [Defeitos, causas, correções e evidência](11.7_COHERENCE_AA.md): papéis tipográficos, cor da turma por tema, textos abaixo de 12px nos painéis ao vivo. Sem redesign; axe e CSP `wss:` pendentes.
 
+## 11.15 — Consistência entre páginas e Histórico único
+
+- [Auditoria de larguras e superfícies, projeção XP/Condução, critérios de aceite](11.15_CLASSROOM_LAYOUT_AND_HISTORY.md).
+- Contêiner compartilhado para páginas de turma e padronização de cabeçalho/área útil em Atividades, Jornadas e Histórico.
+- Histórico unificado com filtros Tudo, XP e Condução, busca e ordenação cronológica. Reversão disponível somente no ledger XP.
+- Sem migração, sem alterações em backend/XP e sem autorizar o redesign amplo v0.12.
+
 ## 11.14 — Editor docente de Atividades guiado (ajuste de estabilização)
 
 - [Diagnóstico das capturas, implementação guiada, importação e critérios de aceite](11.14_ACTIVITIES_GUIDED_EDITOR.md).

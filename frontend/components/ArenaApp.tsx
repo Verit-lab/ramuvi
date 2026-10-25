@@ -498,13 +498,12 @@ export default function ArenaApp() {
 
           {view === "classroom" && (
             activeClassroom ? (
-              <div className="stack-lg">
+              <div className="classroom-workspace stack-lg">
                 <ClassroomWorkspaceTabs
                   tab={classroomTab}
                   onTabChange={setClassroomTab}
                   studentCount={classStudents.length}
                   activityCount={data.activities.filter((activity) => activity.classroomId === activeClassroom.id).length}
-                  eventCount={data.scoreEvents.filter((event) => event.classroomId === activeClassroom.id).length}
                 />
                 {classroomTab === "home" && (
                   <ClassroomHome

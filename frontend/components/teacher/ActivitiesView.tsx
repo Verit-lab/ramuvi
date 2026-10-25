@@ -419,7 +419,7 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
   return (
     <div className="stack-lg">
       {!editorOpen && <>
-      <div className="page-action-bar">
+      <header className="page-action-bar classroom-page-header">
         <div>
           <span className="eyebrow accent">CONTEXTO DA TURMA</span>
           <h2>{classroomName}</h2>
@@ -432,7 +432,7 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
           <button type="button" className="button" onClick={openImport}>Copiar de outra turma</button>
           <button className="button primary" onClick={openNewActivity}>+ Nova atividade</button>
         </div>
-      </div>
+      </header>
 
       <div className="metrics-grid activity-metrics">
         <Metric label="Atividades" value={classActivities.length.toString()} hint="nesta turma" />
@@ -490,7 +490,7 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
       </>}
 
       {editorOpen && <section className="activity-editor-page" aria-label={activityId ? "Editor de atividade" : "Criação de atividade"}>
-        <header className="activity-editor-header">
+        <header className="activity-editor-header classroom-page-header">
           <button type="button" className="button ghost activity-editor-back" onClick={closeEditor}>← Voltar às atividades</button>
           <div>
             <span className="eyebrow accent">ATIVIDADES · {classroomName}</span>

@@ -489,3 +489,10 @@
 .releaseCountField{display:inline-flex;align-items:center;gap:.45rem;flex-wrap:wrap}
 .releaseCountField input{width:5.25rem;min-height:44px;padding:.5rem;border:1px solid var(--border);border-radius:.55rem;background:var(--surface);color:var(--text);font:inherit}
 .releaseCountField span{color:var(--muted);font-size:.8rem}
+
+/* The journey catalog and content editor share the classroom's width instead of a fixed card viewport. */
+.workspace{min-width:0;width:100%}
+.grid{grid-template-columns:minmax(14rem,.45fr) minmax(0,1.8fr);min-width:0;gap:1.25rem}
+.header{padding-block:1rem 1.35rem}
+.editor{min-width:0;padding:clamp(1rem,1.7vw,1.5rem)}
+@media(max-width:70rem){.grid{grid-template-columns:minmax(0,1fr)}.catalog{grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr))}}

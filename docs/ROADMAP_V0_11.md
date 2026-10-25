@@ -18,6 +18,10 @@ A correção automática e a liberação escolhida pelo professor continuam na [
 
 A [PR #114](https://github.com/wesscosta/arena-dev/pull/114) já entregou o editor principal fora de modal e a importação JSON. O piloto mostrou a UI antiga ainda visível em captura e excesso de etapas aninhadas na criação de questões. A fatia [11.14](v0.11/11.14_ACTIVITIES_GUIDED_EDITOR.md) aprimora a **mesma área de página**, com três passos claros, roteiro opcional, importação visível, proteção de rascunho e configurações não essenciais recolhidas. Sem inventar backend nem antecipar o redesign Figma-first da v0.12. CI + Safari físico obrigatórios; v0.11 segue NO-GO operacional.
 
+## Estabilização 11.15 — páginas de turma e Histórico unificado
+
+O piloto identificou largura isolada de 1120px e superfícies artificiais no editor de Atividades, além de UX inconsistente com Jornada e duas listas de Histórico. O ajuste [11.15](v0.11/11.15_CLASSROOM_LAYOUT_AND_HISTORY.md) uniformiza a geometria da turma (1480px fluido), cabeçalho/editor, áreas de Jornada e implementa um feed cronológico com filtros Tudo/XP/Condução e uma busca, preservando auditabilidade de ScoreEvent e SessionEvent. Sem migration ou nova regra docente; os oito gates #110 continuam necessários.
+
 ## Objetivo geral
 
 Evoluir a Arena e a Jornada sem duplicar material canônico, conservando a separação **estudo sequencial (Jornada)** / **atividades e entregas** / **condução síncrona (Arena)**. Consolidar conteúdo, autoria, proveniência e uso pedagógico de materiais e questões de forma progressiva, mantendo interfaces acessíveis e estado autoritativo.

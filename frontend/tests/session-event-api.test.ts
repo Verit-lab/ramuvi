@@ -67,11 +67,15 @@ test("loads one session timeline in chronological endpoint order", async () => {
   assert.deepEqual(await fetchSessionEventsBySession("session-a"), []);
 });
 
-test("keeps operational timeline separate from reversible XP history", () => {
-  assert.match(arenaSource, /id: "timeline", label: "Linha do tempo"/);
-  assert.match(arenaSource, /id: "xp", label: "Histórico de XP"/);
-  assert.match(arenaSource, /<SessionTimeline classroomId=\{classroomId\} \/>/);
-  assert.match(arenaSource, /onReverse/);
+test("merges classroom operational events and XP in one history with safe filters", () => {
+  const history = readFileSync(resolve(process.cwd(), "components/teacher/HistoryView.tsx"), "utf8");
+  assert.match(arenaSource, /<HistoryView/);
+  assert.match(history, /mergeClassroomHistory\(events, operational, studentsById\)/);
+  assert.match(history, /filterClassroomHistory\(entries, filter, query\)/);
+  assert.match(history, /"all", label: "Tudo"/);
+  assert.match(history, /"xp", label: "XP dos alunos"/);
+  assert.match(history, /"actions", label: "Ações e dinâmicas"/);
+  assert.match(history, /onReverse\(entry.score.id\)/);
 });
 
 test("timeline exposes actor context without announcing the whole historical list", () => {
