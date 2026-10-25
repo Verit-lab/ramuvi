@@ -71,6 +71,30 @@ export default function StudentActivitiesPanel({ access, disabled }: { access: S
   const activeActivityRef = useRef<ParticipantActivity | null>(null);
   const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
   const itemIdsRef = useRef(new Map<string, string>());
+  const accessibilityMenuRef = useRef<HTMLDetailsElement>(null);
+
+  useEffect(() => {
+    // The native <details> trigger remains keyboard accessible. Close when
+    // tapping outside or pressing Escape, without changing the active answer.
+    function closeOnOutside(event: PointerEvent) {
+      const menu = accessibilityMenuRef.current;
+      if (menu?.open && event.target instanceof Node && !menu.contains(event.target)) menu.open = false;
+    }
+    function closeOnEscape(event: KeyboardEvent) {
+      const menu = accessibilityMenuRef.current;
+      if (event.key === "Escape" && menu?.open) {
+        menu.open = false;
+        menu.querySelector("summary")?.focus();
+        event.stopPropagation();
+      }
+    }
+    document.addEventListener("pointerdown", closeOnOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutside);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, []);
 
   async function load() {
     setBusy(true); setError("");
@@ -311,7 +335,18 @@ export default function StudentActivitiesPanel({ access, disabled }: { access: S
               <div className={styles.runnerBrand}><span>A</span><div><strong>ARENA DEV</strong><small>{access.classroomName}</small></div></div>
               <div className={styles.runnerTitle}><span>ATIVIDADE</span><strong>{open.title}</strong></div>
               <div className={styles.runnerActions}>
-                <details className={styles.runnerAccessibility}><summary>Acessibilidade</summary><div className={styles.runnerAccessibilityPanel}><StudentAccessibilityControls compact /></div></details>
+                <details ref={accessibilityMenuRef} className={styles.runnerAccessibility}>
+                  <summary aria-label="Acessibilidade" title="Ajustar acessibilidade">
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="4" r="2" />
+                      <path d="M4 9h16M12 9v5M12 14l-5 7M12 14l5 7" />
+                    </svg>
+                  </summary>
+                  <div className={styles.runnerAccessibilityPanel} role="group" aria-label="Opções de acessibilidade da atividade">
+                    <strong className={styles.runnerAccessibilityTitle}>Aparência e acessibilidade</strong>
+                    <StudentAccessibilityControls settingsPage />
+                  </div>
+                </details>
                 <DialogCloseButton className={styles.runnerClose} onClick={() => void closeActivity()} label="Fechar atividade" />
               </div>
             </header>

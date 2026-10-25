@@ -46,8 +46,9 @@ test("controles são compartilhados entre estudo e participação e persistem em
   assert.match(joinCss, /student-join-card:has\(\[aria-modal="true"\]\)\{zoom:1\}/);
   assert.match(joinCss, /student-join-card \[aria-modal="true"\] main\{zoom:var\(--student-content-scale,1\)/);
   const activity = readFileSync(resolve(process.cwd(), "components/StudentActivitiesPanel.tsx"), "utf8");
-  assert.match(activity, /<StudentAccessibilityControls compact/);
-  assert.match(activity, /<summary>Acessibilidade<\/summary>/);
+  assert.match(activity, /<StudentAccessibilityControls settingsPage/);
+  assert.match(activity, /<summary aria-label="Acessibilidade" title="Ajustar acessibilidade">/);
+  assert.match(activity, /className=\{styles\.runnerAccessibilityPanel\} role="group" aria-label="Opções de acessibilidade da atividade"/);
   assert.match(join, /Sair da sessão/);
   assert.match(profile, /await revokeRememberedDevice\(profile.studyToken\)/);
   assert.match(profile, /Esquecer este dispositivo/);
