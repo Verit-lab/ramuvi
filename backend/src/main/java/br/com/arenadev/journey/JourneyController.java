@@ -67,6 +67,14 @@ public class JourneyController {
         return service.updateStageContent(id, stageId, input);
     }
 
+    @GetMapping("/{id}/markdown")
+    public JourneyService.MarkdownView markdown(@PathVariable UUID id) { return service.markdown(id); }
+
+    @PutMapping("/{id}/markdown")
+    public JourneyService.JourneyView updateMarkdown(@PathVariable UUID id, @RequestBody JourneyService.MarkdownInput input) {
+        return service.updateMarkdown(id, input);
+    }
+
     @GetMapping("/{id}/progress/{enrollmentId}")
     public JourneyService.JourneyProgressView progress(@PathVariable UUID id, @PathVariable UUID enrollmentId) {
         return service.progress(id, enrollmentId);

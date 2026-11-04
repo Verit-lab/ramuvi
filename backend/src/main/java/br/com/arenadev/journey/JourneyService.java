@@ -168,8 +168,66 @@ public class JourneyService {
         JourneyStage stage = requireStage(journey, stageId);
         LearningResource resource = learningResourceService.updateBody(requireStageResource(stage).getId(), input == null ? null : input.body());
         stage.materializeResource(resource);
+        journey.update(journey.getTitle(), journey.getDescription());
         return toView(journey);
     }
+
+    /** Consolidated Markdown, preserving existing stage identifiers and progress. */
+    @Transactional(readOnly = true)
+    public MarkdownView markdown(UUID journeyId) {
+        Journey journey = requireJourney(journeyId);
+        List<JourneyStage> stages = journey.getStages();
+        List<JourneyMarkdown.Part> parts = new ArrayList<>();
+        List<String> modules = new ArrayList<>();
+        for (JourneyStage stage : stages) {
+            LearningResource resource = requireStageResource(stage);
+            if (resource.getFormat() != br.com.arenadev.content.LearningResourceFormat.MARKDOWN)
+                throw new IllegalStateException("O editor consolidado aceita apenas conteúdos Markdown. Edite os demais conteúdos individualmente.");
+            parts.add(new JourneyMarkdown.Part(stage.getTitle(), resource.getBody()));
+            modules.add(stage.getSection() == null ? "Jornada principal" : stage.getSection().getTitle());
+        }
+        return new MarkdownView(JourneyMarkdown.render(journey.getTitle(), journey.getDescription(), parts, modules), journey.getUpdatedAt());
+    }
+
+    @Transactional
+    public JourneyView updateMarkdown(UUID journeyId, MarkdownInput input) {
+        Journey journey = requireJourney(journeyId);
+        if (journey.getStatus() == JourneyStatus.ARCHIVED)
+            throw new IllegalStateException("Jornada arquivada não pode ser alterada.");
+        if (input == null || input.expectedUpdatedAt() == null || !input.expectedUpdatedAt().equals(journey.getUpdatedAt()))
+            throw new IllegalStateException("A jornada foi modificada. Reabra o Markdown para evitar sobrescrever alterações de outra edição.");
+        List<JourneyStage> stages = journey.getStages();
+        List<JourneyMarkdown.Part> parts = JourneyMarkdown.parse(input.markdown(), stages.stream().map(JourneyStage::getTitle).toList());
+        Map<UUID, String> sharedBodies = new HashMap<>();
+        for (int i = 0; i < stages.size(); i++) {
+            LearningResource resource = requireStageResource(stages.get(i));
+            if (resource.getFormat() != br.com.arenadev.content.LearningResourceFormat.MARKDOWN)
+                throw new IllegalStateException("Todos os conteúdos precisam estar em Markdown.");
+            String prior = sharedBodies.putIfAbsent(resource.getId(), parts.get(i).body());
+            if (prior != null && !prior.equals(parts.get(i).body()))
+                throw new IllegalStateException("Duas etapas compartilham o mesmo material com textos diferentes. Corrija-as individualmente.");
+        }
+        Map<UUID, LearningResource> changed = new HashMap<>();
+        for (int i = 0; i < stages.size(); i++) {
+            JourneyStage stage = stages.get(i);
+            LearningResource old = requireStageResource(stage);
+            String body = parts.get(i).body();
+            if (!body.equals(old.getBody().strip()) && !changed.containsKey(old.getId())) {
+                changed.put(old.getId(), learningResourceService.updateBody(old.getId(), body));
+            }
+        }
+        if (!changed.isEmpty()) {
+            for (JourneyStage stage : stages) {
+                LearningResource changedResource = changed.get(requireStageResource(stage).getId());
+                if (changedResource != null) stage.materializeResource(changedResource);
+            }
+            journey.update(journey.getTitle(), journey.getDescription());
+        }
+        return toView(journey);
+    }
+
+    public record MarkdownView(String markdown, Instant updatedAt) {}
+    public record MarkdownInput(String markdown, Instant expectedUpdatedAt) {}
 
     private LearningResource requireStageResource(JourneyStage stage) {
         if (stage.getLearningResource() == null) {

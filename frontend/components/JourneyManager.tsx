@@ -17,6 +17,8 @@ import {
   disableJourneyRedemption,
   fetchJourneyStageContent,
   updateJourneyStageContent,
+  fetchJourneyMarkdown,
+  updateJourneyMarkdown,
   type JourneyRedemptionCode,
   type JourneyStageContent,
   type Journey,
@@ -104,6 +106,11 @@ export default function JourneyManager({ classroomId, classroomName, notify, ini
   const [libraryResources, setLibraryResources] = useState<LearningResource[]>([]);
   const [libraryQuery, setLibraryQuery] = useState("");
   const [libraryTargetModule, setLibraryTargetModule] = useState<string | undefined>();
+  const [markdownEditor, setMarkdownEditor] = useState<{ body: string; original: string; updatedAt: string } | null>(null);
+  const markdownDialogRef = useRef<HTMLElement>(null);
+  const markdownCloseRef = useRef<HTMLButtonElement>(null);
+  useBodyScrollLock(Boolean(markdownEditor));
+  useModalKeyboard(Boolean(markdownEditor), () => setMarkdownEditor(null), markdownDialogRef, markdownCloseRef);
   const [textEditor, setTextEditor] = useState<{ content: JourneyStageContent; body: string } | null>(null);
   const textDialogRef = useRef<HTMLElement>(null);
   const textCloseRef = useRef<HTMLButtonElement>(null);
@@ -376,6 +383,32 @@ export default function JourneyManager({ classroomId, classroomName, notify, ini
     } finally { setBusy(false); }
   }
 
+  async function openMarkdownEditor() {
+    if (!draft?.id || busy) return;
+    setBusy(true);
+    try {
+      const document = await fetchJourneyMarkdown(draft.id);
+      setMarkdownEditor({ body: document.markdown, original: document.markdown, updatedAt: document.updatedAt });
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Não foi possível carregar o Markdown da jornada.", "error");
+    } finally { setBusy(false); }
+  }
+
+  async function saveMarkdown() {
+    if (!draft?.id || !markdownEditor || busy || markdownEditor.body === markdownEditor.original) return;
+    if (!window.confirm("Substituir os textos dos conteúdos correspondentes? O progresso dos alunos será preservado e os materiais vinculados à Biblioteca poderão ser atualizados.")) return;
+    setBusy(true);
+    try {
+      const saved = await updateJourneyMarkdown(draft.id, markdownEditor.body, markdownEditor.updatedAt);
+      setJourneys(current => current.map(journey => journey.id === saved.id ? saved : journey));
+      setDraft(toDraft(saved));
+      setMarkdownEditor(null);
+      notify("Markdown atualizado. A estrutura e o progresso dos alunos foram preservados.");
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Não foi possível atualizar o Markdown.", "error");
+    } finally { setBusy(false); }
+  }
+
   async function openTextEditor(stageId: string) {
     if (!draft?.id || busy) return;
     setBusy(true);
@@ -490,6 +523,7 @@ export default function JourneyManager({ classroomId, classroomName, notify, ini
                       : "Rascunho editável. Organize módulos e conteúdos; as regras de progressão são aplicadas automaticamente."}</p>
                 </div>
                 <div className={styles.actions}>
+                  {draft.id && draft.status !== "ARCHIVED" && <button className={styles.secondary} type="button" disabled={busy} onClick={() => void openMarkdownEditor()}>Editar Markdown completo</button>}
                   {draft.id && <a className={styles.secondary} href={`/learn/journeys/${draft.id}?preview=teacher`}>Ver jornada</a>}
                   {draft.status !== "ARCHIVED" && <button className={styles.primary} type="button" disabled={busy} onClick={() => void save()}>{busy ? "Salvando..." : published ? "Salvar alterações" : "Salvar"}</button>}
                   {draft.id && draft.status === "DRAFT" && <button className={styles.ghost} type="button" disabled={busy || draft.stages.length === 0} onClick={() => void publish()}>Publicar</button>}
@@ -665,6 +699,19 @@ export default function JourneyManager({ classroomId, classroomName, notify, ini
                 </button>
               ))}
               {libraryResources.length===0 && <p className={styles.libraryEmpty}>Sua Biblioteca ainda está vazia.</p>}
+            </div>
+          </section>
+        </div>
+      )}
+      {markdownEditor && (
+        <div className={styles.libraryBackdrop}>
+          <section ref={markdownDialogRef} tabIndex={-1} className={`${styles.libraryPicker} ${styles.markdownEditor}`} role="dialog" aria-modal="true" aria-labelledby="journey-markdown-title">
+            <header><div><span>JORNADA · CÓDIGO-FONTE DO CONTEÚDO</span><h3 id="journey-markdown-title">Markdown completo da jornada</h3><p>Visualize, copie ou substitua o Markdown. Preserve os títulos H3 e a ordem dos conteúdos para manter os vínculos e o progresso dos alunos. Títulos da jornada e módulos devem ser alterados no editor de estrutura.</p></div><DialogCloseButton ref={markdownCloseRef} label="Fechar Markdown" onClick={() => setMarkdownEditor(null)} /></header>
+            <textarea className={styles.markdownEditorBody} aria-label="Markdown completo" spellCheck={false} value={markdownEditor.body} onChange={event => setMarkdownEditor(current => current ? { ...current, body: event.target.value } : current)} />
+            <div className={styles.textEditorActions}>
+              <button className={styles.secondary} type="button" onClick={() => navigator.clipboard.writeText(markdownEditor.body).then(() => notify("Markdown copiado.")).catch(() => notify("Não foi possível copiar.", "error"))}>Copiar Markdown</button>
+              <button className={styles.secondary} type="button" onClick={() => setMarkdownEditor(null)}>Cancelar</button>
+              <button className={styles.primary} type="button" disabled={busy || markdownEditor.body === markdownEditor.original || !markdownEditor.body.trim()} onClick={() => void saveMarkdown()}>{busy ? "Salvando..." : "Substituir Markdown"}</button>
             </div>
           </section>
         </div>

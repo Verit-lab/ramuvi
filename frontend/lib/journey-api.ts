@@ -121,6 +121,18 @@ export function refreshJourneyStageResource(journeyId: string, stageId: string) 
   );
 }
 
+export type JourneyMarkdownDocument = { markdown: string; updatedAt: string };
+
+export function fetchJourneyMarkdown(journeyId: string) {
+  return journeyRequest<JourneyMarkdownDocument>(`/api/journeys/${encodeURIComponent(journeyId)}/markdown`);
+}
+
+export function updateJourneyMarkdown(journeyId: string, markdown: string, expectedUpdatedAt: string) {
+  return journeyRequest<Journey>(`/api/journeys/${encodeURIComponent(journeyId)}/markdown`, {
+    method: "PUT", body: JSON.stringify({ markdown, expectedUpdatedAt }),
+  });
+}
+
 export type JourneyStageContent = {
   stageId: string;
   title: string;
