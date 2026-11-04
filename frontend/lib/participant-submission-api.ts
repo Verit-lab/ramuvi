@@ -33,6 +33,7 @@ export type ParticipantActivity = {
   submissionStatus: "NOT_STARTED" | "IN_PROGRESS" | "SUBMITTED" | "UNDER_REVIEW" | "GRADED" | "RETURNED";
   startedAt: string | null;
   submittedAt: string | null;
+  activityUpdatedAt: string;
   items: ParticipantSubmissionItem[];
   publishedFeedback: string | null;
   feedbackPublishedAt: string | null;

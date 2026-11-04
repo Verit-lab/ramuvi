@@ -74,10 +74,15 @@ public class ActivityService {
         if (!Objects.equals(limit, activity.getTimeLimitMinutes()) && activityRepository.hasSubmissions(activity.getId())) {
             throw new IllegalStateException("O tempo da atividade não pode mudar depois que um aluno iniciou a tentativa.");
         }
+        // Question IDs and their answer keys are referenced by existing submissions.
+        // Until per-attempt immutable snapshots exist, only metadata can be revised safely.
+        if (activityRepository.hasSubmissions(activity.getId()) && !sameQuestions(activity, input.questions())) {
+            throw new IllegalStateException("Esta atividade já possui tentativas. Questões e gabaritos não podem ser alterados sem versionamento das tentativas; revise apenas os dados gerais.");
+        }
         apply(activity, input);
         activity.configureIndividualOrder(options, questions);
         activity.configureTimeLimit(limit);
-        applyQuestions(activity, input.questions());
+        if (!activityRepository.hasSubmissions(activity.getId())) applyQuestions(activity, input.questions());
         return toView(activity);
     }
 
@@ -157,6 +162,31 @@ public class ActivityService {
                 .filter(question -> question.getId() != null && existing.containsKey(question.getId()) && !usedExisting.contains(question.getId()))
                 .toList();
         stale.forEach(activity::removeQuestion);
+    }
+
+    private boolean sameQuestions(Activity activity, List<QuestionInput> inputs) {
+        List<QuestionInput> requested = inputs == null ? List.of() : inputs;
+        List<ActivityQuestion> current = activity.getQuestions();
+        if (requested.size() != current.size()) return false;
+        for (int i = 0; i < requested.size(); i++) {
+            QuestionInput input = requested.get(i);
+            ActivityQuestion question = current.get(i);
+            if (input == null || !Objects.equals(input.id(), question.getId().toString())
+                    || input.type() != question.getType()
+                    || !Objects.equals(input.statement() == null ? null : input.statement().trim(), question.getStatement())
+                    || input.difficulty() != question.getDifficulty() || input.points() != question.getPoints()
+                    || !Objects.equals(writeJson(input.options()), question.getOptionsJson())
+                    || !Objects.equals(writeJson(input.answer()), question.getAnswerJson())
+                    || !Objects.equals(clean(input.expectedAnswer()), question.getExpectedAnswer())
+                    || !Objects.equals(clean(input.explanation()), question.getExplanation())
+                    || !Objects.equals(input.code(), question.getCode())
+                    || !Objects.equals(clean(input.language()), question.getLanguage())
+                    || !Objects.equals(clean(input.expectedOutcome()), question.getExpectedOutcome())
+                    || !Objects.equals(writeJson(input.evaluationCriteria()), question.getEvaluationCriteriaJson())) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private ActivityQuestion cloneQuestion(ActivityQuestion source, int position) {

@@ -48,6 +48,15 @@ function genericItem(activity: ParticipantActivity) {
   return activity.items.find((item) => item.questionId == null);
 }
 
+/** Updates after a student's first attempt are informative; they never reset the submission. */
+function hasActivityUpdate(activity: ParticipantActivity) {
+  const baseline = activity.startedAt;
+  if (!baseline || !activity.activityUpdatedAt) return false;
+  const changed = Date.parse(activity.activityUpdatedAt);
+  const started = Date.parse(baseline);
+  return Number.isFinite(changed) && Number.isFinite(started) && changed > started;
+}
+
 function statusLabel(status: ParticipantActivity["submissionStatus"]) {
   return ({
     NOT_STARTED: "Não iniciada",
@@ -323,9 +332,9 @@ export default function StudentActivitiesPanel({ access, disabled }: { access: S
     {error && <div className={styles.error} role="alert">{error}</div>}
 
     <div className={styles.list}>
-      {activities.map((activity) => <article className={styles.card} key={activity.id}>
+      {activities.map((activity) => <article className={`${styles.card} ${hasActivityUpdate(activity) ? styles.updatedCard : ""}`} key={activity.id}>
         <div className={styles.cardHead}>
-          <div><h3>{activity.title}</h3><div className={styles.meta}><span>{activity.topic || "Atividade"}</span><span>{activity.points} XP previsto</span><span>{activity.questions.length} questão(ões)</span>{activity.timeLimitMinutes != null && <span>{activity.timeLimitMinutes} min após iniciar</span>}</div></div>
+          <div><h3>{activity.title}{hasActivityUpdate(activity) && <span className={styles.updateDot} role="img" aria-label="Atividade atualizada após o início da sua tentativa" title="Esta atividade foi atualizada após o início da sua tentativa" />}</h3><div className={styles.meta}><span>{activity.topic || "Atividade"}</span><span>{activity.points} XP previsto</span><span>{activity.questions.length} questão(ões)</span>{activity.timeLimitMinutes != null && <span>{activity.timeLimitMinutes} min após iniciar</span>}</div></div>
           <span className={styles.status}>{statusLabel(activity.submissionStatus)}</span>
         </div>
         <button type="button" className={`${styles.action} ${activity.submissionStatus === "NOT_STARTED" ? styles.primary : ""}`} disabled={disabled || busy} onClick={() => void openActivity(activity)}>
