@@ -19,6 +19,9 @@ import {
   updateJourneyStageContent,
   fetchJourneyMarkdown,
   updateJourneyMarkdown,
+  previewJourneyReconstruction,
+  reconstructJourneyMarkdown,
+  type JourneyReconstructionPreview,
   type JourneyRedemptionCode,
   type JourneyStageContent,
   type Journey,
@@ -108,7 +111,7 @@ export default function JourneyManager({ classroomId, classroomName, notify, ini
   const [libraryTargetModule, setLibraryTargetModule] = useState<string | undefined>();
   const [markdownEditor, setMarkdownEditor] = useState<{ body: string; original: string; updatedAt: string } | null>(null);
   const [markdownMode, setMarkdownMode] = useState<"update" | "rebuild">("update");
-  const [rebuildPreview, setRebuildPreview] = useState<{ source: string; draft: ContentDraft } | null>(null);
+  const [rebuildPreview, setRebuildPreview] = useState<{ source: string; preview: JourneyReconstructionPreview } | null>(null);
   const markdownDialogRef = useRef<HTMLElement>(null);
   const markdownCloseRef = useRef<HTMLButtonElement>(null);
   useBodyScrollLock(Boolean(markdownEditor));
@@ -418,42 +421,38 @@ export default function JourneyManager({ classroomId, classroomName, notify, ini
     setBusy(true);
     setRebuildPreview(null);
     try {
-      const proposed = await previewContentIngestion({
-        classroomId,
-        source: "MARKDOWN",
-        title: `${draft.title} (versão revisada)`,
-        sourceLabel: `Reconstrução de ${draft.title}`,
-        content: markdownEditor.body,
-      });
-      if (!proposed.sections.length || !proposed.sections.some((section) => section.items.length)) {
-        throw new Error("Nenhum módulo com conteúdo foi identificado. Revise a hierarquia H2/H3.");
-      }
-      setRebuildPreview({ source: markdownEditor.body, draft: proposed });
+      const preview = await previewJourneyReconstruction(
+        draft.id, markdownEditor.body, markdownEditor.updatedAt,
+      );
+      setRebuildPreview({ source: markdownEditor.body, preview });
     } catch (error) {
       notify(error instanceof Error ? error.message : "Não foi possível analisar a nova estrutura.", "error");
     } finally { setBusy(false); }
   }
 
-  async function createReconstructedJourney() {
-    if (!draft?.id || !markdownEditor || !rebuildPreview || rebuildPreview.source !== markdownEditor.body || busy) return;
-    const proposed = rebuildPreview.draft;
-    const proposedCount = proposed.sections.reduce((sum, section) => sum + section.items.length, 0);
-    if (!proposedCount || proposed.sections.some((section) => !section.title.trim() ||
-        section.items.some((item) => !item.title.trim()))) {
-      notify("Revise os módulos e conteúdos sem título antes da reconstrução.", "error");
-      return;
-    }
-    if (!window.confirm(`Criar outra jornada em RASCUNHO com ${proposed.sections.length} módulos e ${proposedCount} conteúdos? A jornada atual não será modificada, arquivada nem apagada. Progresso e vínculos antigos permanecerão apenas nela; a nova versão começará sem progresso de alunos.`)) return;
+  async function rebuildExistingJourney() {
+    if (!draft?.id || !markdownEditor || !rebuildPreview ||
+        rebuildPreview.source !== markdownEditor.body || busy ||
+        !rebuildPreview.preview.canApply) return;
+    const plan = rebuildPreview.preview;
+    if (!window.confirm(
+      `Reconstruir a jornada ORIGINAL com ${plan.newModules} módulos e ${plan.newContents} conteúdos? ` +
+      `Serão mantidos ${plan.reusedContents} conteúdos identificados, criados ${plan.addedContents} e removidos ${plan.removedContents} sem progresso. ` +
+      "O ID, a publicação e o progresso das etapas preservadas serão mantidos. " +
+      "Esta operação altera a estrutura da jornada atual e não cria outra. Continuar?"
+    )) return;
     setBusy(true);
     try {
-      const created = await materializeContentDraft(classroomId, proposed);
-      setJourneys((current) => [created, ...current.filter((journey) => journey.id !== created.id)]);
-      setDraft(toDraft(created));
+      const saved = await reconstructJourneyMarkdown(
+        draft.id, markdownEditor.body, markdownEditor.updatedAt,
+      );
+      setJourneys((current) => current.map((journey) => journey.id === saved.id ? saved : journey));
+      setDraft(toDraft(saved));
       setMarkdownEditor(null);
       setRebuildPreview(null);
-      notify("Nova jornada criada como rascunho. Revise, publique e só então arquive a versão anterior, se desejar.");
+      notify("Estrutura da jornada original reconstruída. IDs correspondentes e progresso preservados.");
     } catch (error) {
-      notify(error instanceof Error ? error.message : "Não foi possível criar a nova versão.", "error");
+      notify(error instanceof Error ? error.message : "Não foi possível reconstruir a jornada.", "error");
     } finally { setBusy(false); }
   }
 
@@ -754,40 +753,45 @@ export default function JourneyManager({ classroomId, classroomName, notify, ini
       {markdownEditor && (
         <div className={styles.libraryBackdrop}>
           <section ref={markdownDialogRef} tabIndex={-1} className={`${styles.libraryPicker} ${styles.markdownEditor}`} role="dialog" aria-modal="true" aria-labelledby="journey-markdown-title">
-            <header><div><span>JORNADA · MARKDOWN</span><h3 id="journey-markdown-title">Markdown completo da jornada</h3><p>Escolha como aplicar o material. A atualização preserva os conteúdos existentes; a reconstrução cria uma nova jornada em rascunho.</p></div><DialogCloseButton ref={markdownCloseRef} label="Fechar Markdown" onClick={() => setMarkdownEditor(null)} /></header>
+            <header><div><span>JORNADA · MARKDOWN</span><h3 id="journey-markdown-title">Markdown completo da jornada</h3><p>Escolha como aplicar o material. A atualização preserva a estrutura; a reconstrução reorganiza esta mesma jornada, mediante prévia e validação de progresso.</p></div><DialogCloseButton ref={markdownCloseRef} label="Fechar Markdown" onClick={() => setMarkdownEditor(null)} /></header>
             <div className={styles.markdownModes} role="group" aria-label="Tipo de importação do Markdown">
               <button type="button" className={markdownMode === "update" ? styles.markdownModeActive : styles.markdownMode} onClick={() => { setMarkdownMode("update"); setRebuildPreview(null); }} aria-pressed={markdownMode === "update"}>Atualizar conteúdos</button>
               <button type="button" className={markdownMode === "rebuild" ? styles.markdownModeActive : styles.markdownMode} onClick={() => { setMarkdownMode("rebuild"); setRebuildPreview(null); }} aria-pressed={markdownMode === "rebuild"}>Reconstruir jornada</button>
             </div>
             <p className={styles.markdownModeHint}>{markdownMode === "update"
               ? "Mantém módulos, títulos, ordem, IDs e progresso. Exige os mesmos conteúdos H3; materiais compartilhados da Biblioteca podem ser atualizados."
-              : "Cria uma jornada independente. H1 = título, H2 = módulo, H3 = conteúdo. A jornada original e o progresso permanecem intactos; a nova não herda progresso nem vínculos."}</p>
+              : "Reconstrói a jornada original, mantendo seu ID e status. H1 = título, H2 = módulo, H3 = conteúdo. Etapas correspondentes mantêm seus IDs; remoções com progresso ou atividade vinculada são bloqueadas."}</p>
             <textarea className={styles.markdownEditorBody} aria-label="Markdown completo" spellCheck={false} value={markdownEditor.body} onChange={event => { setRebuildPreview(null); setMarkdownEditor(current => current ? { ...current, body: event.target.value } : current); }} />
             {markdownMode === "rebuild" && rebuildPreview && (
               <div className={styles.markdownRebuildPreview} aria-live="polite">
                 <h4>Prévia da reconstrução</h4>
                 <div className={styles.markdownCompare} aria-label="Comparação das estruturas">
-                  <div><span>Jornada atual</span><strong>{new Set((selected?.stages ?? []).map(stage => stage.sectionId || stage.sectionTitle || "__default")).size} módulos</strong><strong>{selected?.stages.length ?? 0} conteúdos</strong></div>
-                  <div><span>Nova jornada (rascunho)</span><strong>{rebuildPreview.draft.sections.length} módulos</strong><strong>{rebuildPreview.draft.sections.reduce((sum, section) => sum + section.items.length, 0)} conteúdos</strong></div>
+                  <div><span>Jornada atual</span><strong>{rebuildPreview.preview.previousModules} módulos</strong><strong>{rebuildPreview.preview.previousContents} conteúdos</strong></div>
+                  <div><span>Mesma jornada (reconstruída)</span><strong>{rebuildPreview.preview.newModules} módulos</strong><strong>{rebuildPreview.preview.newContents} conteúdos</strong></div>
                 </div>
-                <p>Esta operação não migra progresso, atividades ou vínculos com a Biblioteca. Nenhum conteúdo da versão anterior será excluído.</p>
+                <p>{rebuildPreview.preview.reusedContents} conteúdos preservam o ID; {rebuildPreview.preview.addedContents} serão criados; {rebuildPreview.preview.removedContents} serão removidos (somente sem progresso). {rebuildPreview.preview.changedBodies} textos mudarão.</p>
+                {rebuildPreview.preview.detachedLibraryLinks > 0 && <p className={styles.markdownPreviewWarning}>{rebuildPreview.preview.detachedLibraryLinks} etapas perderão o vínculo anterior com a Biblioteca, para evitar modificar materiais compartilhados.</p>}
+                {rebuildPreview.preview.releaseLimitAdjusted && <p className={styles.markdownPreviewWarning}>O limite de capítulos liberados será reduzido à nova quantidade de módulos.</p>}
+                {rebuildPreview.preview.blockedByProgress && <p className={styles.markdownPreviewWarning} role="alert">Reconstrução bloqueada: há etapas que seriam removidas com progresso registrado ou atividade vinculada. Nenhuma alteração foi feita. Preserve essas etapas ou use Atualizar conteúdos.</p>}
+                {rebuildPreview.preview.removedContents > 0 && <details><summary>Ver conteúdos removidos ({rebuildPreview.preview.removedContents})</summary><ul>{rebuildPreview.preview.removedTitles.map((title, index) => <li key={index}>{title}</li>)}</ul>{rebuildPreview.preview.removedContents > rebuildPreview.preview.removedTitles.length && <p>Exibindo os primeiros {rebuildPreview.preview.removedTitles.length} conteúdos.</p>}</details>}
                 <details><summary>Conferir módulos e títulos identificados</summary>
-                  <ol className={styles.markdownModuleList}>{rebuildPreview.draft.sections.map((section, index) => <li key={index}><strong>{section.title}</strong> · {section.items.length} conteúdos<ol>{section.items.map((item, itemIndex) => <li key={itemIndex}>{item.title}{!item.body?.trim() ? " (sem texto)" : ""}</li>)}</ol></li>)}</ol>
+                  <ol className={styles.markdownModuleList}>{rebuildPreview.preview.draft.sections.map((section, index) => <li key={index}><strong>{section.title}</strong> · {section.items.length} conteúdos<ol>{section.items.map((item, itemIndex) => <li key={itemIndex}>{item.title}{!item.body?.trim() ? " (sem texto)" : ""}</li>)}</ol></li>)}</ol>
                 </details>
                 {(selected?.stages.length ?? 0) > 0 &&
-                  rebuildPreview.draft.sections.reduce((sum, section) => sum + section.items.length, 0) < (selected?.stages.length ?? 0) * 0.7 &&
+                  rebuildPreview.preview.newContents < (selected?.stages.length ?? 0) * 0.7 &&
                   <p className={styles.markdownPreviewWarning}>A nova estrutura tem muito menos conteúdos que a original. Confira se os H3 internos não foram interpretados incorretamente antes de reconstruir.</p>}
-                {rebuildPreview.draft.sections.some(section => section.items.some(item => !item.body?.trim())) &&
-                  <p className={styles.markdownPreviewWarning}>Atenção: existem conteúdos sem texto. Confira a importação antes de criar.</p>}
+                {rebuildPreview.preview.draft.sections.some(section => section.items.some(item => !item.body?.trim())) &&
+                  <p className={styles.markdownPreviewWarning}>Atenção: existem conteúdos sem texto. Confira a importação antes de reconstruir.</p>}
               </div>
             )}
             <div className={styles.textEditorActions}>
+              {markdownMode === "rebuild" && <button className={styles.secondary} type="button" onClick={() => navigator.clipboard.writeText(markdownEditor.original).then(() => notify("Versão original copiada para backup.")).catch(() => notify("Não foi possível copiar o original.", "error"))}>Copiar versão original</button>}
               <button className={styles.secondary} type="button" onClick={() => navigator.clipboard.writeText(markdownEditor.body).then(() => notify("Markdown copiado.")).catch(() => notify("Não foi possível copiar.", "error"))}>Copiar Markdown</button>
               <button className={styles.secondary} type="button" onClick={() => setMarkdownEditor(null)}>Cancelar</button>
               {markdownMode === "update" ? (
                 <button className={styles.primary} type="button" disabled={busy || markdownEditor.body === markdownEditor.original || !markdownEditor.body.trim()} onClick={() => void saveMarkdown()}>{busy ? "Salvando..." : "Atualizar conteúdos"}</button>
               ) : rebuildPreview ? (
-                <button className={styles.primary} type="button" disabled={busy || rebuildPreview.source !== markdownEditor.body} onClick={() => void createReconstructedJourney()}>{busy ? "Criando..." : "Criar nova jornada em rascunho"}</button>
+                <button className={styles.primary} type="button" disabled={busy || rebuildPreview.source !== markdownEditor.body || !rebuildPreview.preview.canApply} onClick={() => void rebuildExistingJourney()}>{busy ? "Aplicando..." : "Reconstruir jornada original"}</button>
               ) : (
                 <button className={styles.primary} type="button" disabled={busy || !markdownEditor.body.trim()} onClick={() => void previewReconstruction()}>{busy ? "Analisando..." : "Pré-visualizar reconstrução"}</button>
               )}

@@ -10,8 +10,12 @@ import java.util.UUID;
 @RequestMapping("/api/journeys")
 public class JourneyController {
     private final JourneyService service;
+    private final JourneyReconstructionService reconstruction;
 
-    public JourneyController(JourneyService service) { this.service = service; }
+    public JourneyController(JourneyService service, JourneyReconstructionService reconstruction) {
+        this.service = service;
+        this.reconstruction = reconstruction;
+    }
 
     @GetMapping
     public List<JourneyService.JourneyView> list(@RequestParam UUID classroomId) {
@@ -73,6 +77,18 @@ public class JourneyController {
     @PutMapping("/{id}/markdown")
     public JourneyService.JourneyView updateMarkdown(@PathVariable UUID id, @RequestBody JourneyService.MarkdownInput input) {
         return service.updateMarkdown(id, input);
+    }
+
+    @PostMapping("/{id}/markdown/reconstruction-preview")
+    public JourneyReconstructionService.ReconstructionPreview reconstructionPreview(
+            @PathVariable UUID id, @RequestBody JourneyService.MarkdownInput input) {
+        return reconstruction.preview(id, input);
+    }
+
+    @PutMapping("/{id}/markdown/reconstruct")
+    public JourneyService.JourneyView reconstruct(
+            @PathVariable UUID id, @RequestBody JourneyService.MarkdownInput input) {
+        return reconstruction.rebuild(id, input);
     }
 
     @GetMapping("/{id}/progress/{enrollmentId}")

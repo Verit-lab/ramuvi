@@ -133,6 +133,35 @@ export function updateJourneyMarkdown(journeyId: string, markdown: string, expec
   });
 }
 
+export type JourneyReconstructionPreview = {
+  draft: import("./content-ingestion-api").ContentDraft;
+  previousModules: number;
+  previousContents: number;
+  newModules: number;
+  newContents: number;
+  reusedContents: number;
+  addedContents: number;
+  removedContents: number;
+  changedBodies: number;
+  detachedLibraryLinks: number;
+  blockedByProgress: boolean;
+  canApply: boolean;
+  removedTitles: string[];
+  releaseLimitAdjusted: boolean;
+};
+
+export function previewJourneyReconstruction(journeyId: string, markdown: string, expectedUpdatedAt: string) {
+  return journeyRequest<JourneyReconstructionPreview>(`/api/journeys/${encodeURIComponent(journeyId)}/markdown/reconstruction-preview`, {
+    method: "POST", body: JSON.stringify({ markdown, expectedUpdatedAt }),
+  });
+}
+
+export function reconstructJourneyMarkdown(journeyId: string, markdown: string, expectedUpdatedAt: string) {
+  return journeyRequest<Journey>(`/api/journeys/${encodeURIComponent(journeyId)}/markdown/reconstruct`, {
+    method: "PUT", body: JSON.stringify({ markdown, expectedUpdatedAt }),
+  });
+}
+
 export type JourneyStageContent = {
   stageId: string;
   title: string;

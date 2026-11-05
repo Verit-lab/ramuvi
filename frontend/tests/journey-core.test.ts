@@ -208,9 +208,10 @@ test("consolidated Markdown supports a non-destructive new draft reconstruction"
   assert.match(manager, /Reconstruir jornada/);
   assert.match(manager, /previewContentIngestion/);
   assert.match(manager, /Prévia da reconstrução/);
-  assert.match(manager, /createReconstructedJourney/);
-  assert.match(manager, /materializeContentDraft\(classroomId, proposed\)/);
-  assert.match(manager, /A jornada atual não será modificada, arquivada nem apagada/);
-  assert.match(manager, /setDraft\(toDraft\(created\)\)/);
+  assert.match(manager, /rebuildExistingJourney/);
+  assert.match(manager, /previewJourneyReconstruction/);
+  assert.match(manager, /reconstructJourneyMarkdown/);
+  assert.match(manager, /rebuildPreview\.preview\.canApply/);
+  assert.match(manager, /setDraft\(toDraft\(saved\)\)/);
   assert.match(manager, /rebuildPreview\.source !== markdownEditor\.body/);
 });

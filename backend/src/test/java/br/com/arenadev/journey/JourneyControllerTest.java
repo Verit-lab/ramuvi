@@ -22,7 +22,7 @@ class JourneyControllerTest {
         );
         when(service.create(input)).thenReturn(view);
 
-        JourneyController controller = new JourneyController(service);
+        JourneyController controller = new JourneyController(service, mock(JourneyReconstructionService.class));
         JourneyService.JourneyView result = controller.create(input);
 
         assertThat(result.id()).isEqualTo(journeyId);
@@ -34,7 +34,7 @@ class JourneyControllerTest {
     void lifecycleEndpointsDelegateToJourneyService() {
         JourneyService service = mock(JourneyService.class);
         UUID id = UUID.randomUUID();
-        JourneyController controller = new JourneyController(service);
+        JourneyController controller = new JourneyController(service, mock(JourneyReconstructionService.class));
 
         controller.publish(id);
         controller.archive(id);
