@@ -162,6 +162,35 @@ export function reconstructJourneyMarkdown(journeyId: string, markdown: string, 
   });
 }
 
+export type JourneyOverwritePreview = {
+  draft: import("./content-ingestion-api").ContentDraft;
+  confirmationTitle: string;
+  previousModules: number;
+  previousContents: number;
+  newModules: number;
+  newContents: number;
+  enrollmentProgressToReset: number;
+  redeemedProgressToReset: number;
+  linkedActivitiesToDetach: number;
+  published: boolean;
+};
+
+export type JourneyOverwriteResult = { journey: Journey; snapshotId: string };
+
+export function previewJourneyOverwrite(journeyId: string, markdown: string, expectedUpdatedAt: string) {
+  return journeyRequest<JourneyOverwritePreview>(`/api/journeys/${encodeURIComponent(journeyId)}/markdown/overwrite-preview`, {
+    method: "POST", body: JSON.stringify({ markdown, expectedUpdatedAt }),
+  });
+}
+
+export function overwriteJourneyMarkdown(
+  journeyId: string, markdown: string, expectedUpdatedAt: string, confirmationTitle: string,
+) {
+  return journeyRequest<JourneyOverwriteResult>(`/api/journeys/${encodeURIComponent(journeyId)}/markdown/overwrite`, {
+    method: "PUT", body: JSON.stringify({ markdown, expectedUpdatedAt, confirmationTitle }),
+  });
+}
+
 export type JourneyStageContent = {
   stageId: string;
   title: string;

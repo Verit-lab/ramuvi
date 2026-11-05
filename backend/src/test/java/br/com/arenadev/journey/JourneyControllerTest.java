@@ -31,6 +31,21 @@ class JourneyControllerTest {
     }
 
     @Test
+    void overwriteEndpointsRequireBackendPreviewAndTypedConfirmation() {
+        JourneyService service = mock(JourneyService.class);
+        JourneyReconstructionService reconstruction = mock(JourneyReconstructionService.class);
+        JourneyController controller = new JourneyController(service, reconstruction);
+        UUID id = UUID.randomUUID();
+        var input = new JourneyService.MarkdownInput("## Bloco", Instant.now());
+        var confirmed = new JourneyReconstructionService.OverwriteInput(
+                input.markdown(), input.expectedUpdatedAt(), "Jornada original");
+        controller.overwritePreview(id, input);
+        controller.overwrite(id, confirmed);
+        verify(reconstruction).overwritePreview(id, input);
+        verify(reconstruction).overwrite(id, confirmed);
+    }
+
+    @Test
     void lifecycleEndpointsDelegateToJourneyService() {
         JourneyService service = mock(JourneyService.class);
         UUID id = UUID.randomUUID();

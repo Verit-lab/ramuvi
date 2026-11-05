@@ -91,6 +91,18 @@ public class JourneyController {
         return reconstruction.rebuild(id, input);
     }
 
+    @PostMapping("/{id}/markdown/overwrite-preview")
+    public JourneyReconstructionService.OverwritePreview overwritePreview(
+            @PathVariable UUID id, @RequestBody JourneyService.MarkdownInput input) {
+        return reconstruction.overwritePreview(id, input);
+    }
+
+    @PutMapping("/{id}/markdown/overwrite")
+    public JourneyReconstructionService.OverwriteResult overwrite(
+            @PathVariable UUID id, @RequestBody JourneyReconstructionService.OverwriteInput input) {
+        return reconstruction.overwrite(id, input);
+    }
+
     @GetMapping("/{id}/progress/{enrollmentId}")
     public JourneyService.JourneyProgressView progress(@PathVariable UUID id, @PathVariable UUID enrollmentId) {
         return service.progress(id, enrollmentId);

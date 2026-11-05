@@ -19,9 +19,9 @@ import {
   updateJourneyStageContent,
   fetchJourneyMarkdown,
   updateJourneyMarkdown,
-  previewJourneyReconstruction,
-  reconstructJourneyMarkdown,
-  type JourneyReconstructionPreview,
+  previewJourneyOverwrite,
+  overwriteJourneyMarkdown,
+  type JourneyOverwritePreview,
   type JourneyRedemptionCode,
   type JourneyStageContent,
   type Journey,
@@ -111,7 +111,8 @@ export default function JourneyManager({ classroomId, classroomName, notify, ini
   const [libraryTargetModule, setLibraryTargetModule] = useState<string | undefined>();
   const [markdownEditor, setMarkdownEditor] = useState<{ body: string; original: string; updatedAt: string } | null>(null);
   const [markdownMode, setMarkdownMode] = useState<"update" | "rebuild">("update");
-  const [rebuildPreview, setRebuildPreview] = useState<{ source: string; preview: JourneyReconstructionPreview } | null>(null);
+  const [rebuildPreview, setRebuildPreview] = useState<{ source: string; preview: JourneyOverwritePreview } | null>(null);
+  const [overwriteConfirmation, setOverwriteConfirmation] = useState("");
   const markdownDialogRef = useRef<HTMLElement>(null);
   const markdownCloseRef = useRef<HTMLButtonElement>(null);
   useBodyScrollLock(Boolean(markdownEditor));
@@ -396,6 +397,7 @@ export default function JourneyManager({ classroomId, classroomName, notify, ini
       setMarkdownEditor({ body: document.markdown, original: document.markdown, updatedAt: document.updatedAt });
       setMarkdownMode("update");
       setRebuildPreview(null);
+      setOverwriteConfirmation("");
     } catch (error) {
       notify(error instanceof Error ? error.message : "Não foi possível carregar o Markdown da jornada.", "error");
     } finally { setBusy(false); }
@@ -420,39 +422,35 @@ export default function JourneyManager({ classroomId, classroomName, notify, ini
     if (!draft?.id || !markdownEditor?.body.trim() || busy) return;
     setBusy(true);
     setRebuildPreview(null);
+    setOverwriteConfirmation("");
     try {
-      const preview = await previewJourneyReconstruction(
+      const preview = await previewJourneyOverwrite(
         draft.id, markdownEditor.body, markdownEditor.updatedAt,
       );
       setRebuildPreview({ source: markdownEditor.body, preview });
     } catch (error) {
-      notify(error instanceof Error ? error.message : "Não foi possível analisar a nova estrutura.", "error");
+      notify(error instanceof Error ? error.message : "Não foi possível analisar a substituição.", "error");
     } finally { setBusy(false); }
   }
 
-  async function rebuildExistingJourney() {
+  async function overwriteExistingJourney() {
     if (!draft?.id || !markdownEditor || !rebuildPreview ||
         rebuildPreview.source !== markdownEditor.body || busy ||
-        !rebuildPreview.preview.canApply) return;
-    const plan = rebuildPreview.preview;
-    if (!window.confirm(
-      `Reconstruir a jornada ORIGINAL com ${plan.newModules} módulos e ${plan.newContents} conteúdos? ` +
-      `Serão mantidos ${plan.reusedContents} conteúdos identificados, criados ${plan.addedContents} e removidos ${plan.removedContents} sem progresso. ` +
-      "O ID, a publicação e o progresso das etapas preservadas serão mantidos. " +
-      "Esta operação altera a estrutura da jornada atual e não cria outra. Continuar?"
-    )) return;
+        overwriteConfirmation !== rebuildPreview.preview.confirmationTitle) return;
     setBusy(true);
     try {
-      const saved = await reconstructJourneyMarkdown(
-        draft.id, markdownEditor.body, markdownEditor.updatedAt,
+      const result = await overwriteJourneyMarkdown(
+        draft.id, markdownEditor.body, markdownEditor.updatedAt, overwriteConfirmation,
       );
+      const saved = result.journey;
       setJourneys((current) => current.map((journey) => journey.id === saved.id ? saved : journey));
       setDraft(toDraft(saved));
       setMarkdownEditor(null);
       setRebuildPreview(null);
-      notify("Estrutura da jornada original reconstruída. IDs correspondentes e progresso preservados.");
+      setOverwriteConfirmation("");
+      notify("Jornada original sobrescrita. O progresso da nova trilha foi reiniciado e uma cópia de segurança foi registrada.");
     } catch (error) {
-      notify(error instanceof Error ? error.message : "Não foi possível reconstruir a jornada.", "error");
+      notify(error instanceof Error ? error.message : "Não foi possível substituir a jornada.", "error");
     } finally { setBusy(false); }
   }
 
@@ -753,35 +751,45 @@ export default function JourneyManager({ classroomId, classroomName, notify, ini
       {markdownEditor && (
         <div className={styles.libraryBackdrop}>
           <section ref={markdownDialogRef} tabIndex={-1} className={`${styles.libraryPicker} ${styles.markdownEditor}`} role="dialog" aria-modal="true" aria-labelledby="journey-markdown-title">
-            <header><div><span>JORNADA · MARKDOWN</span><h3 id="journey-markdown-title">Markdown completo da jornada</h3><p>Escolha como aplicar o material. A atualização preserva a estrutura; a reconstrução reorganiza esta mesma jornada, mediante prévia e validação de progresso.</p></div><DialogCloseButton ref={markdownCloseRef} label="Fechar Markdown" onClick={() => setMarkdownEditor(null)} /></header>
+            <header><div><span>JORNADA · MARKDOWN</span><h3 id="journey-markdown-title">Markdown completo da jornada</h3><p>Escolha entre corrigir textos ou substituir por completo a estrutura desta jornada. O segundo caminho reinicia o progresso dos alunos.</p></div><DialogCloseButton ref={markdownCloseRef} label="Fechar Markdown" onClick={() => setMarkdownEditor(null)} /></header>
             <div className={styles.markdownModes} role="group" aria-label="Tipo de importação do Markdown">
-              <button type="button" className={markdownMode === "update" ? styles.markdownModeActive : styles.markdownMode} onClick={() => { setMarkdownMode("update"); setRebuildPreview(null); }} aria-pressed={markdownMode === "update"}>Atualizar conteúdos</button>
-              <button type="button" className={markdownMode === "rebuild" ? styles.markdownModeActive : styles.markdownMode} onClick={() => { setMarkdownMode("rebuild"); setRebuildPreview(null); }} aria-pressed={markdownMode === "rebuild"}>Reconstruir jornada</button>
+              <button type="button" className={markdownMode === "update" ? styles.markdownModeActive : styles.markdownMode} onClick={() => { setMarkdownMode("update"); setRebuildPreview(null); setOverwriteConfirmation(""); }} aria-pressed={markdownMode === "update"}>Atualizar conteúdos</button>
+              <button type="button" className={markdownMode === "rebuild" ? styles.markdownModeActive : styles.markdownMode} onClick={() => { setMarkdownMode("rebuild"); setRebuildPreview(null); setOverwriteConfirmation(""); }} aria-pressed={markdownMode === "rebuild"}>Sobrescrever jornada</button>
             </div>
             <p className={styles.markdownModeHint}>{markdownMode === "update"
               ? "Mantém módulos, títulos, ordem, IDs e progresso. Exige os mesmos conteúdos H3; materiais compartilhados da Biblioteca podem ser atualizados."
-              : "Reconstrói a jornada original, mantendo seu ID e status. H1 = título, H2 = módulo, H3 = conteúdo. Etapas correspondentes mantêm seus IDs; remoções com progresso ou atividade vinculada são bloqueadas."}</p>
-            <textarea className={styles.markdownEditorBody} aria-label="Markdown completo" spellCheck={false} value={markdownEditor.body} onChange={event => { setRebuildPreview(null); setMarkdownEditor(current => current ? { ...current, body: event.target.value } : current); }} />
+              : "Substituição integral: mantém o ID e a publicação da jornada, mas cria novos módulos e conteúdos. Progresso dos alunos é reiniciado. Os materiais e registros anteriores são salvos em histórico interno."}</p>
+            <textarea className={styles.markdownEditorBody} aria-label="Markdown completo" spellCheck={false} value={markdownEditor.body} onChange={event => { setRebuildPreview(null); setOverwriteConfirmation(""); setMarkdownEditor(current => current ? { ...current, body: event.target.value } : current); }} />
             {markdownMode === "rebuild" && rebuildPreview && (
-              <div className={styles.markdownRebuildPreview} aria-live="polite">
-                <h4>Prévia da reconstrução</h4>
-                <div className={styles.markdownCompare} aria-label="Comparação das estruturas">
+              <div className={styles.markdownRebuildPreview} aria-label="Prévia da substituição completa">
+                <h4>Prévia da substituição completa</h4>
+                <div className={styles.markdownCompare}>
                   <div><span>Jornada atual</span><strong>{rebuildPreview.preview.previousModules} módulos</strong><strong>{rebuildPreview.preview.previousContents} conteúdos</strong></div>
-                  <div><span>Mesma jornada (reconstruída)</span><strong>{rebuildPreview.preview.newModules} módulos</strong><strong>{rebuildPreview.preview.newContents} conteúdos</strong></div>
+                  <div><span>Mesma jornada, novo material</span><strong>{rebuildPreview.preview.newModules} módulos</strong><strong>{rebuildPreview.preview.newContents} conteúdos</strong></div>
                 </div>
-                <p>{rebuildPreview.preview.reusedContents} conteúdos preservam o ID; {rebuildPreview.preview.addedContents} serão criados; {rebuildPreview.preview.removedContents} serão removidos (somente sem progresso). {rebuildPreview.preview.changedBodies} textos mudarão.</p>
-                {rebuildPreview.preview.detachedLibraryLinks > 0 && <p className={styles.markdownPreviewWarning}>{rebuildPreview.preview.detachedLibraryLinks} etapas perderão o vínculo anterior com a Biblioteca, para evitar modificar materiais compartilhados.</p>}
-                {rebuildPreview.preview.releaseLimitAdjusted && <p className={styles.markdownPreviewWarning}>O limite de capítulos liberados será reduzido à nova quantidade de módulos.</p>}
-                {rebuildPreview.preview.blockedByProgress && <p className={styles.markdownPreviewWarning} role="alert">Reconstrução bloqueada: há etapas que seriam removidas com progresso registrado ou atividade vinculada. Nenhuma alteração foi feita. Preserve essas etapas ou use Atualizar conteúdos.</p>}
-                {rebuildPreview.preview.removedContents > 0 && <details><summary>Ver conteúdos removidos ({rebuildPreview.preview.removedContents})</summary><ul>{rebuildPreview.preview.removedTitles.map((title, index) => <li key={index}>{title}</li>)}</ul>{rebuildPreview.preview.removedContents > rebuildPreview.preview.removedTitles.length && <p>Exibindo os primeiros {rebuildPreview.preview.removedTitles.length} conteúdos.</p>}</details>}
-                <details><summary>Conferir módulos e títulos identificados</summary>
-                  <ol className={styles.markdownModuleList}>{rebuildPreview.preview.draft.sections.map((section, index) => <li key={index}><strong>{section.title}</strong> · {section.items.length} conteúdos<ol>{section.items.map((item, itemIndex) => <li key={itemIndex}>{item.title}{!item.body?.trim() ? " (sem texto)" : ""}</li>)}</ol></li>)}</ol>
+                <p className={styles.markdownOverwriteWarning} role="alert">
+                  Esta operação substitui todos os módulos e conteúdos antigos e reinicia o progresso da jornada para todos os alunos.
+                  O ID, a turma e o estado de publicação permanecem. Os vínculos das atividades antigas não são transferidos.
+                </p>
+                <p>Registros de progresso que deixarão a trilha ativa: <strong>{rebuildPreview.preview.enrollmentProgressToReset + rebuildPreview.preview.redeemedProgressToReset}</strong> ({rebuildPreview.preview.enrollmentProgressToReset} matrículas e {rebuildPreview.preview.redeemedProgressToReset} acessos por código).</p>
+                {rebuildPreview.preview.linkedActivitiesToDetach > 0 &&
+                  <p className={styles.markdownOverwriteWarning}>{rebuildPreview.preview.linkedActivitiesToDetach} associações a atividades serão retiradas da jornada. As atividades originais não serão excluídas.</p>}
+                <p>Uma cópia interna da jornada anterior, com textos e progresso, será salva no banco de dados antes da substituição. Essa cópia não é restaurável pela interface. Conquistas já concedidas permanecem registradas.</p>
+                <details><summary>Conferir módulos e conteúdos da nova versão</summary>
+                  <ol className={styles.markdownModuleList}>{rebuildPreview.preview.draft.sections.map((section, index) =>
+                    <li key={index}><strong>{section.title}</strong> · {section.items.length} conteúdos
+                      <ol>{section.items.map((item, itemIndex) => <li key={itemIndex}>{item.title}</li>)}</ol>
+                    </li>
+                  )}</ol>
                 </details>
-                {(selected?.stages.length ?? 0) > 0 &&
-                  rebuildPreview.preview.newContents < (selected?.stages.length ?? 0) * 0.7 &&
-                  <p className={styles.markdownPreviewWarning}>A nova estrutura tem muito menos conteúdos que a original. Confira se os H3 internos não foram interpretados incorretamente antes de reconstruir.</p>}
-                {rebuildPreview.preview.draft.sections.some(section => section.items.some(item => !item.body?.trim())) &&
-                  <p className={styles.markdownPreviewWarning}>Atenção: existem conteúdos sem texto. Confira a importação antes de reconstruir.</p>}
+                <label className={styles.markdownOverwriteConfirm} htmlFor="journey-overwrite-confirmation">
+                  <span>Para autorizar a substituição, digite exatamente o nome da jornada:</span>
+                  <strong>{rebuildPreview.preview.confirmationTitle}</strong>
+                  <input id="journey-overwrite-confirmation" type="text" autoComplete="off" spellCheck={false}
+                    value={overwriteConfirmation} onChange={(event) => setOverwriteConfirmation(event.target.value)}
+                    placeholder="Digite o título completo da jornada" aria-describedby="journey-overwrite-note" />
+                </label>
+                <p id="journey-overwrite-note">A substituição somente será habilitada quando o texto digitado corresponder exatamente ao título. Não altera outras jornadas da turma.</p>
               </div>
             )}
             <div className={styles.textEditorActions}>
@@ -791,9 +799,9 @@ export default function JourneyManager({ classroomId, classroomName, notify, ini
               {markdownMode === "update" ? (
                 <button className={styles.primary} type="button" disabled={busy || markdownEditor.body === markdownEditor.original || !markdownEditor.body.trim()} onClick={() => void saveMarkdown()}>{busy ? "Salvando..." : "Atualizar conteúdos"}</button>
               ) : rebuildPreview ? (
-                <button className={styles.primary} type="button" disabled={busy || rebuildPreview.source !== markdownEditor.body || !rebuildPreview.preview.canApply} onClick={() => void rebuildExistingJourney()}>{busy ? "Aplicando..." : "Reconstruir jornada original"}</button>
+                <button className={styles.markdownOverwriteButton} type="button" disabled={busy || rebuildPreview.source !== markdownEditor.body || overwriteConfirmation !== rebuildPreview.preview.confirmationTitle} onClick={() => void overwriteExistingJourney()}>{busy ? "Substituindo..." : "Sobrescrever jornada original"}</button>
               ) : (
-                <button className={styles.primary} type="button" disabled={busy || !markdownEditor.body.trim()} onClick={() => void previewReconstruction()}>{busy ? "Analisando..." : "Pré-visualizar reconstrução"}</button>
+                <button className={styles.primary} type="button" disabled={busy || !markdownEditor.body.trim()} onClick={() => void previewReconstruction()}>{busy ? "Analisando..." : "Pré-visualizar substituição"}</button>
               )}
             </div>
           </section>

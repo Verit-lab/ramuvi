@@ -27,6 +27,7 @@ public class JourneyReconstructionService {
     private final LearningResourceRepository resources;
     private final ContentIngestionService ingestion;
     private final JourneyService journeyService;
+    private final JourneyOverwriteSnapshotService snapshots;
 
     public JourneyReconstructionService(
             JourneyRepository journeys,
@@ -34,7 +35,8 @@ public class JourneyReconstructionService {
             JourneyStageRepository stages,
             LearningResourceRepository resources,
             ContentIngestionService ingestion,
-            JourneyService journeyService
+            JourneyService journeyService,
+            JourneyOverwriteSnapshotService snapshots
     ) {
         this.journeys = journeys;
         this.progress = progress;
@@ -42,6 +44,7 @@ public class JourneyReconstructionService {
         this.resources = resources;
         this.ingestion = ingestion;
         this.journeyService = journeyService;
+        this.snapshots = snapshots;
     }
 
     public record ReconstructionPreview(
@@ -60,6 +63,100 @@ public class JourneyReconstructionService {
             List<String> removedTitles,
             boolean releaseLimitAdjusted
     ) {}
+
+    /** Full overwrite: all new stage IDs and a fresh learning path, but same journey ID. */
+    public record OverwritePreview(
+            ContentIngestionService.DraftView draft,
+            String confirmationTitle,
+            int previousModules,
+            int previousContents,
+            int newModules,
+            int newContents,
+            int enrollmentProgressToReset,
+            int redeemedProgressToReset,
+            int linkedActivitiesToDetach,
+            boolean published
+    ) {}
+
+    public record OverwriteInput(String markdown, java.time.Instant expectedUpdatedAt, String confirmationTitle) {}
+    public record OverwriteResult(JourneyService.JourneyView journey, UUID snapshotId) {}
+
+    @Transactional(readOnly = true)
+    public OverwritePreview overwritePreview(UUID journeyId, JourneyService.MarkdownInput input) {
+        Journey journey = requireJourney(journeyId);
+        validateVersion(journey, input);
+        Plan parsed = buildPlan(journey, input.markdown());
+        return describeOverwrite(journey, parsed.preview().draft());
+    }
+
+    /**
+     * Deliberately destructive to the active study path. This starts everyone
+     * from the beginning but preserves a transactionally consistent historical
+     * snapshot (stage content plus both forms of student progress).
+     */
+    @Transactional
+    public OverwriteResult overwrite(UUID journeyId, OverwriteInput input) {
+        Journey journey = journeys.lockForOverwrite(journeyId).orElseThrow(
+                () -> new ResourceNotFoundException("Jornada não encontrada."));
+        if (input == null) throw new IllegalArgumentException("Solicitação de substituição obrigatória.");
+        validateVersion(journey, new JourneyService.MarkdownInput(input.markdown(), input.expectedUpdatedAt()));
+        if (!journey.getTitle().equals(input.confirmationTitle())) {
+            throw new IllegalArgumentException("Digite o título completo e exato da jornada para confirmar a substituição.");
+        }
+        Plan plan = buildPlan(journey, input.markdown());
+        var draft = plan.preview().draft();
+
+        List<UUID> oldIds = journey.getStages().stream().map(JourneyStage::getId)
+                .filter(Objects::nonNull).sorted().toList();
+        if (!oldIds.isEmpty() && stages.lockForReconstruction(oldIds).size() != oldIds.size()) {
+            throw new IllegalStateException("A estrutura mudou. Reabra a jornada antes de sobrescrever.");
+        }
+        UUID snapshotId = snapshots.capture(journeyId);
+
+        journey.getStages().clear();
+        journey.getSections().clear();
+        int position = 0;
+        int modulePosition = 0;
+        for (var sectionInput : draft.sections()) {
+            JourneySection section = new JourneySection(
+                    sectionInput.title(), sectionInput.description(), modulePosition++);
+            journey.addSection(section);
+            for (var item : sectionInput.items()) {
+                JourneyStage stage = new JourneyStage(item.title(), position);
+                stage.updateConfiguration(item.title(), item.description(), position,
+                        null, position == 0 ? JourneyUnlockRule.IMMEDIATE
+                                : JourneyUnlockRule.PREVIOUS_STAGE_COMPLETED,
+                        JourneyCompletionRule.MANUAL, section, JourneyItemType.CONTENT);
+                LearningResource resource = new LearningResource(journey.getClassroom(), item.title());
+                resource.update(item.title(), item.description(), item.body().strip(),
+                        LearningResourceFormat.MARKDOWN, LearningResourceSourceType.MARKDOWN,
+                        null, "Substituição integral da jornada");
+                stage.materializeResource(resources.save(resource));
+                journey.addStage(stage);
+                position++;
+            }
+        }
+        // A new path must not inherit a teacher release gate from the old one.
+        journey.changeReleasedChapterCount(null);
+        journey.update(journey.getTitle(), journey.getDescription());
+        journeys.saveAndFlush(journey);
+        return new OverwriteResult(journeyService.get(journeyId), snapshotId);
+    }
+
+    private OverwritePreview describeOverwrite(Journey journey, ContentIngestionService.DraftView draft) {
+        var counts = snapshots.counts(journey.getId());
+        return new OverwritePreview(
+                draft,
+                journey.getTitle(),
+                journey.getChapterCount(),
+                journey.getStages().size(),
+                draft.sections().size(),
+                draft.sections().stream().mapToInt(section -> section.items().size()).sum(),
+                counts.enrollment(), counts.redeemed(),
+                (int) journey.getStages().stream().filter(stage -> stage.getActivity() != null).count(),
+                journey.getStatus() == JourneyStatus.PUBLISHED
+        );
+    }
 
     private record Plan(
             ReconstructionPreview preview,

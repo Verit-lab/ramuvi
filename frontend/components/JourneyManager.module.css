@@ -523,3 +523,14 @@
 .markdownModuleList ol { padding-left: 1.5rem; font-size: .83rem; }
 .markdownRebuildPreview .markdownPreviewWarning { color: #e0a02e; font-weight: 700; }
 @media(max-width: 720px) { .markdownCompare {grid-template-columns: 1fr;} .markdownEditor .textEditorActions button{flex:1 1 9rem;} }
+
+.markdownOverwriteWarning{color:#ffd0d0;font-weight:700;line-height:1.55;border-left:3px solid #e56767;padding-left:.7rem}
+.markdownOverwriteConfirm{display:grid;gap:.55rem;padding:.9rem;border:1px solid #b05a5a;border-radius:.65rem;max-width:100%;min-width:0}
+.markdownOverwriteConfirm span{font-size:.85rem;font-weight:600}
+.markdownOverwriteConfirm strong{overflow-wrap:anywhere}
+.markdownOverwriteConfirm input{width:100%;min-width:0;min-height:44px;box-sizing:border-box;padding:.65rem;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:.5rem;font:inherit}
+.markdownOverwriteConfirm input:focus-visible{outline:2px solid #e56767;outline-offset:2px}
+.markdownOverwriteButton{min-height:44px;padding:.7rem 1rem;color:#fff;background:#ab3333;border:1px solid #d65b5b;border-radius:.65rem;font-weight:800;cursor:pointer}
+.markdownOverwriteButton:hover:not(:disabled){background:#8e2828}
+.markdownOverwriteButton:disabled{opacity:.42;cursor:not-allowed}
+.markdownOverwriteButton:focus-visible{outline:2px solid var(--text);outline-offset:2px}

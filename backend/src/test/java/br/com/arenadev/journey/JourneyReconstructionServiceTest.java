@@ -26,8 +26,9 @@ class JourneyReconstructionServiceTest {
     private final LearningResourceRepository resources = mock(LearningResourceRepository.class);
     private final ContentIngestionService ingestion = mock(ContentIngestionService.class);
     private final JourneyService journeyService = mock(JourneyService.class);
+    private final JourneyOverwriteSnapshotService snapshots = mock(JourneyOverwriteSnapshotService.class);
     private final JourneyReconstructionService service =
-            new JourneyReconstructionService(journeys, progress, stages, resources, ingestion, journeyService);
+            new JourneyReconstructionService(journeys, progress, stages, resources, ingestion, journeyService, snapshots);
 
     private final UUID journeyId = UUID.randomUUID();
     private final Classroom classroom = mock(Classroom.class);
@@ -48,6 +49,10 @@ class JourneyReconstructionServiceTest {
         original = kept.getLearningResource();
         journey.publish();
         when(journeys.findById(journeyId)).thenReturn(Optional.of(journey));
+        when(journeys.lockForOverwrite(journeyId)).thenReturn(Optional.of(journey));
+        when(snapshots.capture(journeyId)).thenReturn(UUID.randomUUID());
+        when(snapshots.counts(journeyId)).thenReturn(
+                new JourneyOverwriteSnapshotService.ProgressCounts(5, 2));
         when(resources.save(any(LearningResource.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(stages.lockForReconstruction(anyCollection())).thenAnswer(invocation -> {
             java.util.Collection<UUID> ids = invocation.getArgument(0);
@@ -121,6 +126,60 @@ class JourneyReconstructionServiceTest {
         assertThat(kept.getResourceSnapshotBody()).isEqualTo("Texto antigo");
         verify(journeys, never()).saveAndFlush(any());
         verify(resources, never()).save(any());
+    }
+
+    @Test
+    void overwritePreviewWarnsAboutProgressResetEvenWhenSafeRebuildWouldBeBlocked() {
+        when(progress.anyStudyStarted(anyCollection())).thenReturn(true);
+        var preview = service.overwritePreview(journeyId, input());
+        assertThat(preview.confirmationTitle()).isEqualTo("Portaria Digital");
+        assertThat(preview.previousContents()).isEqualTo(2);
+        assertThat(preview.newContents()).isEqualTo(2);
+        assertThat(preview.enrollmentProgressToReset()).isEqualTo(5);
+        assertThat(preview.redeemedProgressToReset()).isEqualTo(2);
+        verify(snapshots, never()).capture(any());
+    }
+
+    @Test
+    void overwriteResetsStagesButRetainsOriginalJourneyIdentityAndPublication() {
+        UUID priorStageId = kept.getId();
+        var result = service.overwrite(journeyId,
+                new JourneyReconstructionService.OverwriteInput(
+                        input().markdown(), journey.getUpdatedAt(), journey.getTitle()));
+        assertThat(result.snapshotId()).isNotNull();
+        assertThat(journey.getId()).isEqualTo(journeyId);
+        assertThat(journey.getStatus()).isEqualTo(JourneyStatus.PUBLISHED);
+        assertThat(journey.getStages()).hasSize(2);
+        assertThat(journey.getStages()).noneMatch(stage -> stage.getId() != null && stage.getId().equals(priorStageId));
+        assertThat(journey.getStages()).extracting(JourneyStage::getTitle)
+                .containsExactly("Etapa 00 · Git", "Etapa 02 · SQLite");
+        assertThat(journey.getSections()).extracting(JourneySection::getTitle)
+                .containsExactly("Módulo novo");
+        verify(snapshots).capture(journeyId);
+        var order = inOrder(snapshots, journeys);
+        order.verify(snapshots).capture(journeyId);
+        order.verify(journeys).saveAndFlush(journey);
+        verify(resources, times(2)).save(any(LearningResource.class));
+    }
+
+    @Test
+    void overwriteRequiresAnExactTitleOnTheServer() {
+        var input = new JourneyReconstructionService.OverwriteInput(
+                "## módulo\\n### Conteúdo\\nTexto", journey.getUpdatedAt(), "Portaria");
+        assertThatThrownBy(() -> service.overwrite(journeyId, input))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("título completo");
+        verify(snapshots, never()).capture(any());
+        verify(journeys, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void staleOverwriteCannotCaptureSnapshotOrDeleteAnything() {
+        var request = new JourneyReconstructionService.OverwriteInput(
+                input().markdown(), journey.getUpdatedAt().minusSeconds(1), journey.getTitle());
+        assertThatThrownBy(() -> service.overwrite(journeyId, request))
+                .isInstanceOf(IllegalStateException.class).hasMessageContaining("Reabra");
+        verify(snapshots, never()).capture(any());
+        assertThat(journey.getStages()).hasSize(2);
     }
 
     @Test

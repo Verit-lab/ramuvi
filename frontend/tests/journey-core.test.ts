@@ -203,15 +203,14 @@ test("v0.11 keeps Configurações in the sidebar foot and supports hiding and re
 });
 
 
-test("consolidated Markdown supports a non-destructive new draft reconstruction", () => {
+test("full journey overwrite requires typed title and displays progress reset before applying", () => {
   assert.match(manager, /Atualizar conteúdos/);
-  assert.match(manager, /Reconstruir jornada/);
-  assert.match(manager, /previewContentIngestion/);
-  assert.match(manager, /Prévia da reconstrução/);
-  assert.match(manager, /rebuildExistingJourney/);
-  assert.match(manager, /previewJourneyReconstruction/);
-  assert.match(manager, /reconstructJourneyMarkdown/);
-  assert.match(manager, /rebuildPreview\.preview\.canApply/);
+  assert.match(manager, /Sobrescrever jornada/);
+  assert.match(manager, /previewJourneyOverwrite/);
+  assert.match(manager, /overwriteJourneyMarkdown/);
+  assert.match(manager, /overwriteConfirmation !== rebuildPreview\.preview\.confirmationTitle/);
+  assert.match(manager, /enrollmentProgressToReset/);
+  assert.match(manager, /redeemedProgressToReset/);
+  assert.match(manager, /A substituição somente será habilitada/);
   assert.match(manager, /setDraft\(toDraft\(saved\)\)/);
-  assert.match(manager, /rebuildPreview\.source !== markdownEditor\.body/);
 });
