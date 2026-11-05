@@ -204,8 +204,10 @@ test("v0.11 keeps Configurações in the sidebar foot and supports hiding and re
 
 
 test("full journey overwrite requires typed title and displays progress reset before applying", () => {
-  assert.match(manager, /Atualizar conteúdos/);
   assert.match(manager, /Sobrescrever jornada/);
+  assert.doesNotMatch(manager, /Atualizar conteúdos/);
+  assert.doesNotMatch(manager, /markdownModes/);
+  assert.match(manager, /Para editar um módulo ou conteúdo isoladamente/);
   assert.match(manager, /previewJourneyOverwrite/);
   assert.match(manager, /overwriteJourneyMarkdown/);
   assert.match(manager, /overwriteConfirmation !== rebuildPreview\.preview\.confirmationTitle/);

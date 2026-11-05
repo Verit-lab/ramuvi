@@ -502,12 +502,7 @@
 .markdownEditorBody:focus-visible{outline:2px solid var(--ds-accent-text);outline-offset:2px}
 @media(max-width:720px){.markdownEditor{padding:16px}.markdownEditorBody{min-height:52dvh}.markdownEditor .textEditorActions{flex-wrap:wrap}}
 
-/* Consolidated Markdown: safe in-place update or independent draft reconstruction. */
-.markdownModes { display: flex; flex-wrap: wrap; gap: .4rem; padding: .25rem; border: 1px solid var(--border); border-radius: .75rem; }
-.markdownMode, .markdownModeActive { flex: 1 1 11rem; min-height: 42px; border: 0; border-radius: .55rem; padding: .5rem .75rem; cursor: pointer; font: inherit; font-weight: 700; }
-.markdownMode { background: transparent; color: var(--muted); }
-.markdownModeActive { background: color-mix(in srgb, var(--accent) 13%, var(--surface)); color: var(--text); box-shadow: inset 0 0 0 1px var(--accent); }
-.markdownModes button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Full Markdown overwrite: preview and destructive action safeguards. */
 .markdownModeHint { font-size: .86rem; line-height: 1.5; }
 .markdownRebuildPreview { display: grid; gap: .75rem; border: 1px solid var(--border); border-radius: .75rem; padding: 1rem; background: var(--surface-2,var(--surface)); }
 .markdownRebuildPreview h4 { margin: 0; }

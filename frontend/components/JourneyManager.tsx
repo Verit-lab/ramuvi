@@ -18,7 +18,6 @@ import {
   fetchJourneyStageContent,
   updateJourneyStageContent,
   fetchJourneyMarkdown,
-  updateJourneyMarkdown,
   previewJourneyOverwrite,
   overwriteJourneyMarkdown,
   type JourneyOverwritePreview,
@@ -110,7 +109,6 @@ export default function JourneyManager({ classroomId, classroomName, notify, ini
   const [libraryQuery, setLibraryQuery] = useState("");
   const [libraryTargetModule, setLibraryTargetModule] = useState<string | undefined>();
   const [markdownEditor, setMarkdownEditor] = useState<{ body: string; original: string; updatedAt: string } | null>(null);
-  const [markdownMode, setMarkdownMode] = useState<"update" | "rebuild">("update");
   const [rebuildPreview, setRebuildPreview] = useState<{ source: string; preview: JourneyOverwritePreview } | null>(null);
   const [overwriteConfirmation, setOverwriteConfirmation] = useState("");
   const markdownDialogRef = useRef<HTMLElement>(null);
@@ -395,26 +393,10 @@ export default function JourneyManager({ classroomId, classroomName, notify, ini
     try {
       const document = await fetchJourneyMarkdown(draft.id);
       setMarkdownEditor({ body: document.markdown, original: document.markdown, updatedAt: document.updatedAt });
-      setMarkdownMode("update");
       setRebuildPreview(null);
       setOverwriteConfirmation("");
     } catch (error) {
       notify(error instanceof Error ? error.message : "Não foi possível carregar o Markdown da jornada.", "error");
-    } finally { setBusy(false); }
-  }
-
-  async function saveMarkdown() {
-    if (!draft?.id || !markdownEditor || busy || markdownEditor.body === markdownEditor.original) return;
-    if (!window.confirm("Substituir os textos dos conteúdos correspondentes? O progresso dos alunos será preservado e os materiais vinculados à Biblioteca poderão ser atualizados.")) return;
-    setBusy(true);
-    try {
-      const saved = await updateJourneyMarkdown(draft.id, markdownEditor.body, markdownEditor.updatedAt);
-      setJourneys(current => current.map(journey => journey.id === saved.id ? saved : journey));
-      setDraft(toDraft(saved));
-      setMarkdownEditor(null);
-      notify("Markdown atualizado. A estrutura e o progresso dos alunos foram preservados.");
-    } catch (error) {
-      notify(error instanceof Error ? error.message : "Não foi possível atualizar o Markdown.", "error");
     } finally { setBusy(false); }
   }
 
@@ -572,7 +554,7 @@ export default function JourneyManager({ classroomId, classroomName, notify, ini
                   {draft.id && <a className={styles.secondary} href={`/learn/journeys/${draft.id}?preview=teacher`}>Ver jornada</a>}
                   {draft.status !== "ARCHIVED" && <button className={styles.primary} type="button" disabled={busy} onClick={() => void save()}>{busy ? "Salvando..." : published ? "Salvar alterações" : "Salvar"}</button>}
                   {draft.id && draft.status === "DRAFT" && <button className={styles.ghost} type="button" disabled={busy || draft.stages.length === 0} onClick={() => void publish()}>Publicar</button>}
-                  <div className={styles.moreActions}><button className={styles.secondary} type="button" aria-label="Mais ações" aria-expanded={moreOpen} onClick={() => setMoreOpen((value) => !value)}>•••</button>{moreOpen && <div className={styles.moreMenu}>{draft.id && draft.status !== "ARCHIVED" && <button type="button" disabled={busy} onClick={() => { setMoreOpen(false); void openMarkdownEditor(); }}>Editar Markdown completo</button>}<button type="button" onClick={() => { setDraft(null); setMoreOpen(false); }}>Fechar painel</button>{draft.id && draft.stages.length > 0 && <button type="button" disabled={busy} onClick={() => { setMoreOpen(false); void saveToLibrary(); }}>Salvar jornada na Biblioteca</button>}{draft.id && draft.status !== "ARCHIVED" && <button className={styles.moreDanger} type="button" disabled={busy} onClick={() => { setMoreOpen(false); void archive(); }}>Arquivar jornada</button>}</div>}</div>
+                  <div className={styles.moreActions}><button className={styles.secondary} type="button" aria-label="Mais ações" aria-expanded={moreOpen} onClick={() => setMoreOpen((value) => !value)}>•••</button>{moreOpen && <div className={styles.moreMenu}>{draft.id && draft.status !== "ARCHIVED" && <button type="button" disabled={busy} onClick={() => { setMoreOpen(false); void openMarkdownEditor(); }}>Sobrescrever jornada (Markdown)</button>}<button type="button" onClick={() => { setDraft(null); setMoreOpen(false); }}>Fechar painel</button>{draft.id && draft.stages.length > 0 && <button type="button" disabled={busy} onClick={() => { setMoreOpen(false); void saveToLibrary(); }}>Salvar jornada na Biblioteca</button>}{draft.id && draft.status !== "ARCHIVED" && <button className={styles.moreDanger} type="button" disabled={busy} onClick={() => { setMoreOpen(false); void archive(); }}>Arquivar jornada</button>}</div>}</div>
                 </div>
               </div>
 
@@ -751,16 +733,10 @@ export default function JourneyManager({ classroomId, classroomName, notify, ini
       {markdownEditor && (
         <div className={styles.libraryBackdrop}>
           <section ref={markdownDialogRef} tabIndex={-1} className={`${styles.libraryPicker} ${styles.markdownEditor}`} role="dialog" aria-modal="true" aria-labelledby="journey-markdown-title">
-            <header><div><span>JORNADA · MARKDOWN</span><h3 id="journey-markdown-title">Markdown completo da jornada</h3><p>Escolha entre corrigir textos ou substituir por completo a estrutura desta jornada. O segundo caminho reinicia o progresso dos alunos.</p></div><DialogCloseButton ref={markdownCloseRef} label="Fechar Markdown" onClick={() => setMarkdownEditor(null)} /></header>
-            <div className={styles.markdownModes} role="group" aria-label="Tipo de importação do Markdown">
-              <button type="button" className={markdownMode === "update" ? styles.markdownModeActive : styles.markdownMode} onClick={() => { setMarkdownMode("update"); setRebuildPreview(null); setOverwriteConfirmation(""); }} aria-pressed={markdownMode === "update"}>Atualizar conteúdos</button>
-              <button type="button" className={markdownMode === "rebuild" ? styles.markdownModeActive : styles.markdownMode} onClick={() => { setMarkdownMode("rebuild"); setRebuildPreview(null); setOverwriteConfirmation(""); }} aria-pressed={markdownMode === "rebuild"}>Sobrescrever jornada</button>
-            </div>
-            <p className={styles.markdownModeHint}>{markdownMode === "update"
-              ? "Mantém módulos, títulos, ordem, IDs e progresso. Exige os mesmos conteúdos H3; materiais compartilhados da Biblioteca podem ser atualizados."
-              : "Substituição integral: mantém o ID e a publicação da jornada, mas cria novos módulos e conteúdos. Progresso dos alunos é reiniciado. Os materiais e registros anteriores são salvos em histórico interno."}</p>
+            <header><div><span>JORNADA · MARKDOWN</span><h3 id="journey-markdown-title">Sobrescrever jornada</h3><p>Substitua a estrutura completa utilizando Markdown. Para editar um módulo ou conteúdo isoladamente, use o editor da jornada.</p></div><DialogCloseButton ref={markdownCloseRef} label="Fechar Markdown" onClick={() => setMarkdownEditor(null)} /></header>
+            <p className={styles.markdownModeHint}>A substituição mantém o ID, a turma e a publicação da jornada, mas reinicia o progresso dos alunos. O histórico anterior será armazenado em uma cópia de segurança.</p>
             <textarea className={styles.markdownEditorBody} aria-label="Markdown completo" spellCheck={false} value={markdownEditor.body} onChange={event => { setRebuildPreview(null); setOverwriteConfirmation(""); setMarkdownEditor(current => current ? { ...current, body: event.target.value } : current); }} />
-            {markdownMode === "rebuild" && rebuildPreview && (
+            {rebuildPreview && (
               <div className={styles.markdownRebuildPreview} aria-label="Prévia da substituição completa">
                 <h4>Prévia da substituição completa</h4>
                 <div className={styles.markdownCompare}>
@@ -793,12 +769,10 @@ export default function JourneyManager({ classroomId, classroomName, notify, ini
               </div>
             )}
             <div className={styles.textEditorActions}>
-              {markdownMode === "rebuild" && <button className={styles.secondary} type="button" onClick={() => navigator.clipboard.writeText(markdownEditor.original).then(() => notify("Versão original copiada para backup.")).catch(() => notify("Não foi possível copiar o original.", "error"))}>Copiar versão original</button>}
+              <button className={styles.secondary} type="button" onClick={() => navigator.clipboard.writeText(markdownEditor.original).then(() => notify("Versão original copiada para backup.")).catch(() => notify("Não foi possível copiar o original.", "error"))}>Copiar versão original</button>
               <button className={styles.secondary} type="button" onClick={() => navigator.clipboard.writeText(markdownEditor.body).then(() => notify("Markdown copiado.")).catch(() => notify("Não foi possível copiar.", "error"))}>Copiar Markdown</button>
               <button className={styles.secondary} type="button" onClick={() => setMarkdownEditor(null)}>Cancelar</button>
-              {markdownMode === "update" ? (
-                <button className={styles.primary} type="button" disabled={busy || markdownEditor.body === markdownEditor.original || !markdownEditor.body.trim()} onClick={() => void saveMarkdown()}>{busy ? "Salvando..." : "Atualizar conteúdos"}</button>
-              ) : rebuildPreview ? (
+              {rebuildPreview ? (
                 <button className={styles.markdownOverwriteButton} type="button" disabled={busy || rebuildPreview.source !== markdownEditor.body || overwriteConfirmation !== rebuildPreview.preview.confirmationTitle} onClick={() => void overwriteExistingJourney()}>{busy ? "Substituindo..." : "Sobrescrever jornada original"}</button>
               ) : (
                 <button className={styles.primary} type="button" disabled={busy || !markdownEditor.body.trim()} onClick={() => void previewReconstruction()}>{busy ? "Analisando..." : "Pré-visualizar substituição"}</button>
