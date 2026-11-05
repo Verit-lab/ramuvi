@@ -201,3 +201,16 @@ test("v0.11 keeps Configurações in the sidebar foot and supports hiding and re
   assert.match(shell, /arena-dev:study-sidebar-hidden/);
   assert.match(studyCss, /\.shell\.sidebarHidden\{grid-template-columns:minmax\(0,1fr\)\}/);
 });
+
+
+test("consolidated Markdown supports a non-destructive new draft reconstruction", () => {
+  assert.match(manager, /Atualizar conteúdos/);
+  assert.match(manager, /Reconstruir jornada/);
+  assert.match(manager, /previewContentIngestion/);
+  assert.match(manager, /Prévia da reconstrução/);
+  assert.match(manager, /createReconstructedJourney/);
+  assert.match(manager, /materializeContentDraft\(classroomId, proposed\)/);
+  assert.match(manager, /A jornada atual não será modificada, arquivada nem apagada/);
+  assert.match(manager, /setDraft\(toDraft\(created\)\)/);
+  assert.match(manager, /rebuildPreview\.source !== markdownEditor\.body/);
+});

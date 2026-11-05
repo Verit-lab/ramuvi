@@ -41,6 +41,44 @@ class SourceAdapterContractTest {
     }
 
     @Test
+    void notionTogglesRespectModulesStagesAndNestedSubtopics() {
+        var adapter = new MarkdownSourceAdapter();
+        var markdown = """
+                # Portaria Digital
+                <toggle heading="h2">
+                Módulo 01 | Fundamentos
+
+                <toggle heading="h3">
+                Etapa 00 · Git
+
+                Introdução.
+                <toggle heading="h3">
+                0.1 Git básico
+
+                Exemplo.
+                </toggle>
+                ### 0.2 Próximos passos
+                Mais texto.
+                </toggle>
+
+                <toggle heading="h3">
+                Etapa 01 · Python
+
+                Conhecimento inicial.
+                </toggle>
+                </toggle>
+                """;
+        var doc = adapter.normalize(request(ContentIngestionSource.MARKDOWN, markdown, "notion.md"));
+        var headings = doc.blocks().stream().filter(b -> b instanceof NormalizedDocument.Heading)
+                .map(b -> (NormalizedDocument.Heading) b).toList();
+        assertThat(headings).extracting(NormalizedDocument.Heading::text)
+                .containsExactly("Módulo 01 | Fundamentos", "Etapa 00 · Git",
+                        "0.1 Git básico", "0.2 Próximos passos", "Etapa 01 · Python");
+        assertThat(headings).extracting(NormalizedDocument.Heading::level)
+                .containsExactly(2, 3, 4, 4, 3);
+    }
+
+    @Test
     void textAndExtractedFilesUseTheSameNeutralContract() {
         var adapter = new TextSourceAdapter();
         var text = adapter.normalize(request(ContentIngestionSource.TEXT, "Primeiro bloco.\n\nSegundo bloco.", "Texto colado"));

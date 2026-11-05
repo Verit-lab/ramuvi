@@ -2,18 +2,24 @@ package br.com.arenadev.content.ingestion;
 
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Component
 public class MarkdownSourceAdapter implements ContentSourceAdapter {
+    private static final Pattern NOTION_TOGGLE = Pattern.compile("^<toggle\\s+heading=\"h([1-4])\"[^>]*>\\s*$");
+    private static final Pattern NOTION_TOGGLE_CLOSE = Pattern.compile("^</toggle>\\s*$");
     @Override
     public boolean supports(ContentIngestionSource source) { return source == ContentIngestionSource.MARKDOWN; }
 
     @Override
     public NormalizedDocument normalize(ContentIngestionService.PreviewRequest request) {
-        String markdown = requireContent(request.content());
+        String markdown = flattenNotionToggles(requireContent(request.content()));
         List<NormalizedDocument.Block> blocks = new ArrayList<>();
         String documentTitle = null;
         boolean fenced = false;
@@ -29,7 +35,7 @@ public class MarkdownSourceAdapter implements ContentSourceAdapter {
             int level = fenced ? 0 : headingLevel(trimmed);
             if (level > 0) {
                 flush(content, blocks);
-                String text = trimmed.substring(level + 1).trim();
+                String text = trimmed.substring(level + 1).trim().replace("\\|", "|");
                 if (level == 1 && documentTitle == null) documentTitle = text;
                 else blocks.add(new NormalizedDocument.Heading(level, text));
             } else content.append(line).append('\n');
@@ -41,6 +47,60 @@ public class MarkdownSourceAdapter implements ContentSourceAdapter {
                 new NormalizedDocument.Provenance(ContentIngestionSource.MARKDOWN, clean(request.sourceLabel()), clean(request.sourceUrl()), null, "MARKDOWN"),
                 Map.of("mappingProfile", "MARKDOWN_H2_H3")
         );
+    }
+
+
+    /**
+     * Flatten native Notion heading toggles into readable Markdown. A toggle
+     * nested under a stage is part of that stage, not a new stage.
+     * Plain Markdown is kept untouched.
+     */
+    static String flattenNotionToggles(String markdown) {
+        if (!markdown.contains("<toggle heading=")) return markdown;
+        String[] lines = markdown.replace("\r\n", "\n").replace('\r', '\n').split("\n", -1);
+        StringBuilder flattened = new StringBuilder(markdown.length());
+        Deque<String> hierarchy = new ArrayDeque<>();
+        boolean code = false;
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+            String trimmed = line.trim();
+            if (trimmed.startsWith("```") || trimmed.startsWith("~~~")) code = !code;
+            if (!code) {
+                Matcher opening = NOTION_TOGGLE.matcher(trimmed);
+                if (opening.matches()) {
+                    int next = i + 1;
+                    while (next < lines.length && lines[next].isBlank()) next++;
+                    if (next < lines.length && !lines[next].trim().startsWith("<")) {
+                        String title = lines[next].trim();
+                        boolean insideModule = hierarchy.contains("module");
+                        boolean insideStage = hierarchy.contains("stage");
+                        int level = Integer.parseInt(opening.group(1));
+                        String role = insideStage ? "detail" : insideModule ? "stage"
+                                : level == 2 ? "module" : "detail";
+                        hierarchy.push(role);
+                        int heading = role.equals("module") ? 2 : role.equals("stage") ? 3 : 4;
+                        flattened.append("#".repeat(heading)).append(' ').append(title).append("\n\n");
+                        i = next;
+                        continue;
+                    }
+                    hierarchy.push("detail");
+                    continue;
+                }
+                if (NOTION_TOGGLE_CLOSE.matcher(trimmed).matches()) {
+                    if (!hierarchy.isEmpty()) hierarchy.pop();
+                    continue;
+                }
+                if (hierarchy.contains("stage")) {
+                    int heading = headingLevel(trimmed);
+                    if (heading > 0 && heading <= 3) {
+                        flattened.append("#### ").append(trimmed.substring(heading + 1)).append('\n');
+                        continue;
+                    }
+                }
+            }
+            flattened.append(line).append('\n');
+        }
+        return flattened.toString();
     }
 
     private static int headingLevel(String line) {

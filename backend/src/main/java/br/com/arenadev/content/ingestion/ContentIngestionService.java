@@ -287,12 +287,24 @@ public class ContentIngestionService {
         List<DraftItem> items = new ArrayList<>();
         String contentTitle = null;
         StringBuilder contentBody = new StringBuilder();
+        // Notion materials often keep numbered H3 subtopics inside an "Etapa".
+        // If the document explicitly identifies stages, only "Etapa NN" starts
+        // a new item; all other H3 headings belong to the current stage body.
+        boolean numberedStages = document.blocks().stream().anyMatch(block ->
+                block instanceof NormalizedDocument.Heading h && h.level() == 3
+                        && h.text().matches("(?iu)^Etapa\\s+\\d{1,3}\\b.*"));
         for (NormalizedDocument.Block block : document.blocks()) {
             if (block instanceof NormalizedDocument.Heading heading && heading.level() == 2) {
                 if (contentTitle != null) { items.add(markdownItem(contentTitle, contentBody)); contentTitle = null; contentBody.setLength(0); }
                 if (sectionTitle != null) addMarkdownSection(result, sectionTitle, sectionIntro, items);
+                else if (!sectionIntro.isEmpty()) {
+                    // Preserve the document preface instead of discarding it.
+                    addMarkdownSection(result, "Apresentação", sectionIntro, List.of());
+                }
                 sectionTitle = heading.text(); sectionIntro.setLength(0); items = new ArrayList<>();
-            } else if (block instanceof NormalizedDocument.Heading heading && heading.level() == 3) {
+            } else if (block instanceof NormalizedDocument.Heading heading && heading.level() == 3
+                    && !(numberedStages && contentTitle != null
+                            && !heading.text().matches("(?iu)^Etapa\\s+\\d{1,3}\\b.*"))) {
                 if (sectionTitle == null) sectionTitle = "Conteúdo";
                 if (contentTitle != null) items.add(markdownItem(contentTitle, contentBody));
                 contentTitle = heading.text(); contentBody.setLength(0);
@@ -314,6 +326,13 @@ public class ContentIngestionService {
         if (sectionItems.isEmpty() && !intro.isEmpty()) {
             sectionItems.add(new DraftItem(title, summarize(intro, 180), DraftItemType.CONTENT, intro, null));
             intro = "";
+        } else if (!sectionItems.isEmpty() && !intro.isEmpty()) {
+            // The module introduction is part of the original source, not just
+            // a 180-character summary. Keep it in the first content body.
+            DraftItem first = sectionItems.getFirst();
+            String body = "#### Orientações do módulo\n\n" + intro
+                    + (first.body() == null ? "" : "\n\n" + first.body());
+            sectionItems.set(0, new DraftItem(first.title(), first.description(), first.type(), body, first.sourceUrl()));
         }
         if (!sectionItems.isEmpty()) result.add(new DraftSection(title, intro.isEmpty() ? null : summarize(intro, 180), List.copyOf(sectionItems)));
     }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { materializeContentDraft, type ContentDraft } from "@/lib/content-ingestion-api";
+import { materializeContentDraft, previewContentIngestion, type ContentDraft } from "@/lib/content-ingestion-api";
 import { fetchContentLibrary, type LearningResource } from "@/lib/learning-resource-api";
 import JourneyCreationWizard from "@/components/JourneyCreationWizard";
 import {
@@ -107,6 +107,8 @@ export default function JourneyManager({ classroomId, classroomName, notify, ini
   const [libraryQuery, setLibraryQuery] = useState("");
   const [libraryTargetModule, setLibraryTargetModule] = useState<string | undefined>();
   const [markdownEditor, setMarkdownEditor] = useState<{ body: string; original: string; updatedAt: string } | null>(null);
+  const [markdownMode, setMarkdownMode] = useState<"update" | "rebuild">("update");
+  const [rebuildPreview, setRebuildPreview] = useState<{ source: string; draft: ContentDraft } | null>(null);
   const markdownDialogRef = useRef<HTMLElement>(null);
   const markdownCloseRef = useRef<HTMLButtonElement>(null);
   useBodyScrollLock(Boolean(markdownEditor));
@@ -389,6 +391,8 @@ export default function JourneyManager({ classroomId, classroomName, notify, ini
     try {
       const document = await fetchJourneyMarkdown(draft.id);
       setMarkdownEditor({ body: document.markdown, original: document.markdown, updatedAt: document.updatedAt });
+      setMarkdownMode("update");
+      setRebuildPreview(null);
     } catch (error) {
       notify(error instanceof Error ? error.message : "Não foi possível carregar o Markdown da jornada.", "error");
     } finally { setBusy(false); }
@@ -406,6 +410,50 @@ export default function JourneyManager({ classroomId, classroomName, notify, ini
       notify("Markdown atualizado. A estrutura e o progresso dos alunos foram preservados.");
     } catch (error) {
       notify(error instanceof Error ? error.message : "Não foi possível atualizar o Markdown.", "error");
+    } finally { setBusy(false); }
+  }
+
+  async function previewReconstruction() {
+    if (!draft?.id || !markdownEditor?.body.trim() || busy) return;
+    setBusy(true);
+    setRebuildPreview(null);
+    try {
+      const proposed = await previewContentIngestion({
+        classroomId,
+        source: "MARKDOWN",
+        title: `${draft.title} (versão revisada)`,
+        sourceLabel: `Reconstrução de ${draft.title}`,
+        content: markdownEditor.body,
+      });
+      if (!proposed.sections.length || !proposed.sections.some((section) => section.items.length)) {
+        throw new Error("Nenhum módulo com conteúdo foi identificado. Revise a hierarquia H2/H3.");
+      }
+      setRebuildPreview({ source: markdownEditor.body, draft: proposed });
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Não foi possível analisar a nova estrutura.", "error");
+    } finally { setBusy(false); }
+  }
+
+  async function createReconstructedJourney() {
+    if (!draft?.id || !markdownEditor || !rebuildPreview || rebuildPreview.source !== markdownEditor.body || busy) return;
+    const proposed = rebuildPreview.draft;
+    const proposedCount = proposed.sections.reduce((sum, section) => sum + section.items.length, 0);
+    if (!proposedCount || proposed.sections.some((section) => !section.title.trim() ||
+        section.items.some((item) => !item.title.trim()))) {
+      notify("Revise os módulos e conteúdos sem título antes da reconstrução.", "error");
+      return;
+    }
+    if (!window.confirm(`Criar outra jornada em RASCUNHO com ${proposed.sections.length} módulos e ${proposedCount} conteúdos? A jornada atual não será modificada, arquivada nem apagada. Progresso e vínculos antigos permanecerão apenas nela; a nova versão começará sem progresso de alunos.`)) return;
+    setBusy(true);
+    try {
+      const created = await materializeContentDraft(classroomId, proposed);
+      setJourneys((current) => [created, ...current.filter((journey) => journey.id !== created.id)]);
+      setDraft(toDraft(created));
+      setMarkdownEditor(null);
+      setRebuildPreview(null);
+      notify("Nova jornada criada como rascunho. Revise, publique e só então arquive a versão anterior, se desejar.");
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Não foi possível criar a nova versão.", "error");
     } finally { setBusy(false); }
   }
 
@@ -453,6 +501,7 @@ export default function JourneyManager({ classroomId, classroomName, notify, ini
 
   async function archive() {
     if (!draft?.id || draft.status === "ARCHIVED" || busy) return;
+    if (!window.confirm("Arquivar esta jornada? Ela deixará de aparecer entre as jornadas publicadas para alunos. Os registros de progresso permanecem armazenados, mas esta versão ficará somente leitura.")) return;
     setBusy(true);
     try {
       const archived = await archiveJourney(draft.id);
@@ -705,12 +754,43 @@ export default function JourneyManager({ classroomId, classroomName, notify, ini
       {markdownEditor && (
         <div className={styles.libraryBackdrop}>
           <section ref={markdownDialogRef} tabIndex={-1} className={`${styles.libraryPicker} ${styles.markdownEditor}`} role="dialog" aria-modal="true" aria-labelledby="journey-markdown-title">
-            <header><div><span>JORNADA · CÓDIGO-FONTE DO CONTEÚDO</span><h3 id="journey-markdown-title">Markdown completo da jornada</h3><p>Visualize, copie ou substitua o Markdown. Preserve os títulos H3 e a ordem dos conteúdos para manter os vínculos e o progresso dos alunos. Títulos da jornada e módulos devem ser alterados no editor de estrutura.</p></div><DialogCloseButton ref={markdownCloseRef} label="Fechar Markdown" onClick={() => setMarkdownEditor(null)} /></header>
-            <textarea className={styles.markdownEditorBody} aria-label="Markdown completo" spellCheck={false} value={markdownEditor.body} onChange={event => setMarkdownEditor(current => current ? { ...current, body: event.target.value } : current)} />
+            <header><div><span>JORNADA · MARKDOWN</span><h3 id="journey-markdown-title">Markdown completo da jornada</h3><p>Escolha como aplicar o material. A atualização preserva os conteúdos existentes; a reconstrução cria uma nova jornada em rascunho.</p></div><DialogCloseButton ref={markdownCloseRef} label="Fechar Markdown" onClick={() => setMarkdownEditor(null)} /></header>
+            <div className={styles.markdownModes} role="group" aria-label="Tipo de importação do Markdown">
+              <button type="button" className={markdownMode === "update" ? styles.markdownModeActive : styles.markdownMode} onClick={() => { setMarkdownMode("update"); setRebuildPreview(null); }} aria-pressed={markdownMode === "update"}>Atualizar conteúdos</button>
+              <button type="button" className={markdownMode === "rebuild" ? styles.markdownModeActive : styles.markdownMode} onClick={() => { setMarkdownMode("rebuild"); setRebuildPreview(null); }} aria-pressed={markdownMode === "rebuild"}>Reconstruir jornada</button>
+            </div>
+            <p className={styles.markdownModeHint}>{markdownMode === "update"
+              ? "Mantém módulos, títulos, ordem, IDs e progresso. Exige os mesmos conteúdos H3; materiais compartilhados da Biblioteca podem ser atualizados."
+              : "Cria uma jornada independente. H1 = título, H2 = módulo, H3 = conteúdo. A jornada original e o progresso permanecem intactos; a nova não herda progresso nem vínculos."}</p>
+            <textarea className={styles.markdownEditorBody} aria-label="Markdown completo" spellCheck={false} value={markdownEditor.body} onChange={event => { setRebuildPreview(null); setMarkdownEditor(current => current ? { ...current, body: event.target.value } : current); }} />
+            {markdownMode === "rebuild" && rebuildPreview && (
+              <div className={styles.markdownRebuildPreview} aria-live="polite">
+                <h4>Prévia da reconstrução</h4>
+                <div className={styles.markdownCompare} aria-label="Comparação das estruturas">
+                  <div><span>Jornada atual</span><strong>{new Set((selected?.stages ?? []).map(stage => stage.sectionId || stage.sectionTitle || "__default")).size} módulos</strong><strong>{selected?.stages.length ?? 0} conteúdos</strong></div>
+                  <div><span>Nova jornada (rascunho)</span><strong>{rebuildPreview.draft.sections.length} módulos</strong><strong>{rebuildPreview.draft.sections.reduce((sum, section) => sum + section.items.length, 0)} conteúdos</strong></div>
+                </div>
+                <p>Esta operação não migra progresso, atividades ou vínculos com a Biblioteca. Nenhum conteúdo da versão anterior será excluído.</p>
+                <details><summary>Conferir módulos e títulos identificados</summary>
+                  <ol className={styles.markdownModuleList}>{rebuildPreview.draft.sections.map((section, index) => <li key={index}><strong>{section.title}</strong> · {section.items.length} conteúdos<ol>{section.items.map((item, itemIndex) => <li key={itemIndex}>{item.title}{!item.body?.trim() ? " (sem texto)" : ""}</li>)}</ol></li>)}</ol>
+                </details>
+                {(selected?.stages.length ?? 0) > 0 &&
+                  rebuildPreview.draft.sections.reduce((sum, section) => sum + section.items.length, 0) < (selected?.stages.length ?? 0) * 0.7 &&
+                  <p className={styles.markdownPreviewWarning}>A nova estrutura tem muito menos conteúdos que a original. Confira se os H3 internos não foram interpretados incorretamente antes de reconstruir.</p>}
+                {rebuildPreview.draft.sections.some(section => section.items.some(item => !item.body?.trim())) &&
+                  <p className={styles.markdownPreviewWarning}>Atenção: existem conteúdos sem texto. Confira a importação antes de criar.</p>}
+              </div>
+            )}
             <div className={styles.textEditorActions}>
               <button className={styles.secondary} type="button" onClick={() => navigator.clipboard.writeText(markdownEditor.body).then(() => notify("Markdown copiado.")).catch(() => notify("Não foi possível copiar.", "error"))}>Copiar Markdown</button>
               <button className={styles.secondary} type="button" onClick={() => setMarkdownEditor(null)}>Cancelar</button>
-              <button className={styles.primary} type="button" disabled={busy || markdownEditor.body === markdownEditor.original || !markdownEditor.body.trim()} onClick={() => void saveMarkdown()}>{busy ? "Salvando..." : "Substituir Markdown"}</button>
+              {markdownMode === "update" ? (
+                <button className={styles.primary} type="button" disabled={busy || markdownEditor.body === markdownEditor.original || !markdownEditor.body.trim()} onClick={() => void saveMarkdown()}>{busy ? "Salvando..." : "Atualizar conteúdos"}</button>
+              ) : rebuildPreview ? (
+                <button className={styles.primary} type="button" disabled={busy || rebuildPreview.source !== markdownEditor.body} onClick={() => void createReconstructedJourney()}>{busy ? "Criando..." : "Criar nova jornada em rascunho"}</button>
+              ) : (
+                <button className={styles.primary} type="button" disabled={busy || !markdownEditor.body.trim()} onClick={() => void previewReconstruction()}>{busy ? "Analisando..." : "Pré-visualizar reconstrução"}</button>
+              )}
             </div>
           </section>
         </div>

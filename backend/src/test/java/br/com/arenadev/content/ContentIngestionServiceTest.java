@@ -97,6 +97,35 @@ class ContentIngestionServiceTest {
     }
 
     @Test
+    void treatsNotionStageSubheadingsAsPartOfTheStage() {
+        String markdown = """
+                # Portaria Digital
+                ## Módulo 01 | Fundamentos
+                ### Etapa 00 · Iniciar Git
+                Conceitos básicos.
+                ### 0.1 Diagnóstico
+                Análise do cenário.
+                ### Etapa 01 · Primeira janela
+                Exemplo em PySide6.
+                ### 1.1 Exercício
+                Aplique os widgets.
+                ## Módulo 02 | Banco de dados
+                ### Etapa 02 · SQL
+                Criar tabela.
+                """;
+        var draft = service.preview(new ContentIngestionService.PreviewRequest(
+                classroom(), ContentIngestionSource.MARKDOWN, null, null, null, markdown, null, "notion.md"));
+        assertThat(draft.sections()).hasSize(2);
+        assertThat(draft.sections().getFirst().items())
+                .extracting(ContentIngestionService.DraftItem::title)
+                .containsExactly("Etapa 00 · Iniciar Git", "Etapa 01 · Primeira janela");
+        assertThat(draft.sections().getFirst().items().getFirst().body())
+                .contains("### 0.1 Diagnóstico", "Análise do cenário.");
+        assertThat(draft.sections().get(1).items())
+                .extracting(ContentIngestionService.DraftItem::title).containsExactly("Etapa 02 · SQL");
+    }
+
+    @Test
     void preservesDeepMarkdownHeadingsInsideContentWithoutCallingAi() {
         UUID classroomId = classroom();
         String markdown = """

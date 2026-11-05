@@ -501,3 +501,25 @@
 .markdownEditorBody{box-sizing:border-box;width:100%;min-height:min(58dvh,660px);padding:16px;border:1px solid var(--border);border-radius:10px;resize:vertical;background:var(--surface);color:var(--text);font:13px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;tab-size:2}
 .markdownEditorBody:focus-visible{outline:2px solid var(--ds-accent-text);outline-offset:2px}
 @media(max-width:720px){.markdownEditor{padding:16px}.markdownEditorBody{min-height:52dvh}.markdownEditor .textEditorActions{flex-wrap:wrap}}
+
+/* Consolidated Markdown: safe in-place update or independent draft reconstruction. */
+.markdownModes { display: flex; flex-wrap: wrap; gap: .4rem; padding: .25rem; border: 1px solid var(--border); border-radius: .75rem; }
+.markdownMode, .markdownModeActive { flex: 1 1 11rem; min-height: 42px; border: 0; border-radius: .55rem; padding: .5rem .75rem; cursor: pointer; font: inherit; font-weight: 700; }
+.markdownMode { background: transparent; color: var(--muted); }
+.markdownModeActive { background: color-mix(in srgb, var(--accent) 13%, var(--surface)); color: var(--text); box-shadow: inset 0 0 0 1px var(--accent); }
+.markdownModes button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.markdownModeHint { font-size: .86rem; line-height: 1.5; }
+.markdownRebuildPreview { display: grid; gap: .75rem; border: 1px solid var(--border); border-radius: .75rem; padding: 1rem; background: var(--surface-2,var(--surface)); }
+.markdownRebuildPreview h4 { margin: 0; }
+.markdownRebuildPreview p { font-size: .83rem; }
+.markdownCompare { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .75rem; }
+.markdownCompare > div { display: grid; gap: .3rem; padding: .7rem; border: 1px solid var(--border); border-radius: .6rem; }
+.markdownCompare span { color: var(--muted); font-size: .8rem; }
+.markdownCompare strong { font-size: .92rem; }
+.markdownRebuildPreview details { max-height: 15rem; overflow: auto; }
+.markdownRebuildPreview summary { cursor: pointer; font-weight: 700; padding: .4rem 0; }
+.markdownModuleList { padding-left: 1.5rem; }
+.markdownModuleList > li { padding: .2rem 0; }
+.markdownModuleList ol { padding-left: 1.5rem; font-size: .83rem; }
+.markdownRebuildPreview .markdownPreviewWarning { color: #e0a02e; font-weight: 700; }
+@media(max-width: 720px) { .markdownCompare {grid-template-columns: 1fr;} .markdownEditor .textEditorActions button{flex:1 1 9rem;} }
