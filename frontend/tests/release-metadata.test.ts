@@ -53,7 +53,7 @@ test("release manifests and version derivation stay aligned", () => {
   const version = backendVersion();
 
   assert.equal(pkg.version, version);
-  assert.match(version, /^0\.11\.0(?:-(?:rc|beta)\.[0-9]+)?$/);
+  assert.match(version, /^0\.11\.1(?:-(?:rc|beta)\.[0-9]+)?$/);
 
   assert.equal(lock.version, version);
   assert.equal(lock.packages[""]?.version, version);
@@ -64,8 +64,9 @@ test("release manifests and version derivation stay aligned", () => {
   assert.match(gate, /artifactId>arena-dev-api/);
 });
 
-test("release gate uses v0.11/V66 while preserving earlier v0.11 and v0.10 contract checks", () => {
+test("release gate uses v0.11/V67 while preserving earlier v0.11 and v0.10 contract checks", () => {
   assert.match(gate, /verify-v0\.11-contract\.sh/);
+  assert.match(gate, /expected_schema_version=67/);
   assert.match(gate, /expected_schema_version=66/);
   assert.match(gate, /expected_schema_version=61/);
   assert.match(gate, /expected_schema_version=60/);
@@ -91,16 +92,16 @@ test("release gate uses v0.11/V66 while preserving earlier v0.11 and v0.10 contr
   assert.match(v09Contract, /physicalLegacyRemovalReady/);
 });
 
-test("final v0.11 release requires 0.11.0, signed 11.6 attestation and validated backup", () => {
-  assert.match(gate, /RELEASE_VERSION" == "0\.11\.0"/);
+test("final v0.11.1 release requires 0.11.1, signed 11.6 attestation and validated backup", () => {
+  assert.match(gate, /RELEASE_VERSION" == "0\.11\.1"/);
   assert.match(gate, /--attestation/);
   assert.match(gate, /v011-readiness\.py/);
   assert.match(gate, /--candidate "\$head_sha"/);
   assert.match(gate, /--ci-run-id "\$run_id"/);
   assert.match(v011Contract, /verify-v0\.10-contract\.sh/);
-  assert.match(v011Contract, /V011_LAST_MIGRATION=66/);
+  assert.match(v011Contract, /V011_LAST_MIGRATION=67/);
   assert.match(v011Contract, /--check-template/);
-  assert.match(v011Contract, /0\\\.11\\\.0/);
+  assert.ok(v011Contract.includes(String.raw`^0\.11\.[01]`));
   assert.match(verifier, /arena_material_publications/);
   assert.match(verifier, /uq_arena_material_active_session/);
   assert.match(verifier, /arena_material_section_commands/);
