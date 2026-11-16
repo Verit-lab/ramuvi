@@ -1,5 +1,6 @@
 package br.com.arenadev.controller;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,6 +15,9 @@ public class HealthController {
 
     private final JdbcTemplate jdbcTemplate;
 
+    @Value("${APP_BUILD_SHA:unknown}")
+    private String buildSha;
+
     public HealthController(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
@@ -26,6 +30,7 @@ public class HealthController {
                 "application", "arena-dev-api",
                 "check", "readiness",
                 "database", database != null && database == 1 ? "UP" : "DOWN",
+                "buildSha", buildSha,
                 "timestamp", OffsetDateTime.now().toString()
         );
     }
@@ -36,6 +41,7 @@ public class HealthController {
                 "status", "UP",
                 "application", "arena-dev-api",
                 "check", "liveness",
+                "buildSha", buildSha,
                 "timestamp", OffsetDateTime.now().toString()
         );
     }

@@ -23,12 +23,14 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        RAMUVI_BUILD_SHA: ${RAMUVI_BUILD_SHA:-unknown}
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-arena_dev}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-arena}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-arena123}
       APP_FRONTEND_URL: ${APP_FRONTEND_URL:-http://localhost:3000}
-      APP_ALLOWED_ORIGIN_PATTERNS: ${APP_ALLOWED_ORIGIN_PATTERNS:-http://*:[3000]}
+      APP_ALLOWED_ORIGIN_PATTERNS: ${APP_ALLOWED_ORIGIN_PATTERNS:-http://localhost:3000,http://127.0.0.1:3000}
       APP_TEACHER_USERNAME: ${APP_TEACHER_USERNAME:-professor}
       APP_TEACHER_PASSWORD: ${APP_TEACHER_PASSWORD:-arena-dev-change-me}
       APP_TEACHER_SESSION_TIMEOUT_MINUTES: ${APP_TEACHER_SESSION_TIMEOUT_MINUTES:-240}
@@ -79,12 +81,13 @@ services:
         INTERNAL_API_URL: ${INTERNAL_API_URL:-http://backend:8080}
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
         NEXT_PUBLIC_ARENA_SELECTOR_MODE: ${NEXT_PUBLIC_ARENA_SELECTOR_MODE:-grid-spotlight}
+        RAMUVI_BUILD_SHA: ${RAMUVI_BUILD_SHA:-unknown}
     environment:
       INTERNAL_API_URL: ${INTERNAL_API_URL:-http://backend:8080}
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
       NEXT_PUBLIC_ARENA_SELECTOR_MODE: ${NEXT_PUBLIC_ARENA_SELECTOR_MODE:-grid-spotlight}
     ports:
-      - "${FRONTEND_PORT:-3000}:3000"
+      - "${FRONTEND_BIND:-127.0.0.1}:${FRONTEND_PORT:-3000}:3000"
     depends_on:
       backend:
         condition: service_healthy

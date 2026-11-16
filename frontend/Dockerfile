@@ -16,6 +16,8 @@ COPY . .
 RUN npm run build
 
 FROM node:22-alpine AS production
+ARG RAMUVI_BUILD_SHA=unknown
+LABEL org.opencontainers.image.revision="${RAMUVI_BUILD_SHA}"
 WORKDIR /app
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
