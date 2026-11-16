@@ -245,10 +245,10 @@ A próxima linha candidata é **v0.10 — Learning Loop**, com intervenções pe
 ## Executando localmente
 
 ```bash
-git clone https://github.com/wesscosta/arena-dev.git
-cd arena-dev
-cp .env.example .env
-docker compose up -d --build
+git clone https://github.com/Verit-lab/ramuvi.git
+cd ramuvi
+scripts/arena.sh install --no-start  # cria .env com segredos aleatórios
+docker compose up -d --build          # perfil local: frontend em 127.0.0.1
 docker compose ps
 ```
 
@@ -260,7 +260,7 @@ Readiness: `http://localhost:8080/api/health/ready`
 
 Liveness: `http://localhost:8080/api/health/live`
 
-Em acesso pela rede local, compartilhe apenas o frontend, por exemplo `http://<IP-DA-MAQUINA>:3000`. No perfil Docker de desenvolvimento, o browser usa essa mesma origem para `/api/*` e `/ws/*`, e o Next.js encaminha as requisições para o backend pela rede interna do Compose. Assim, Join, Learn e tempo real não dependem de a porta `:8080` estar acessível no dispositivo do aluno. O banco e o backend de desenvolvimento escutam só em `127.0.0.1` (`POSTGRES_BIND`, `BACKEND_BIND`); os aparelhos da sala usam apenas o frontend. Não exponha o banco na rede da sala, porque a senha padrão de `.env.example` é pública.
+**Ambiente local:** o Compose básico publica frontend, backend e PostgreSQL somente em `127.0.0.1`. Para a rede da sala, utilize `scripts/arena.sh install` (perfil `compose.classroom.yaml`): só o frontend escuta na LAN, e `/api/*` e `/ws/*` passam pelo proxy same-origin do Next.js. `CLASSROOM_FRONTEND_BIND` controla o bind da sala, separado de `FRONTEND_BIND`; restrinja `CLASSROOM_ALLOWED_ORIGIN_PATTERNS` ao host da sala sempre que possível. Em produção use exclusivamente HTTPS, `compose.prod.yaml` e origens específicas. Senhas do `.env.example` **não devem ser utilizadas** em ambiente real; `install` as substitui por segredos gerados.
 
 ## Dados dos alunos
 
@@ -274,7 +274,7 @@ Em acesso pela rede local, compartilhe apenas o frontend, por exemplo `http://<I
 Para usar com uma turma, prefira `scripts/arena.sh` ao `docker compose` direto. Ele usa o perfil de sala (`compose.yaml` + `compose.classroom.yaml`): só o frontend fica acessível na rede, Postgres e backend ficam sem porta publicada, e os serviços reiniciam sozinhos.
 
 ```bash
-scripts/arena.sh install     # cria o .env com senhas aleatórias e sobe tudo
+scripts/arena.sh install     # cria o .env com senhas aleatórias e sobe a sala
 scripts/arena.sh status      # serviços, saúde e endereço para os alunos
 scripts/arena.sh backup      # aceita --keep N e --encrypt-to <chave-age>
 scripts/arena.sh upgrade     # backup, git pull, rebuild e conferência de saúde
