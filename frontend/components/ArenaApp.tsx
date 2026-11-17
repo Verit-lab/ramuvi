@@ -141,6 +141,9 @@ export default function ArenaApp() {
   const classroomIdsRef = useRef<string[]>([]);
   // Until the URL has been read once, the default screen must not overwrite it.
   const [locationRestored, setLocationRestored] = useState(false);
+  // Browser Back/Forward restores state without creating a new history entry.
+  const [locationRestoreRevision, setLocationRestoreRevision] = useState(0);
+  const handledRestoreRevisionRef = useRef(0);
   const [journeyCreation, setJourneyCreation] = useState(false);
   // True when this tab pushed the creation entry, so leaving it can go "back".
   const creationPushedRef = useRef(false);
@@ -171,6 +174,7 @@ export default function ArenaApp() {
       setView(location.view);
       setJourneyCreation(Boolean(location.journeyCreation));
       if (!location.journeyCreation) creationPushedRef.current = false;
+      setLocationRestoreRevision((previous) => previous + 1);
       setLocationRestored(true);
     }
     restore();
@@ -182,6 +186,13 @@ export default function ArenaApp() {
 
   useEffect(() => {
     if (!locationRestored) return;
+    // Initial URL hydration and popstate read history; only user actions push.
+    // Skip the state-sync effect produced by a browser restoration to prevent
+    // a duplicate history entry that would make the next Back ineffective.
+    if (locationRestoreRevision !== handledRestoreRevisionRef.current) {
+      handledRestoreRevisionRef.current = locationRestoreRevision;
+      return;
+    }
     const search = teacherLocationSearch(
       { view, tab: classroomTab, classroomId: activeClassroomId, journeyCreation: creatingJourney },
       window.location.search,
@@ -189,7 +200,7 @@ export default function ArenaApp() {
     if (search !== window.location.search) {
       window.history.pushState(null, "", `${window.location.pathname}${search}`);
     }
-  }, [locationRestored, view, classroomTab, activeClassroomId, creatingJourney]);
+  }, [locationRestored, locationRestoreRevision, view, classroomTab, activeClassroomId, creatingJourney]);
 
   function openJourneyCreation() {
     creationPushedRef.current = true;
