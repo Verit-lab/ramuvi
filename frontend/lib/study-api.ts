@@ -1,6 +1,7 @@
 import { apiRequest } from "./http/client";
 import { deviceClaimStorageKey } from "./app-state";
 import { HttpApiError } from "./http/errors";
+import { verifiedStudyAccess, type VerifiedStudyMode } from "./verified-study-api";
 
 export type StudyState = "COMPLETED" | "CURRENT" | "AVAILABLE" | "LOCKED";
 export type JourneyProgressSummary = { completedContents: number; totalContents: number; percent: number };
@@ -175,7 +176,30 @@ export async function fetchAllStudyLiveSessions(): Promise<LiveSessionSummary[]>
 }
 
 export type MultiClassroomJourneySummary = JourneyStudySummary & { studyToken: string; classroomId: string };
+export async function fetchStudyJourneyCatalog(): Promise<{
+  mode: VerifiedStudyMode;
+  journeys: MultiClassroomJourneySummary[];
+}> {
+  const verified = await verifiedStudyAccess();
+  if (verified.mode === "ACCOUNT") {
+    return {
+      mode: "ACCOUNT",
+      journeys: (verified.journeys ?? []).map((journey) => ({
+        ...journey,
+        // An account never receives a device access token.
+        studyToken: "",
+        classroomId: journey.classroomId ?? "",
+      })),
+    };
+  }
+  return { mode: "DEVICE", journeys: await fetchDeviceStudyJourneys() };
+}
+
 export async function fetchAllStudyJourneys(): Promise<MultiClassroomJourneySummary[]> {
+  return (await fetchStudyJourneyCatalog()).journeys;
+}
+
+async function fetchDeviceStudyJourneys(): Promise<MultiClassroomJourneySummary[]> {
   const claims = studyDeviceClaims();
   const groups = await Promise.all(claims.map(async (claim) => {
     try { const journeys = await fetchStudyJourneys(claim.token); return journeys.map((journey) => ({ ...journey, studyToken: claim.token, classroomId: journey.classroomId ?? claim.classroomId })); }

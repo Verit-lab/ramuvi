@@ -1,6 +1,6 @@
 # Ramuvi v0.12 — identidade única do aluno
 
-**Estado:** I0 PR #136, I1 PR #137 e I2 IMPLEMENTADO EM BRANCH EMPILHADA, revisão/CI/GO pendentes. Não é release publicada.
+**Estado:** I0 PR #136, I1 PR #137, I2 PR #138 e I3a de Jornada em branch empilhada. Revisão de ADRs, CI final e GO pendentes. Não é release publicada.
 **Base:** `main@6893377940f2761693a6854f5a305f1af71122a1` (CI 3/3 aprovado).
 **Branch:** `feat/v0.12-student-account-foundation`.
 **Rastreabilidade:** [issue #119](https://github.com/Verit-lab/ramuvi/issues/119), ADR-0068, [roadmap Notion](https://app.notion.com/p/3f9f3eb198c38136b319e5807170f8bf).
@@ -16,7 +16,8 @@ Ingresso repetido via código de aula/Jornada; a lembrança de dispositivo não 
 | **I0 — fundação** | V68 com conta, identidades externas e convites individuais; emissão/revogação docente, resgate somente interno; anonimização revoga vínculo | Testes de esquema, integridade, anonimização, autenticação docente, regressão Java/Next |
 | **I1 — autenticação** | OIDC Google/Microsoft Authorization Code + PKCE, issuer/sub verificados; alternativa email OTP se viável | Sessão HttpOnly/Secure/SameSite, CSRF, anti-replay, rate limiting, rotas administrativas permanecem protegidas |
 | **I2 — ingresso** | Resgatar convite com conta autenticada; tratamento de associação de aluno existente, convite expirado/recusado, aprovação manual | 2 dispositivos, associação indevida, revogação concorrente, professor e convidado |
-| **I3 — painel do aluno** | Minhas turmas/Jornadas/Atividades/Arena; reingresso sem códigos recorrentes para matriculado; alternar conta/sair | E2E Chromium/WebKit, Safari físico, teclado/voz/zoom, privacidade |
+| **I3a — Jornada do aluno** | Catálogo multi-turma, capítulos, leitura e progresso pelo OIDC, usando a matrícula canônica | HTTP, PostgreSQL, Chromium/WebKit, revogação e CSRF |
+| **I3b — demais experiências** | Atividades/submissões, Arena, Perfil e Conquistas entre dispositivos | Contratos de autorização específicos, Figma e novos testes; pendente |
 | **I4 — homologação** | CI 3/3, backup real restaurável em isolado, testes de fluxo e métricas, aprovação do responsável | GO assinado, tag/release/deploy explícitos |
 
 ## Implementado em I0
@@ -46,7 +47,7 @@ Ingresso repetido via código de aula/Jornada; a lembrança de dispositivo não 
 
 - [x] Maven verify e testes de migração V1–V68 verdes (172 testes na primeira suíte completa; novos testes HTTP incluídos na validação final).
 - [x] Frontend lint/typecheck/test/build (425/425 testes) e contratos de pré-release; 12 testes de scripts operacionais aprovados.
-- [ ] CI da PR verde no SHA final;
+- [x] CI 3/3 da PR #136 no SHA da fundação I0 aprovada; cada incremento posterior exige sua própria CI.
 - [ ] revisão de segurança da emissão do token e do controle de autorização;
 - [ ] PR para revisão, sem merge automático na `main` nem deploy.
 
@@ -57,4 +58,5 @@ Ingresso repetido via código de aula/Jornada; a lembrança de dispositivo não 
 - ADR proposta: `docs/adr/ADR-0070-student-enrollment-claim-authorization.md`.
 - Rotas docentes com convite individual e capabilities; resgate OIDC autenticado com CSRF e limite de tentativas; turmas ativas de múltiplas matrículas; interface aluno e professor sob flags OFF.
 - Versão de desenvolvimento `0.12.0-dev.3`, sem migrações posteriores a V68.
-- **I3 ainda pendente**: autorização transversal na Jornada e continuidade cross-device, perfil/aluno, onboarding genérico com aprovação docente quando adotado.
+- **I3a implementado na branch** `feat/v0.12-verified-journey-i3`: Jornada multi-turma e conclusão por sessão OIDC, mantendo progresso canônico da matrícula. Ver `docs/v0.12/JOURNEY_I3_IMPLEMENTATION.md` e ADR-0071.
+- **I3b pendente:** autorização de Atividades/submissões, Arena, Perfil e Conquistas, revisão UX no Figma e piloto presencial.

@@ -14,6 +14,9 @@ import org.springframework.test.context.DynamicPropertySource;
 
 import java.time.Instant;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -52,6 +55,32 @@ class StudentAccountFoundationIT {
                 accountId);
         assertThat(accounts.findActiveVerifiedOidcAccount(verified.issuer(), verified.subject()))
                 .isEmpty();
+    }
+
+    @Test
+    void firstOidcLoginsFromTwoDevicesProvisionExactlyOneAccount() throws Exception {
+        var identity = new StudentAccountService.VerifiedIdentity(
+                StudentAccountService.Method.OIDC, "https://accounts.google.com",
+                UUID.randomUUID().toString());
+        try (var pool = Executors.newFixedThreadPool(2)) {
+            var ready = new CountDownLatch(2);
+            var start = new CountDownLatch(1);
+            java.util.concurrent.Callable<UUID> login = () -> {
+                ready.countDown();
+                if (!start.await(5, TimeUnit.SECONDS)) throw new IllegalStateException("start timeout");
+                return accounts.provisionVerifiedIdentity(identity);
+            };
+            var first = pool.submit(login);
+            var second = pool.submit(login);
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+            UUID id = first.get(20, TimeUnit.SECONDS);
+            assertThat(second.get(20, TimeUnit.SECONDS)).isEqualTo(id);
+            assertThat(jdbc.queryForObject("""
+                    select count(*) from student_account_identities
+                     where issuer = ? and subject = ?
+                    """, Integer.class, identity.issuer(), identity.subject())).isEqualTo(1);
+        }
     }
 
     @Test

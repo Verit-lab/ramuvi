@@ -5,6 +5,9 @@ import br.com.arenadev.classroom.Enrollment;
 import br.com.arenadev.classroom.EnrollmentRepository;
 import br.com.arenadev.content.LearningResource;
 import br.com.arenadev.journey.*;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +25,8 @@ public class JourneyStudyService {
     private final StudentJourneyAccessRepository redeemedAccess;
     private final StudentJourneyStageProgressRepository redeemedProgress;
     private final AchievementService achievements;
+    private final JdbcTemplate jdbc;
+    private final EntityManager entityManager;
 
     public JourneyStudyService(
             JourneyRepository journeys,
@@ -30,7 +35,9 @@ public class JourneyStudyService {
             StudyAccessPolicy accessPolicy,
             StudentJourneyAccessRepository redeemedAccess,
             StudentJourneyStageProgressRepository redeemedProgress,
-            AchievementService achievements
+            AchievementService achievements,
+            JdbcTemplate jdbc,
+            EntityManager entityManager
     ) {
         this.journeys = journeys;
         this.enrollments = enrollments;
@@ -39,19 +46,26 @@ public class JourneyStudyService {
         this.redeemedAccess = redeemedAccess;
         this.redeemedProgress = redeemedProgress;
         this.achievements = achievements;
+        this.jdbc = jdbc;
+        this.entityManager = entityManager;
     }
 
     @Transactional(readOnly = true)
     public List<JourneyStudySummary> list(StudyPrincipal principal) {
-        requirePrincipalEnrollment(principal);
+        if (!principal.verifiedAccount()) requirePrincipalEnrollment(principal);
         Map<UUID, JourneyStudySummary> available = new LinkedHashMap<>();
         enrollments.findByStudentIdAndActiveTrue(principal.userId()).stream()
-                .filter(accessPolicy::canAccessClassroomStudy)
+                .filter(enrollment -> principal.verifiedAccount()
+                        ? accessPolicy.canAccessVerifiedAccountStudy(enrollment)
+                        : accessPolicy.canAccessClassroomStudy(enrollment))
                 .forEach(enrollment -> journeys.findByClassroomIdAndStatusOrderByUpdatedAtDesc(enrollment.getClassroom().getId(), JourneyStatus.PUBLISHED)
                         .forEach(journey -> available.put(journey.getId(), summary(journey, AccessContext.enrollment(enrollment)))));
-        redeemedAccess.findByStudentIdOrderByRedeemedAtDesc(principal.userId()).stream()
-                .filter(access -> access.getJourney().getStatus() == JourneyStatus.PUBLISHED)
-                .forEach(access -> available.putIfAbsent(access.getJourney().getId(), summary(access.getJourney(), AccessContext.redeemed(access))));
+        // Code redemption is not an OIDC authorization grant.
+        if (!principal.verifiedAccount()) {
+            redeemedAccess.findByStudentIdOrderByRedeemedAtDesc(principal.userId()).stream()
+                    .filter(access -> access.getJourney().getStatus() == JourneyStatus.PUBLISHED)
+                    .forEach(access -> available.putIfAbsent(access.getJourney().getId(), summary(access.getJourney(), AccessContext.redeemed(access))));
+        }
         return available.values().stream()
                 .sorted(Comparator.comparing(JourneyStudySummary::started).reversed()
                         .thenComparing(JourneyStudySummary::lastStudiedAt, Comparator.nullsLast(Comparator.reverseOrder())))
@@ -198,6 +212,11 @@ public class JourneyStudyService {
     private AccessContext requireAccess(Journey journey, StudyPrincipal principal) {
         if (journey.getStatus() != JourneyStatus.PUBLISHED) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Jornada não encontrada.");
         Optional<Enrollment> enrollment = enrollments.findByStudentIdAndClassroomIdAndActiveTrue(principal.userId(), journey.getClassroom().getId());
+        if (principal.verifiedAccount()) {
+            return enrollment.filter(accessPolicy::canAccessVerifiedAccountStudy)
+                    .map(AccessContext::enrollment)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Jornada não encontrada."));
+        }
         if (enrollment.filter(accessPolicy::canAccessClassroomStudy).isPresent()) return AccessContext.enrollment(enrollment.get());
         return redeemedAccess.findByStudentIdAndJourneyId(principal.userId(), journey.getId())
                 .map(AccessContext::redeemed)
@@ -206,8 +225,8 @@ public class JourneyStudyService {
 
     private void saveStart(JourneyStage stage, AccessContext access) {
         if (access.enrollment() != null) {
-            JourneyStageProgress entity = progress.findByStageIdAndEnrollmentId(stage.getId(), access.enrollment().getId()).orElseGet(() -> new JourneyStageProgress(stage, access.enrollment()));
-            entity.start(Instant.now()); progress.save(entity);
+            JourneyStageProgress entity = lockedEnrollmentProgress(stage, access.enrollment());
+            entity.start(Instant.now());
         } else {
             StudentJourneyStageProgress entity = redeemedProgress.findByStageIdAndAccessId(stage.getId(), access.redeemed().getId()).orElseGet(() -> new StudentJourneyStageProgress(stage, access.redeemed()));
             entity.start(Instant.now()); redeemedProgress.save(entity);
@@ -216,12 +235,33 @@ public class JourneyStudyService {
 
     private void saveComplete(JourneyStage stage, AccessContext access) {
         if (access.enrollment() != null) {
-            JourneyStageProgress entity = progress.findByStageIdAndEnrollmentId(stage.getId(), access.enrollment().getId()).orElseGet(() -> new JourneyStageProgress(stage, access.enrollment()));
-            entity.complete(Instant.now()); progress.save(entity);
+            JourneyStageProgress entity = lockedEnrollmentProgress(stage, access.enrollment());
+            entity.complete(Instant.now());
         } else {
             StudentJourneyStageProgress entity = redeemedProgress.findByStageIdAndAccessId(stage.getId(), access.redeemed().getId()).orElseGet(() -> new StudentJourneyStageProgress(stage, access.redeemed()));
             entity.complete(Instant.now()); redeemedProgress.save(entity);
         }
+    }
+
+    /**
+     * One academic progress row per stage and enrollment, even when the same
+     * account is used simultaneously on two devices. The insert is idempotent;
+     * the refresh acquires a PostgreSQL row lock AND reloads potentially stale
+     * JPA state previously read during the access projection.
+     *
+     * Use a database constraint rather than a JVM lock, so this also works
+     * across application replicas without another migration.
+     */
+    private JourneyStageProgress lockedEnrollmentProgress(JourneyStage stage, Enrollment enrollment) {
+        jdbc.update("""
+                insert into journey_stage_progress (id, journey_stage_id, enrollment_id)
+                values (?, ?, ?)
+                on conflict (journey_stage_id, enrollment_id) do nothing
+                """, UUID.randomUUID(), stage.getId(), enrollment.getId());
+        JourneyStageProgress entity = progress.findByStageIdAndEnrollmentId(stage.getId(), enrollment.getId())
+                .orElseThrow(() -> new IllegalStateException("Progresso de matrícula não encontrado após inserção."));
+        entityManager.refresh(entity, LockModeType.PESSIMISTIC_WRITE);
+        return entity;
     }
 
     private List<JourneyModuleView> modules(Journey journey, Map<UUID, StudyState> states) {

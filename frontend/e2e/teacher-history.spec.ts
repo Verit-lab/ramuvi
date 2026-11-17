@@ -74,13 +74,19 @@ test("back and reload follow the teacher's screens instead of leaving the app", 
 
     await page.locator("article.overview-class-card").filter({ hasText: fixture.classroom.name }).click();
     await expect(page.getByTestId("classroom-home-hero")).toBeVisible();
+    // Require the home history entry before navigation to another tab.
+    await expect(page).toHaveURL(new RegExp(`tela=turma&turma=${fixture.classroom.id}$`));
     await page.locator(".classroom-section-tab").filter({ hasText: "Jornadas" }).click();
     await expect(page).toHaveURL(new RegExp(`tela=turma&turma=${fixture.classroom.id}&aba=jornadas`));
 
+    const historyLengthBeforeReload = await page.evaluate(() => window.history.length);
     await page.reload();
     await expect(page.locator('.classroom-section-tab[aria-selected="true"]')).toContainText("Jornadas");
+    // Reloading an existing screen is not a new navigation.
+    expect(await page.evaluate(() => window.history.length)).toBe(historyLengthBeforeReload);
 
     await page.goBack();
+    await expect(page).toHaveURL(new RegExp(`tela=turma&turma=${fixture.classroom.id}$`));
     await expect(page.getByTestId("classroom-home-hero")).toBeVisible();
     await page.goBack();
     await expect(page.getByRole("heading", { name: "Suas turmas" })).toBeVisible();

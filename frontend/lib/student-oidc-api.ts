@@ -1,5 +1,32 @@
 import { apiFetch } from "./auth-api";
 
+// A non-secret browser hint prevents an expired or revoked verified session from
+// silently reusing a different student's remembered device claim.
+// This is a UI boundary, NOT proof of identity or an authorization credential.
+const observedAccountKey = "ramuvi:student-account-observed";
+
+function accountWasObserved(): boolean {
+  try { return window.localStorage.getItem(observedAccountKey) === "1"; }
+  catch { return false; }
+}
+
+function markAccountObserved(): void {
+  try { window.localStorage.setItem(observedAccountKey, "1"); }
+  catch { /* storage may be restricted; backend authorization remains authoritative */ }
+}
+
+export function leaveStudentAccountMode(): void {
+  try { window.localStorage.removeItem(observedAccountKey); }
+  catch { /* browser storage may be restricted */ }
+}
+
+export class StudentAccountSessionUnavailable extends Error {
+  constructor() {
+    super("Sua sessão de conta foi encerrada ou revogada. Entre novamente ou escolha explicitamente o acesso por código.");
+    this.name = "StudentAccountSessionUnavailable";
+  }
+}
+
 export type StudentOidcProvider = {
   id: "google" | "microsoft";
   name: string;
@@ -29,9 +56,17 @@ export async function fetchStudentOidcProviders(): Promise<StudentOidcProvider[]
 
 export async function fetchStudentOidcSession(): Promise<StudentOidcSession | null> {
   const response = await apiFetch("/api/student-account/session");
-  if (response.status === 401 || response.status === 404 || response.status === 403) return null;
+  // 404: OIDC is disabled and the existing code-based learner mode remains available.
+  if (response.status === 404) return null;
+  if (response.status === 401) {
+    if (accountWasObserved()) throw new StudentAccountSessionUnavailable();
+    return null; // never signed in here, so guest mode remains intentional
+  }
+  if (response.status === 403) throw new StudentAccountSessionUnavailable();
   if (!response.ok) throw new Error("Não foi possível consultar sua sessão.");
-  return (await response.json()) as StudentOidcSession;
+  const session = (await response.json()) as StudentOidcSession;
+  markAccountObserved();
+  return session;
 }
 
 
@@ -78,4 +113,6 @@ export async function claimStudentEnrollment(token: string): Promise<ClaimedEnro
 export async function logoutStudentOidc(): Promise<void> {
   const response = await apiFetch("/api/student-account/logout", { method: "POST" });
   if (!response.ok) throw new Error("Não foi possível sair desta conta.");
+  // Logout must not silently revive another student's remembered device claim.
+  // Keep the non-secret boundary marker until the learner explicitly selects code mode.
 }

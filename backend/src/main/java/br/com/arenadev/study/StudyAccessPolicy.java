@@ -20,6 +20,14 @@ public class StudyAccessPolicy {
         return enrollment.isActive() && enrollment.getClassroom().isStudentStudyAccessEnabled();
     }
 
+    /** Stricter account authorization; device-claim compatibility stays unchanged. */
+    public boolean canAccessVerifiedAccountStudy(Enrollment enrollment) {
+        return canAccessClassroomStudy(enrollment)
+                && enrollment.getClassroom().isActive()
+                && enrollment.getStudent().isActive()
+                && !enrollment.getStudent().isAnonymized();
+    }
+
     public boolean canAccessJourney(Journey journey, StudyPrincipal principal) {
         return journey.getStatus() == JourneyStatus.PUBLISHED
                 && enrollmentFor(journey, principal).filter(this::canAccessClassroomStudy).isPresent();

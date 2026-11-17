@@ -149,7 +149,7 @@ jobs:
 
       - name: Validate iOS-like WebKit mobile presentation and security
         working-directory: frontend
-        run: npm run test:e2e -- --project=webkit-mobile --grep 'v0.11 / 11.[246]'
+        run: npm run test:e2e -- --project=webkit-mobile --grep 'v0.11 / 11.[246]|v0.12 / I[12]|I3:'
 
       - name: Upload Playwright evidence
         if: always()

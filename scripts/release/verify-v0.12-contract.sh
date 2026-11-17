@@ -11,8 +11,8 @@ fail() { printf 'ERRO: %s\n' "$*" >&2; exit 1; }
   fail "a fundação de identidade requer V68"
 next=(backend/src/main/resources/db/migration/V69__*.sql)
 [[ ! -e "${next[0]}" ]] || fail "V69 requer um gate próprio"
-node -e 'if(require("./frontend/package.json").version!=="0.12.0-dev.3") process.exit(1)' || \
-  fail "identidade I0 deve permanecer pré-release 0.12.0-dev.3"
+node -e 'if(require("./frontend/package.json").version!=="0.12.0-dev.4") process.exit(1)' || \
+  fail "identidade I0 deve permanecer pré-release 0.12.0-dev.4"
 
 grep -q 'uk_student_account_external_identity' backend/src/main/resources/db/migration/V68__*.sql || \
   fail "não há unicidade do identificador verificado"
@@ -41,3 +41,9 @@ grep -q '@AuthenticationPrincipal OidcUser principal' backend/src/main/java/br/c
 grep -q 'claimEnrollmentInviteForVerifiedOidc' backend/src/main/java/br/com/arenadev/identity/account/StudentEnrollmentClaimController.java || fail 'resgate não validado'
 grep -q 'APP_STUDENT_IDENTITY_ENROLLMENT_CLAIM_ENABLED:false' backend/src/main/resources/application.yml || fail 'flag I2 deve estar OFF'
 printf 'Contrato pré-release v0.12 I2 validado: principal autenticado, resgate via POST, flag OFF.\n'
+
+# I3: the authenticated study API is role/CSRF protected and OFF by default.
+grep -q 'APP_STUDENT_IDENTITY_STUDY_SESSION_ENABLED:false' backend/src/main/resources/application.yml || fail 'I3 deve iniciar OFF'
+grep -q 'class VerifiedStudentStudyController' backend/src/main/java/br/com/arenadev/identity/account/VerifiedStudentStudyController.java || fail 'I3: roteamento ausente'
+grep -q 'verifiedAccount()' backend/src/main/java/br/com/arenadev/study/JourneyStudyService.java || fail 'I3: isolamento de estudo ausente'
+printf 'Contrato pré-release v0.12 I3 validado: OIDC/CSRF e Jornada isolada, flag OFF.\n'

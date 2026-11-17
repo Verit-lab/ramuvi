@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { fetchStudyJourney, fetchTeacherStudyPreview, studyDeviceClaims, type JourneyContentView, type JourneyStudyView } from "@/lib/study-api";
+import { fetchVerifiedJourney, verifiedStudyAccess } from "@/lib/verified-study-api";
 import styles from "@/components/study/study.module.css";
 import { studyExcerpt } from "@/lib/study-excerpt";
 
@@ -63,6 +64,18 @@ export default function JourneyStudyPage() {
     if (teacherPreview) {
       try { const data = await fetchTeacherStudyPreview(journeyId); if (active) setJourney(data); }
       catch { if (active) setError("Não foi possível abrir a prévia desta jornada."); }
+      return;
+    }
+    try {
+      const access = await verifiedStudyAccess();
+      if (access.mode === "ACCOUNT") {
+        // A verified session must not fall back to device tokens if access is denied.
+        const data = await fetchVerifiedJourney(journeyId);
+        if (active) setJourney(data);
+        return;
+      }
+    } catch (caught) {
+      if (active) setError(caught instanceof Error ? caught.message : "Não foi possível validar seu acesso.");
       return;
     }
     for (const claim of studyDeviceClaims()) { try { const data = await fetchStudyJourney(journeyId, claim.token); if (active) setJourney(data); return; } catch {} }

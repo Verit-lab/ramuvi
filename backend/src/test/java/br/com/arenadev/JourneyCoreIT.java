@@ -20,6 +20,9 @@ import org.springframework.test.context.DynamicPropertySource;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -48,6 +51,11 @@ class JourneyCoreIT {
     @Autowired private EnrollmentDeviceClaimRepository deviceClaimRepository;
     @Autowired private StudentAchievementRepository studentAchievementRepository;
     @Autowired private AchievementService achievementService;
+    @Autowired private br.com.arenadev.identity.account.StudentAccountService verifiedAccounts;
+    @Autowired private br.com.arenadev.identity.account.VerifiedStudentStudyService verifiedStudy;
+    @Autowired private org.springframework.jdbc.core.JdbcTemplate jdbc;
+    @Autowired private org.springframework.context.ApplicationContext applicationContext;
+
 
     @BeforeEach
     void cleanDatabase() {
@@ -682,6 +690,177 @@ class JourneyCoreIT {
                 new JourneyService.StageContentInput("   ")))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("vazio");
+    }
+
+    @Test
+    void verifiedAccountStudyApiIsOffByDefault() {
+        assertThat(applicationContext.getBeansOfType(
+                br.com.arenadev.identity.account.VerifiedStudentStudyController.class)).isEmpty();
+    }
+
+    @Test
+    void twoDevicesCompletingTheSameStageConcurrentKeepOneProgressRow() throws Exception {
+        Fixture f = fixture("Jornada concurrente", "JRNY-I3-CONC");
+        var journey = createPublishedJourney(f, List.of(
+                stage("Conteúdo único", null, JourneyUnlockRule.IMMEDIATE, JourneyCompletionRule.MANUAL)
+        ));
+        UUID contentId = journey.stages().getFirst().id();
+        StudyPrincipal principal = StudyPrincipal.verifiedAccount(f.enrollment().getStudent().getId());
+
+        try (var pool = Executors.newFixedThreadPool(2)) {
+            var ready = new CountDownLatch(2);
+            var go = new CountDownLatch(1);
+            java.util.concurrent.Callable<Integer> complete = () -> {
+                ready.countDown();
+                if (!go.await(5, TimeUnit.SECONDS)) throw new IllegalStateException("start timeout");
+                return journeyStudyService.complete(journey.id(), contentId, principal).progress().percent();
+            };
+            var first = pool.submit(complete);
+            var second = pool.submit(complete);
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            go.countDown();
+            assertThat(first.get(20, TimeUnit.SECONDS)).isEqualTo(100);
+            assertThat(second.get(20, TimeUnit.SECONDS)).isEqualTo(100);
+        }
+        var history = progressRepository.findByStageJourneyIdAndEnrollmentId(journey.id(), f.enrollment().getId());
+        assertThat(history).hasSize(1);
+        assertThat(history.getFirst().getCompletedAt()).isNotNull();
+        assertThat(journeyStudyService.get(journey.id(), principal).progress().percent()).isEqualTo(100);
+    }
+
+    @Test
+    void verifiedAccountSharesCanonicalEnrollmentProgressAcrossDevicesAndEnforcesTeacherRelease() {
+        Fixture f = fixture("Jornada multi aparelho", "JRNY-I3-MULTI");
+        var journey = createPublishedJourney(f, List.of(
+                stage("Conteúdo 1", null, JourneyUnlockRule.IMMEDIATE, JourneyCompletionRule.MANUAL),
+                stage("Conteúdo 2", null, JourneyUnlockRule.PREVIOUS_STAGE_COMPLETED, JourneyCompletionRule.MANUAL)
+        ));
+        var identity = new br.com.arenadev.identity.account.StudentAccountService.VerifiedIdentity(
+                br.com.arenadev.identity.account.StudentAccountService.Method.OIDC,
+                "https://accounts.google.com", UUID.randomUUID().toString());
+        verifiedAccounts.provisionVerifiedIdentity(identity);
+        verifiedAccounts.claimEnrollmentInviteForVerifiedOidc(
+                verifiedAccounts.issueEnrollmentInvite(f.enrollment().getId()).token(),
+                identity.issuer(), identity.subject());
+
+        UUID first = journey.stages().getFirst().id();
+        UUID second = journey.stages().get(1).id();
+        StudyPrincipal device = new StudyPrincipal(f.enrollment().getStudent().getId(),
+                f.enrollment().getId(), f.classroom().getId(), StudyPrincipal.Role.STUDENT);
+        assertThat(verifiedStudy.list(identity.issuer(), identity.subject()))
+                .extracting(JourneyStudyService.JourneyStudySummary::id)
+                .containsExactly(journey.id());
+        verifiedStudy.start(journey.id(), first, identity.issuer(), identity.subject());
+        assertThat(verifiedStudy.complete(journey.id(), first, identity.issuer(), identity.subject())
+                .progress().percent()).isEqualTo(50);
+        // Read by a fresh request on the same external identity, no device claim needed.
+        assertThat(verifiedStudy.get(journey.id(), identity.issuer(), identity.subject())
+                .progress().percent()).isEqualTo(50);
+        // Legacy device and OIDC update exactly the SAME Enrollment progress rows.
+        assertThat(journeyStudyService.get(journey.id(), device).progress().percent()).isEqualTo(50);
+        journeyStudyService.complete(journey.id(), second, device);
+        assertThat(verifiedStudy.get(journey.id(), identity.issuer(), identity.subject())
+                .progress().percent()).isEqualTo(100);
+        assertThat(progressRepository.findByStageJourneyIdAndEnrollmentId(
+                journey.id(), f.enrollment().getId())).hasSize(2);
+
+        f.classroom().setStudentStudyAccessEnabled(false);
+        classroomRepository.saveAndFlush(f.classroom());
+        assertThat(verifiedStudy.list(identity.issuer(), identity.subject())).isEmpty();
+        assertThatThrownBy(() -> verifiedStudy.get(journey.id(), identity.issuer(), identity.subject()))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
+                .hasMessageContaining("404");
+        assertThatThrownBy(() -> verifiedStudy.complete(journey.id(), second, identity.issuer(), identity.subject()))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
+                .hasMessageContaining("404");
+        // Enrollment deactivation must also revoke access without deleting evidence.
+        f.classroom().setStudentStudyAccessEnabled(true);
+        classroomRepository.saveAndFlush(f.classroom());
+        f.enrollment().setActive(false);
+        enrollmentRepository.saveAndFlush(f.enrollment());
+        assertThat(verifiedStudy.list(identity.issuer(), identity.subject())).isEmpty();
+        assertThatThrownBy(() -> verifiedStudy.get(journey.id(), identity.issuer(), identity.subject()))
+                .hasMessageContaining("404");
+        // Revoking access must not delete the existing academic evidence.
+        assertThat(progressRepository.findByStageJourneyIdAndEnrollmentId(
+                journey.id(), f.enrollment().getId())).hasSize(2);
+    }
+
+    @Test
+    void verifiedAccountNeverReadsOtherStudentsJourneysOrRedeemedDeviceEntitlements() {
+        Fixture own = fixture("Minha Jornada", "JRNY-I3-OWN");
+        Fixture other = fixture("Outra Jornada", "JRNY-I3-OTHER");
+        var ownJourney = createPublishedJourney(own, List.of(
+                stage("Autorizado", null, JourneyUnlockRule.IMMEDIATE, JourneyCompletionRule.MANUAL)));
+        var otherJourney = createPublishedJourney(other, List.of(
+                stage("Não autorizado", null, JourneyUnlockRule.IMMEDIATE, JourneyCompletionRule.MANUAL)));
+
+        var identity = new br.com.arenadev.identity.account.StudentAccountService.VerifiedIdentity(
+                br.com.arenadev.identity.account.StudentAccountService.Method.OIDC,
+                "https://accounts.google.com", UUID.randomUUID().toString());
+        UUID accountId = verifiedAccounts.provisionVerifiedIdentity(identity);
+        assertThat(verifiedStudy.list(identity.issuer(), identity.subject())).isEmpty();
+        assertThatThrownBy(() -> verifiedStudy.get(ownJourney.id(), identity.issuer(), identity.subject()))
+                .hasMessageContaining("404");
+        verifiedAccounts.claimEnrollmentInviteForVerifiedOidc(
+                verifiedAccounts.issueEnrollmentInvite(own.enrollment().getId()).token(),
+                identity.issuer(), identity.subject());
+        assertThat(verifiedStudy.list(identity.issuer(), identity.subject()))
+                .extracting(JourneyStudyService.JourneyStudySummary::id)
+                .containsExactly(ownJourney.id());
+        assertThatThrownBy(() -> verifiedStudy.get(otherJourney.id(), identity.issuer(), identity.subject()))
+                .hasMessageContaining("404");
+        assertThatThrownBy(() -> verifiedStudy.start(otherJourney.id(), otherJourney.stages().getFirst().id(),
+                identity.issuer(), identity.subject())).hasMessageContaining("404");
+
+        // Even an existing authenticated browser must lose access upon identity revocation.
+        // Persisted Student/Enrollment remain available to an authorized future claim.
+        jdbc.update("update student_account_identities set revoked_at=now() where account_id=?", accountId);
+        assertThatThrownBy(() -> verifiedStudy.list(identity.issuer(), identity.subject()))
+                .hasMessageContaining("401");
+        assertThatThrownBy(() -> verifiedStudy.get(ownJourney.id(), identity.issuer(), identity.subject()))
+                .hasMessageContaining("401");
+    }
+
+    @Test
+    void verifiedAccountRejectsInactiveClassroomStudentAndArchivedJourneyWithoutLosingProgress() {
+        Fixture f = fixture("Turma revogável I3", "JRNY-I3-REVOKE");
+        var journey = createPublishedJourney(f, List.of(
+                stage("Revisão", null, JourneyUnlockRule.IMMEDIATE, JourneyCompletionRule.MANUAL)));
+        var verified = new br.com.arenadev.identity.account.StudentAccountService.VerifiedIdentity(
+                br.com.arenadev.identity.account.StudentAccountService.Method.OIDC,
+                "https://accounts.google.com", UUID.randomUUID().toString());
+        verifiedAccounts.provisionVerifiedIdentity(verified);
+        verifiedAccounts.claimEnrollmentInviteForVerifiedOidc(
+                verifiedAccounts.issueEnrollmentInvite(f.enrollment().getId()).token(),
+                verified.issuer(), verified.subject());
+        UUID stageId = journey.stages().getFirst().id();
+        verifiedStudy.complete(journey.id(), stageId, verified.issuer(), verified.subject());
+        assertThat(progressRepository.findByStageJourneyIdAndEnrollmentId(
+                journey.id(), f.enrollment().getId())).hasSize(1);
+
+        // A classroom suspension removes reads and writes, not the underlying evidence.
+        jdbc.update("update classrooms set active=false where id=?", f.classroom().getId());
+        assertThat(verifiedStudy.list(verified.issuer(), verified.subject())).isEmpty();
+        assertThatThrownBy(() -> verifiedStudy.get(journey.id(), verified.issuer(), verified.subject()))
+                .hasMessageContaining("404");
+        assertThatThrownBy(() -> verifiedStudy.complete(journey.id(), stageId,
+                verified.issuer(), verified.subject())).hasMessageContaining("404");
+        jdbc.update("update classrooms set active=true where id=?", f.classroom().getId());
+
+        // A disabled Student revokes the verified session even if the browser cookie remains.
+        jdbc.update("update students set active=false where id=?", f.enrollment().getStudent().getId());
+        assertThatThrownBy(() -> verifiedStudy.list(verified.issuer(), verified.subject()))
+                .hasMessageContaining("401");
+        jdbc.update("update students set active=true where id=?", f.enrollment().getStudent().getId());
+
+        // An archived Journey cannot be recovered from the old device code entitlement.
+        journeyService.archive(journey.id());
+        assertThat(verifiedStudy.list(verified.issuer(), verified.subject())).isEmpty();
+        assertThatThrownBy(() -> verifiedStudy.get(journey.id(), verified.issuer(), verified.subject()))
+                .hasMessageContaining("404");
+        assertThat(progressRepository.findByStageJourneyIdAndEnrollmentId(
+                journey.id(), f.enrollment().getId())).hasSize(1);
     }
 
     private JourneyService.JourneyView createPublishedJourney(Fixture fixture, List<JourneyService.StageInput> stages) {
