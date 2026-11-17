@@ -55,7 +55,7 @@ export default function StudyShell({ children }: { children: ReactNode }) {
         <Link href="/learn/achievements" className={achievementsActive ? styles.activeNav : undefined}><AchievementIcon/><span>Conquistas</span></Link>
       </nav>
       <nav className={`${styles.nav} ${styles.navFoot}`} aria-label="Conta">
-        <Link href="/learn/login"><ProfileIcon/><span>Minha conta</span></Link>
+        <Link href="/learn?account=1"><ProfileIcon/><span>Minha conta</span></Link>
         <Link href="/learn/profile" className={profileActive ? styles.activeNav : undefined}><ProfileIcon/><span>Configurações</span></Link>
       </nav>
     </aside>
@@ -72,7 +72,7 @@ export default function StudyShell({ children }: { children: ReactNode }) {
         <Link href="/learn/journeys" aria-current={journeysActive ? "page" : undefined}><JourneyIcon/>Jornadas</Link>
         <Link href="/learn/live" aria-current={liveActive ? "page" : undefined}><LiveIcon/>Entrar ao vivo</Link>
         <Link href="/learn/achievements" aria-current={achievementsActive ? "page" : undefined}><AchievementIcon/>Conquistas</Link>
-        <Link href="/learn/login"><ProfileIcon/>Minha conta</Link>
+        <Link href="/learn?account=1"><ProfileIcon/>Minha conta</Link>
         <Link href="/learn/profile" aria-current={profileActive ? "page" : undefined}><ProfileIcon/>Configurações</Link>
       </nav>}
       <main className={styles.main}>{children}</main>

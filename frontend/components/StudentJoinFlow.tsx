@@ -503,7 +503,7 @@ export default function StudentJoinFlow({ embedded = false, initialCode = "" }: 
               <p>Retome suas Jornadas ou encontre uma aula em andamento sem digitar outro código. O vínculo continua sujeito à validade do acesso salvo.</p>
             </div>
             <div className="student-return-actions">
-              <Link href="/learn" className="student-return-primary">Continuar meus estudos</Link>
+              <Link href="/learn/journeys" className="student-return-primary">Continuar meus estudos</Link>
               <Link href="/learn/live" className="student-return-secondary">Aulas das minhas turmas</Link>
             </div>
           </section>
