@@ -188,3 +188,28 @@ test("I3: aluno pode escolher explicitamente voltar ao fluxo legado", async ({ p
   expect(await page.evaluate(() => localStorage.getItem("ramuvi:student-account-observed"))).toBeNull();
   await expect.poll(() => state.legacy).toBeGreaterThan(0);
 });
+
+test("I3: logout mantém barreira de conta até escolha explícita do modo por código", async ({ page }) => {
+  const state = { completed: false, writes: 0, legacy: 0 };
+  await mockAccount(page.context(), state);
+  await page.route("**/api/student-account/providers", route =>
+    route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
+  await page.route("**/api/student-account/classrooms", route =>
+    route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
+  await page.route("**/api/student-account/logout", route => {
+    expect(route.request().method()).toBe("POST");
+    return route.fulfill({ status: 204 });
+  });
+  await page.addInitScript(() => {
+    window.localStorage.setItem("arena-dev-device:33333333-3333-4333-8333-333333333333", "other-student-token");
+  });
+  await page.goto("/learn/login");
+  await expect(page.getByRole("button", { name: "Sair desta conta" })).toBeVisible();
+  await page.getByRole("button", { name: "Sair desta conta" }).click();
+  await expect(page.getByRole("button", { name: "Continuar explicitamente com acesso por código" })).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem("ramuvi:student-account-observed"))).toBe("1");
+  await page.route("**/api/student-account/session", route => route.fulfill({ status: 401 }));
+  await page.goto("/learn/journeys");
+  await expect(page.getByText("Não foi possível carregar suas Jornadas.")).toBeVisible();
+  expect(state.legacy).toBe(0);
+});

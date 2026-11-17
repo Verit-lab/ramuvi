@@ -93,6 +93,7 @@ export default function StudentLoginPage() {
     try {
       await logoutStudentOidc();
       setSession(null);
+      setAccountSessionUnavailable(true);
       setClassrooms(null);
       setInviteCode("");
       setClaimSuccess("");

@@ -61,7 +61,7 @@ O teste E2E com dois navegadores utiliza backend simulado para conferir a UX; a 
 
 ## Remediações da auditoria pré-merge (17/11/2026)
 
-- **R12-01:** marcado apenas o histórico de uma sessão OIDC válida (sem credenciais ou identidade pessoal no armazenamento local). A perda posterior dessa sessão passa a oferecer login renovado ou retorno explícito por código, sem fallback automático no catálogo de Jornadas.
+- **R12-01:** marcado apenas o histórico de uma sessão OIDC válida (sem credenciais ou identidade pessoal no armazenamento local). A perda posterior dessa sessão e o logout voluntário passam a oferecer login renovado ou retorno explícito por código, sem fallback automático no catálogo de Jornadas.
 - **R12-02:** a CI WebKit deixa de filtrar apenas casos da v0.11 e passa a incluir I1/I2/I3a, sem remover a cobertura da v0.11.
 - **R12-03:** provisionamento inicial da identidade externa serializado por advisory lock transacional PostgreSQL, preservando a constraint por (issuer,subject) e evitando erro em callbacks concorrentes.
 - **R12-04:** criação inicial de JourneyStageProgress com ON CONFLICT DO NOTHING e atualização sob lock pessimista, usando a matrícula canônica, sem nova migration.

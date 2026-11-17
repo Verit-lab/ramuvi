@@ -113,5 +113,6 @@ export async function claimStudentEnrollment(token: string): Promise<ClaimedEnro
 export async function logoutStudentOidc(): Promise<void> {
   const response = await apiFetch("/api/student-account/logout", { method: "POST" });
   if (!response.ok) throw new Error("Não foi possível sair desta conta.");
-  leaveStudentAccountMode();
+  // Logout must not silently revive another student's remembered device claim.
+  // Keep the non-secret boundary marker until the learner explicitly selects code mode.
 }
