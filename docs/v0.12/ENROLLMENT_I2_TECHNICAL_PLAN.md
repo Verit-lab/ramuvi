@@ -1,6 +1,6 @@
 # Ramuvi v0.12 — I2: vínculo autenticado entre conta e matrícula
 
-**Estado:** IMPLEMENTADO E VALIDADO LOCALMENTE, aguardando PR/CI oficial, revisão e homologação. **Não representa autorização para merge, release ou deploy.**
+**Estado:** IMPLEMENTADO, AUDITADO E VALIDADO NA CI OFICIAL 3/3 EM SHA `a901d3c`; revisão complementar em andamento na mesma PR. **Não representa autorização para merge, release ou deploy.**
 **Base imutável:** I0 PR #136 (V68) + I1 PR #137 (OIDC) `ee5d0b3`.
 **Branch:** `feat/v0.12-enrollment-claim-i2`, PR draft dependente das duas anteriores.
 **Rastreabilidade:** issue #119, ADR-0068, ADR-0069, ADR-0070 (proposta).
@@ -38,6 +38,7 @@ Todos os retornos da área pessoal usam `Cache-Control: no-store`. Nenhuma rota 
 
 - **Não confiar em `accountId` de cliente**: extrair `issuer/sub` do `@AuthenticationPrincipal OidcUser` autenticado pelo Spring, consultar `student_account_identities` e `student_accounts` **dentro da transação** de resgate.
 - Rejeitar principal ausente, conta desativada, identidade revogada, matrícula/turma/aluno inativos ou anonimizados.
+- **Emissão concorrente:** `SELECT ... FOR UPDATE OF e` da matrícula antes de revogar convites pendentes e inserir o novo token. Garante um único convite pendente por matrícula mesmo com dois professores/abas emitindo simultaneamente.
 - Resgate atômico: `SELECT ... FOR UPDATE` do convite, travas de conta, `UNIQUE(student_id)`, `claimed_at` único, transação integral. Rejeitar replay, duplicidade e token expirado/revogado.
 - Evitar diferenciação entre tokens inexistentes, usados ou expirados; exceção de conta vinculada a outro aluno pode informar conflito apenas ao usuário já autenticado.
 - Listar somente `enrollments.active`, `classrooms.active`, `students.active`, `anonymized_at is null`, `student_accounts.status=ACTIVE`, identidade **exata** ativa para a sessão. Exibir booleano de acesso à Jornada, mas **não estender autorização das rotas legadas** antes do I3.
@@ -69,7 +70,7 @@ Todos os retornos da área pessoal usam `Cache-Control: no-store`. Nenhuma rota 
 - 4. Aluno vinculado a outra conta ou conta vinculada a outro Student: transação falha e token não é consumido.
 - 5. Matrícula desativada/excluída, aluno anonimizado, turma inativa, identidade OIDC revogada: sem resgate/listagem.
 - 6. Multiturmas: mesmo Student pode aparecer em duas turmas ativas; conta de outro Student não consegue descobrir essas turmas.
-- 7. Concorrência: dupla submissão ao mesmo token → no máximo um resgate; rotação de convite invalida o anterior.
+- 7. Concorrência: dupla submissão ao mesmo token → no máximo um resgate; **emissão paralela de convites para a mesma matrícula → exatamente um token pendente**. A rotação invalida o anterior.
 - 8. Logs, referrer, cache e UI: não reter ou transmitir token em URL ou armazenamento durável.
 - 9. Regressão: docente, Arena, Jornada e Student já existentes seguem operacionais com flags desligadas.
 
@@ -90,11 +91,82 @@ Todos os retornos da área pessoal usam `Cache-Control: no-store`. Nenhuma rota 
 
 ## 8. Evidências da implementação I2 (17/11/2026)
 
-- Backend: `mvn verify` com **184 testes / zero falhas** (execução anterior ao teste complementar de capability); `StudentEnrollmentClaimIT` validou identidade, contas diferentes, múltiplas turmas, desativação, revogação, replay e concorrência.
+- Backend: execução inicial da PR #138 com **184 testes**. Auditoria adicionou testes de conta desativada, aluno inativo e emissões concorrentes; testes dirigidos após correção tiveram **16/16 PASS**, com bloqueio de linha no banco. A regressão completa após o último commit precisa ser revalidada sequencialmente; uma rodada concorrente de Maven contaminou `target/classes` e não é considerada evidência.
 - Segurança HTTP: sessão anônima e docente rejeitadas; mutações com CSRF; `StudentEnrollmentClaimControllerTest` cobre principal derivado somente do ID Token e rate limiting de tentativas.
 - Frontend: **425/425 testes**; lint/TypeScript/build aprovados.
 - E2E focal: **10/10** em Chromium e WebKit mobile, com API mockada, incluindo POST de resgate, limpeza do segredo e flags OFF.
 - Contratos: Flyway V68, versão `0.12.0-dev.3`, verificação de scripts e Compose local/sala aprovadas.
-- **Sem evidências ainda:** login real nos provedores externos, avaliação iOS físico, teste funcional com alunos, CI oficial da PR no SHA final, backup/restore de produção e decisão GO.
+- **Sem evidências ainda:** login real nos provedores externos, avaliação iOS físico, teste funcional com alunos, backup/restore de produção e decisão GO. A [CI inicial da PR #138](https://github.com/Verit-lab/ramuvi/actions/runs/44106105927) passou 3/3; commits de auditoria posteriores exigem nova CI.
 
 **Ressalva de testes:** a suíte de navegador bloqueia PWA service workers para permitir interceptação de APIs mockadas; a regressão de PWA real permanece nos testes existentes do projeto, inclusive CI completa.
+
+
+## 9. Plano técnico integral: I2 → I3 → I4 (revisão executável)
+
+### 9.1 Fronteiras e invariantes arquiteturais
+
+| Agregado/componente | Responsabilidade | Invariante |
+| --- | --- | --- |
+| `StudentAccount` | Identidade autenticada, não identidade pedagógica | Um vínculo opcional e único com `Student`; `issuer + sub` validado, revogável |
+| `Student` | Registro acadêmico global e histórico do aluno | Não criar ou fundir alunos por e-mail, nickname ou claim de dispositivo |
+| `Enrollment` | Participação em turma específica | Estar ativo e pertencer ao mesmo `Student` do principal para conceder acesso |
+| `Classroom` | Limites de turma e habilitação de Jornada | Turma desativada ou conteúdo não publicado não aparece como acesso autorizado |
+| `StudentEnrollmentInvite` | Prova de aprovação docente para associação | Token de alta entropia, uso único, rotação, expiração, hash e auditoria |
+| `StudyPrincipal` / `StudyAccessPolicy` | Autorização para Jornadas e evidências | A I2 **não** concede acesso a `/api/learn/**`; I3 exige novo contrato auditado |
+| `SessionParticipant` / `EnrollmentDeviceClaim` | Participação ao vivo e retorno no navegador | Compatibilidade intacta; nunca equivalentes a identidade OIDC |
+
+**Fluxo I2:** professor autenticado → matrícula ativa → convite individual → comunicação segura ao destinatário → aluno valida OIDC → POST com CSRF → serviço abre transação e trava convite + conta → `UNIQUE(student_id)` → marca consumo → aluno consulta apenas turmas ativas. A conta não recebe acesso novo a Jornada nesta fase.
+
+### 9.2 Contratos HTTP e erros
+
+- **Emissão:** `POST /api/student-account-invitations/enrollments/{enrollmentId}`, `ROLE_TEACHER`, CSRF, token **somente na resposta inicial**, `Cache-Control: no-store`. Reemissão revoga todos os anteriores pendentes da mesma matrícula.
+- **Revogação:** `DELETE /api/student-account-invitations/{inviteId}`, docente autenticado, CSRF; já consumido não pode ser revogado por esse endpoint (a desassociação exige procedimento separado).
+- **Resgate:** `POST /api/student-account/enrollments/claim` com corpo `{"token":"..."}`, `ROLE_STUDENT`, CSRF, somente principal OIDC verificado no backend; sem `accountId`, `studentId`, `email` ou `classroomId` enviado pelo cliente.
+- **Descoberta:** `GET /api/student-account/classrooms` devolve apenas matrículas ativas da conta atual, sem PII e sem token de acesso à Jornada.
+- **Exceções:** sem sessão 401; papel inadequado/CSRF ausente 403; token inválido, expirado, revogado ou consumido 400 com mensagem genérica; vínculo conflitante 400; abuso 429 com `Retry-After`; flag desativada 404; indisponibilidade de conta revogada resulta em acesso negado.
+- **Auditoria posterior:** persistir eventos estruturados sem valor bruto do convite, emitido/rotacionado/revogado/consumido, ID de matrícula, ID de conta e timestamp; definir retenção e acesso administrativo antes do GO.
+
+### 9.3 Gates de engenharia e aceite
+
+| Gate | Verificação / critério | Evidência |
+| --- | --- | --- |
+| G1 — Integridade | Flyway até V68 sem drift; `student_id` único; nenhuma migração destrutiva nem reatribuição implícita | Maven, PostgreSQL de teste, diff |
+| G2 — Identidade | OIDC válido, `issuer/sub` estritamente verificado, revogação ou anonimização invalida operações | testes SQL e HTTP; homologação de token real ainda pendente |
+| G3 — Token | Entropia 256 bits, hash único, expiração, rotação, revogação, replay e concorrência tanto de **resgate quanto de emissão** | testes de integração e duas requisições concorrentes |
+| G4 — Autorização | docente não resgata, aluno não emite, anônimo não acessa, CSRF obrigatório, dados não cruzam contas, conta desativada ou aluno inativo perde acesso | matriz negativa HTTP e serviços |
+| G5 — Multiturmas | mesmo `Student` em N turmas sem links duplicados; desativação retira apenas a turma desativada | integração PostgreSQL |
+| G6 — Compatibilidade | Arena, login docente, Jornada, claims de dispositivo e projeção sem regressão | CI de backend, frontend, Compose e E2E |
+| G7 — UX mínima | convite visível apenas após emissão, cópia por ação docente; aluno digita sem URL/storage, consegue listar e sair; teclado e mobile | testes E2E Chromium/WebKit + avaliação física pendente |
+| G8 — Operação | flags OFF por padrão, backup V68 restaurável, auditoria, privacidade e GO documentado | execução em homologação, não apenas testes sintéticos |
+
+**Definição de pronto para I2 (código):** G1–G7 com CI 3/3 no SHA final, documentação alinhada, nenhuma alteração em `main`, PR draft aguardando decisão. **Definição de pronto para produção:** também G8, credenciais reais dos IdPs, Safari/iOS físico, testes de recuperação, revisão de segurança e autorização explícita.
+
+### 9.4 I3, continuidade pedagógica entre dispositivos
+
+A I3 deve ser implementada **após** revisão da I2, em uma PR independente, sem transformar o `StudyPrincipal` em acesso genérico por role.
+
+1. **Contrato de sessão acadêmica:** `StudentAccount` autenticada → resolução de `Student` vinculado → `Enrollment` ativa para determinada `Classroom`. Toda leitura e escrita de Jornada reconsulta estado e política de publicação; não confiar em `studentId` enviado por query.
+2. **Estratégia de compatibilidade:** manter `X-Study-Token` e ingresso por código para convidados. Uma sessão OIDC verificada só poderá percorrer matrículas do seu `Student`. Evitar dois caminhos de escrita com regras divergentes de XP/progresso, centralizando política de autorização.
+3. **Plano de migração do progresso:** **não mover registros de progresso** para `student_accounts`; preservar chaves canônicas `Student` + `Enrollment` e reconciliar dados de dispositivos existentes somente após evidência de posse/convite, com trilha de auditoria.
+4. **Telas:** Minha conta, Minhas turmas, Jornada, Atividades, Ao vivo, Sair/Trocar conta. Loading/empty/error, sessão expirada e conta compartilhada; design homologado em Figma antes do redesign.
+5. **Aceite I3:** reingresso em 2 dispositivos com a mesma conta mantém progresso; outra conta não lê/grava dados; revogação e matrícula desativada bloqueiam imediatamente; desafios de Safari e acessibilidade AA testados.
+
+### 9.5 I4, publicação controlada e reversão
+
+1. Revisar e aprovar ADR-0068/0069/0070 e permissões; aceitar versões e dependências.
+2. Homologar Google/Microsoft reais sobre HTTPS com credenciais distintas de integrações delegadas. Testar erro, troca de conta, expiração, logout e CSRF.
+3. Criar backup **real e verificável** antes da V68, restaurar em banco isolado, verificar histórico de progresso, matrícula, convidados e compatibilidade; planejar reversão por restauração, **não** prometer downgrade Flyway.
+4. Implantação em homologação com flags OFF, monitoramento mínimo (sucesso/falha de login/convite, rejeições, 429, latência) sem tokens/PII em logs. Habilitar em turma piloto restrita com consentimento e procedimento de suporte.
+5. Preparar critérios objetivos de parada: 401/403 inesperado, exposição de matrícula entre contas, perda de Jornada/XP, falha de revogação, abuso de convites. GO/NO-GO formal com responsável e evidências; só então tag e release.
+
+### 9.6 Custos e decisões pendentes
+
+- **OIDC:** registrar aplicações Google/Microsoft e consentimento do escopo mínimo; contas sem provedor exigem decidir OTP com e-mail transacional, entregabilidade, limites, recuperação e custos. OTP não pode ser improvisado com e-mail autodeclarado.
+- **Compartilhamento de dispositivos:** explicitar ação Sair/Trocar conta e não confiar em localStorage como sessão.
+- **Suporte para vínculo incorreto:** definir procedimento manual auditável de transferência/desvinculação sem perda de progresso; não implementar auto-merge.
+- **Convites por turma inteira:** opcional futuro; código genérico não deve atribuir automaticamente matrícula de terceiro. Exigir confirmação do docente.
+- **Evidência de usuário real:** não disponível até homologação do callback com IdP, Safari físico e piloto.
+
+## 10. Estado de validação verificado em 17/11/2026
+
+A [PR #138](https://github.com/Verit-lab/ramuvi/pull/138), SHA inicial `a901d3c`, já possui [CI oficial 3/3 aprovada](https://github.com/Verit-lab/ramuvi/actions/runs/44106105927) e está em **draft**. Os testes locais anteriores incluíram Maven 184, frontend 425, E2E focal 10/10; esse histórico não substitui revalidar commits posteriores. Não há autorização para merge na `main`, habilitar flags na VPS, executar migrations em produção ou considerar homologado Google/Microsoft real.

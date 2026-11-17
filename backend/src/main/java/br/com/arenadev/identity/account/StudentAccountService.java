@@ -191,14 +191,18 @@ public class StudentAccountService {
     @Transactional
     public IssuedInvite issueEnrollmentInvite(UUID enrollmentId) {
         Objects.requireNonNull(enrollmentId, "enrollmentId");
-        Integer valid = jdbc.queryForObject("""
-                select count(*) from enrollments e
+        // Serialize all teacher issuances for this enrollment BEFORE rotating invites.
+        // Without the enrollment row lock, two concurrent requests can each revoke
+        // the other's *previous* invites and then issue two live tokens.
+        var eligible = jdbc.query("""
+                select e.id from enrollments e
                   join students s on s.id = e.student_id
                   join classrooms c on c.id = e.classroom_id
                  where e.id = ? and e.active and s.active
                    and s.anonymized_at is null and c.active
-                """, Integer.class, enrollmentId);
-        if (valid == null || valid != 1) throw invalidInvite();
+                 for update of e
+                """, (rs, row) -> rs.getObject("id", UUID.class), enrollmentId);
+        if (eligible.size() != 1) throw invalidInvite();
         byte[] secret = new byte[32];
         random.nextBytes(secret);
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(secret);

@@ -140,6 +140,84 @@ class StudentEnrollmentClaimIT {
     }
 
     @Test
+    void disabledAccountAndInactiveStudentCannotClaimOrReadMemberships() {
+        var first = scenario();
+        var second = scenario();
+        var identityA = identity();
+        var identityB = identity();
+        UUID accountA = accounts.provisionVerifiedIdentity(identityA);
+        UUID accountB = accounts.provisionVerifiedIdentity(identityB);
+        String tokenA = accounts.issueEnrollmentInvite(first.enrollmentId()).token();
+        String tokenB = accounts.issueEnrollmentInvite(second.enrollmentId()).token();
+
+        jdbc.update("""
+                update student_accounts set status='DISABLED', disabled_at=now() where id=?
+                """, accountA);
+        assertThatThrownBy(() -> accounts.claimEnrollmentInviteForVerifiedOidc(
+                tokenA, identityA.issuer(), identityA.subject()))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+        assertThatThrownBy(() -> accounts.listActiveClassroomsForVerifiedOidc(
+                identityA.issuer(), identityA.subject()))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+        assertThat(jdbc.queryForObject("""
+                select count(*) from student_enrollment_invites
+                 where enrollment_id = ? and claimed_at is not null
+                """, Integer.class, first.enrollmentId())).isZero();
+
+        students.update(second.studentId(), "I2-" + second.suffix(),
+                "Aluno I2 " + second.suffix(), null, false);
+        assertThatThrownBy(() -> accounts.claimEnrollmentInviteForVerifiedOidc(
+                tokenB, identityB.issuer(), identityB.subject()))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(jdbc.queryForObject(
+                "select student_id from student_accounts where id=?", UUID.class, accountB))
+                .isNull();
+    }
+
+    @Test
+    void concurrentTeacherIssuanceLeavesExactlyOneUsableInvitation() throws Exception {
+        var enrollment = scenario();
+        var verified = identity();
+        accounts.provisionVerifiedIdentity(verified);
+        String preexisting = accounts.issueEnrollmentInvite(enrollment.enrollmentId()).token();
+
+        StudentAccountService.IssuedInvite first;
+        StudentAccountService.IssuedInvite second;
+        try (var workers = Executors.newFixedThreadPool(2)) {
+            var ready = new CountDownLatch(2);
+            var go = new CountDownLatch(1);
+            java.util.concurrent.Callable<StudentAccountService.IssuedInvite> issue = () -> {
+                ready.countDown();
+                if (!go.await(5, TimeUnit.SECONDS)) throw new IllegalStateException("start timeout");
+                return accounts.issueEnrollmentInvite(enrollment.enrollmentId());
+            };
+            var a = workers.submit(issue);
+            var b = workers.submit(issue);
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            go.countDown();
+            first = a.get(20, TimeUnit.SECONDS);
+            second = b.get(20, TimeUnit.SECONDS);
+        }
+        assertThat(first.inviteId()).isNotEqualTo(second.inviteId());
+        assertThat(jdbc.queryForObject("""
+                select count(*) from student_enrollment_invites
+                 where enrollment_id = ? and claimed_at is null and revoked_at is null
+                """, Integer.class, enrollment.enrollmentId())).isEqualTo(1);
+        assertThatThrownBy(() -> accounts.claimEnrollmentInviteForVerifiedOidc(
+                preexisting, verified.issuer(), verified.subject()))
+                .isInstanceOf(IllegalArgumentException.class);
+        // The single live token belongs to either concurrent issuer.
+        String liveToken = jdbc.queryForObject("""
+                select id from student_enrollment_invites
+                 where enrollment_id = ? and revoked_at is null and claimed_at is null
+                """, UUID.class, enrollment.enrollmentId()).equals(first.inviteId())
+                ? first.token() : second.token();
+        assertThat(accounts.claimEnrollmentInviteForVerifiedOidc(
+                liveToken, verified.issuer(), verified.subject()).studentId())
+                .isEqualTo(enrollment.studentId());
+    }
+
+    @Test
     void simultaneousClaimsUseRowLocksAndAllowExactlyOneWinner() throws Exception {
         var student = scenario();
         var verified = identity();
