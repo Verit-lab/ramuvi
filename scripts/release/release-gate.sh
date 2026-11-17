@@ -24,8 +24,9 @@ Uso:
 local  Executa todos os gates técnicos locais e gera evidência ignorada pelo Git.
 final  Exige main limpa/sincronizada, licença, CI verde no mesmo SHA e backup
        restaurável; depois repete os gates locais. Não cria tag nem release.
-       A partir da v0.11 (V57+) exige também --attestation: cópia PRIVADA do
-       aceite 11.6 com GO, validada por scripts/release/v011-readiness.py.
+       A partir da v0.11 (V57+) exige também --attestation: cópia PRIVADA
+       do aceite da versão (0.11.1 ou 0.12.0) com GO, evidências por gate
+       e CI no SHA exato. A v0.12 exige V68 e controles OIDC/HTTPS.
 EOF
 }
 
@@ -153,17 +154,19 @@ printf 'Branch: %s\n' "$branch"
 printf 'Java: %s\n' "$java_line"
 printf 'Node.js: %s\n' "$node_line"
 
-if [[ "$MODE" == "final" && "$expected_schema_version" -ge 68 ]]; then
-  fail "v0.12.0-dev.4 é candidata de desenvolvimento: o gate final depende do contrato e aceite próprios"
-fi
 if [[ "$MODE" == "final" ]]; then
-  if [[ "$expected_schema_version" -ge 57 ]]; then
+  if [[ "$expected_schema_version" -ge 68 ]]; then
+    [[ "$RELEASE_VERSION" == "0.12.0" ]] || \
+      fail "o gate final V68 exige versão estável 0.12.0; candidata $RELEASE_VERSION não pode ser publicada"
+  elif [[ "$expected_schema_version" -ge 57 ]]; then
     [[ "$RELEASE_VERSION" == "0.11.1" ]] || \
       fail "o gate final v0.11.1 exige versão estável 0.11.1; candidata $RELEASE_VERSION não pode ser publicada"
-    [[ -n "$ATTESTATION_FILE" ]] || fail "informe --attestation com o aceite 11.6 assinado"
-    [[ -f "$ATTESTATION_FILE" ]] || fail "aceite não encontrado: $ATTESTATION_FILE"
   elif [[ "$expected_schema_version" -ge 55 && "$RELEASE_VERSION" != "0.10.0" ]]; then
     fail "o gate final v0.10 exige versão estável 0.10.0; candidata $RELEASE_VERSION não pode ser publicada"
+  fi
+  if [[ "$expected_schema_version" -ge 57 ]]; then
+    [[ -n "$ATTESTATION_FILE" ]] || fail "informe --attestation privado com aceite da versão"
+    [[ -f "$ATTESTATION_FILE" ]] || fail "aceite não encontrado: $ATTESTATION_FILE"
   fi
   [[ "$branch" == "main" ]] || fail "o gate final deve executar na branch main"
   [[ -z "$(git status --porcelain)" ]] || fail "a árvore de trabalho não está limpa"
@@ -208,15 +211,31 @@ if [[ "$MODE" == "final" ]]; then
   printf 'CI validado: %s\n' "$verified_ci_url"
 
   if [[ "$expected_schema_version" -ge 57 ]]; then
-    # Fail-closed operational decision: eight field gates PASS, named owner,
-    # same SHA and green CI jobs. It never creates tags or releases.
+    # Fail-closed operational decision, with v0.12-specific OIDC/V68/HTTPS
+    # evidence in addition to the v0.11 physical and authorization gates.
+    readiness_args=()
+    if [[ "$expected_schema_version" -ge 68 ]]; then
+      readiness_args+=(--expected-version 0.12.0)
+    fi
     python3 "$SCRIPT_DIR/v011-readiness.py" \
       --attestation "$ATTESTATION_FILE" \
       --candidate "$head_sha" \
-      --ci-run-id "$run_id" || fail "aceite operacional v0.11 não autoriza a release"
+      --ci-run-id "$run_id" "${readiness_args[@]}" || \
+      fail "aceite operacional da versão não autoriza a release"
   fi
 
-  ARENA_SCHEMA_VERSION="$expected_schema_version" \
+  # The pre-upgrade production backup can be at V66/V67; the new release
+  # migrates its restored copy to V68 only after a separately evidenced rehearsal.
+  source_schema_version="${ARENA_SOURCE_SCHEMA_VERSION:-$expected_schema_version}"
+  if [[ "$expected_schema_version" -ge 68 ]]; then
+    [[ "$source_schema_version" =~ ^(66|67|68)$ ]] || \
+      fail "backup da v0.12 deve ter schema V66, V67 ou V68"
+  else
+    [[ "$source_schema_version" == "$expected_schema_version" ]] || \
+      fail "versão de schema do backup incompatível com a candidata"
+  fi
+  printf 'Verificando backup pré-implantação no schema V%s.\n' "$source_schema_version"
+  ARENA_SCHEMA_VERSION="$source_schema_version" \
     "$SCRIPT_DIR/verify-backup.sh" "$BACKUP_FILE"
 fi
 
@@ -295,7 +314,7 @@ ready_health="$(docker compose --project-name "$compose_project" exec -T backend
 (
   cd frontend
   npm run test:e2e -- --project=chromium
-  npm run test:e2e -- --project=webkit-mobile --grep 'v0.11 / 11.[246]'
+  npm run test:e2e -- --project=webkit-mobile --grep 'v0.11 / 11.[246]|v0.12 / I[12]|I3:'
 )
 
 cleanup_stack

@@ -1,26 +1,30 @@
 # Ramuvi — estado técnico atual
 
-**Atualizado em 16/11/2026.** Esta página contém o estado operacional vigente. O registro anterior, que incluía estados antigos de RCs e SHAs, foi preservado em [histórico anterior](archive/STATUS_ATUAL_2026-10-25.md).
+**Atualizado em 17/11/2026.** O código I0–I3a está integrado à main. A publicação estável é uma etapa distinta e ainda não ocorreu.
 
-| Linha | Estado confirmado | Evidência |
+| Linha | Estado verificado | Evidência |
 | --- | --- | --- |
-| `v0.11.0` | Última release estável publicada em 25/10; SHA `1f23df6` | [GitHub Release](https://github.com/Verit-lab/ramuvi/releases/tag/v0.11.0) |
-| `main` | Commit `20f1205` (05/11), com 7 commits funcionais após a tag, incluindo V67 | [GitHub](https://github.com/Verit-lab/ramuvi/commit/20f1205) |
-| CI `main` | **FALHOU** nos dois últimos workflows; migração V67 fora do contrato `SecurityAndMigrationIT`; o E2E ficou impedido | [Última execução de 05/11](https://github.com/Verit-lab/ramuvi/actions/runs/42093112826) |
-| `v0.11.1` | **CANDIDATA EM HOMOLOGAÇÃO** na [PR #135](https://github.com/Verit-lab/ramuvi/pull/135); testes locais e rollback sintético aprovados, CI e aceite final pendentes; sem tag e sem deploy | [Plano de implementação](v0.11.1/IMPLEMENTATION_PLAN.md) |
-| `v0.12` | Próxima evolução funcional de identidade discente, sujeita a decisão de escopo e à baseline estável | [Issue #119](https://github.com/Verit-lab/ramuvi/issues/119) |
+| v0.11.0 | Última tag/release estável publicada | [GitHub Release](https://github.com/Verit-lab/ramuvi/releases/tag/v0.11.0) |
+| v0.11.1 | Integrada à main pela PR #135; sem tag/release própria | [PR #135](https://github.com/Verit-lab/ramuvi/pull/135) |
+| main | Commit 09819c5 com I0/I1/I2/I3a e Flyway V68, sem deploy | [Commit](https://github.com/Verit-lab/ramuvi/commit/09819c5b5c5c35701441991a51fbbe146133e78a) |
+| CI main | 3/3 PASS; 113 Chromium e 19 WebKit | [Execução 44171449577](https://github.com/Verit-lab/ramuvi/actions/runs/44171449577) |
+| v0.12.0 | Empacotamento de release em preparação, sem tag e sem publicação | [Notas candidatas](RELEASE_0_12.md) |
+| VPS ramuvi.io | HTTPS válido, frontend anterior ainda ativo; /learn/login retornou 404 | [Runbook](v0.12/PRODUCTION_RELEASE.md) |
 
-## Entregas previstas na v0.11.1
+## Bloqueios concretos para a publicação
 
-1. Corrigir testes e contrato de versão para Flyway V67, preservar snapshots e validar regressão.
-2. Tornar explícita a separação dos perfis local, LAN/classroom e prod.
-3. Exibir SHA real na imagem/backend; atualizar apenas por tag aprovada.
-4. Corrigir documentação corrente e completar testes em CI e homologação de campo.
+1. A branch de release precisa ser integrada à main e passar CI no SHA final, com metadados estáveis 0.12.0.
+2. O backup real/representativo da VPS precisa de checksum e restauração comprovada. O ensaio sintético V68 pré-merge passou, mas não é esse backup.
+3. O gate exige atestação privada de v0.12.0 com responsável, datas e referências para os 11 critérios; a declaração de aceite não comprova automaticamente testes físicos ou callbacks OIDC.
+4. A sessão SSH da VPS está bloqueada pela chave privada criptografada, que não foi desbloqueada no notebook conectado.
 
-## Limitações e critérios obrigatórios
+## HTTPS e identidade
 
-- A edição tem **um operador docente por instalação** (ADR-0053); não há autenticação verificada multi-dispositivo de aluno. O modo convidado usa códigos e credenciais limitados. Não declarar capacidade multiusuário.
-- O plano e testes locais **não equivalem** a release publicada. GO exige PR integrado, CI 3/3 no SHA final, testes físico e de segurança, backup e rollback ensaiado, tag e GitHub Release.
-- Nada deve ser aplicado na VPS ou em banco real sem confirmar compatibilidade de esquema e backup restaurável.
+- Origem canônica https://ramuvi.io; certificado Let's Encrypt válido até 07/02/2027, redirecionamentos HTTP e www funcionando.
+- Conferir na VPS APP_FRONTEND_URL, APP_ALLOWED_ORIGIN_PATTERNS, APP_STUDENT_OIDC_PUBLIC_BASE_URL e cookies Secure, antes de ligar o login externo.
+- Novas flags de aluno iniciam OFF por padrão; deploy do código não habilita automaticamente OIDC, convites ou resgate.
+- Nenhuma tag, release ou atualização de produção foi realizada nesta preparação.
 
-**Fontes canônicas:** [repositório](https://github.com/Verit-lab/ramuvi) para código/CI/ADRs; [Notion](https://app.notion.com/p/3bff3eb198c3818fa281fd0abb23b6ce) para decisões de produto; [Figma](https://www.figma.com/design/gWMkarPwmeFY15jr0Tr6DN) para design aprovado.
+**Fontes canônicas:** [GitHub](https://github.com/Verit-lab/ramuvi) para código e CI; [Notion](https://app.notion.com/p/3bff3eb198c3818fa281fd0abb23b6ce) para decisões; [Figma](https://www.figma.com/design/gWMkarPwmeFY15jr0Tr6DN) para design aprovado.
+
+**Histórico anterior:** [snapshot de 25/10](archive/STATUS_ATUAL_2026-10-25.md), planos e notas de v0.11.1 e [registro ativo de v0.12](v0.12/PRODUCTION_RELEASE.md).
