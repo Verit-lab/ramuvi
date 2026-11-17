@@ -110,6 +110,7 @@ jobs:
         run: |
           python3 -m unittest discover -s scripts/release/tests -p 'test_*.py' -v
           python3 scripts/release/v011-readiness.py --attestation docs/v0.11/11.6_ACCEPTANCE_TEMPLATE.json --check-template
+          python3 scripts/release/v011-readiness.py --attestation docs/v0.12/RELEASE_ACCEPTANCE_TEMPLATE.json --expected-version 0.12.0 --check-template
 
       - name: Install locked frontend dependencies
         working-directory: frontend
