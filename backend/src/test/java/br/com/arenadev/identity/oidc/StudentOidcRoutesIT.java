@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "app.student-identity.oidc.enabled=true",
+        "app.student-identity.enrollment-claim-enabled=true",
         "app.student-identity.oidc.google-client-id=test-google-client",
         "app.student-identity.oidc.google-client-secret=test-google-secret",
         "app.student-identity.oidc.public-base-url=http://localhost:3000",
@@ -69,6 +70,31 @@ class StudentOidcRoutesIT {
         assertThat(send(teacher, "POST", "/api/student-account/logout", "{}", csrf)
                 .statusCode()).isEqualTo(403);
         assertThat(get(teacher, "/api/auth/session").statusCode()).isEqualTo(200);
+    }
+
+    @Test
+    void enrollmentClaimIsProtectedByStudentRoleAndCsrf() throws Exception {
+        HttpClient anonymous = client();
+        String anonymousCsrf = csrf(anonymous);
+        assertThat(get(anonymous, "/api/student-account/classrooms").statusCode()).isEqualTo(401);
+        assertThat(send(anonymous, "POST", "/api/student-account/enrollments/claim",
+                "{\"token\":\"invalid\"}", anonymousCsrf).statusCode()).isEqualTo(401);
+
+        HttpClient teacher = client();
+        String csrf = csrf(teacher);
+        assertThat(send(teacher, "POST", "/api/auth/login",
+                "{\"username\":\"oauth-teacher\",\"password\":\"oauth-test-password\"}", csrf)
+                .statusCode()).isEqualTo(200);
+        assertThat(get(teacher, "/api/student-account/classrooms").statusCode()).isEqualTo(403);
+        assertThat(send(teacher, "POST", "/api/student-account/enrollments/claim",
+                "{\"token\":\"invalid\"}", csrf).statusCode()).isEqualTo(403);
+        assertThat(send(teacher, "POST", "/api/student-account/enrollments/claim",
+                "{\"token\":\"invalid\"}", null).statusCode()).isEqualTo(403);
+        // Student must never receive a teacher invitation capability response.
+        assertThat(get(anonymous, "/api/student-account-invitations/capabilities")
+                .statusCode()).isEqualTo(401);
+        assertThat(get(teacher, "/api/student-account-invitations/capabilities")
+                .body()).contains("\"enabled\":false");
     }
 
     private HttpClient client() {

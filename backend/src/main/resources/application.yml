@@ -38,6 +38,7 @@ spring:
 app:
   student-identity:
     invitation-issuance-enabled: ${APP_STUDENT_IDENTITY_INVITATION_ISSUANCE_ENABLED:false}
+    enrollment-claim-enabled: ${APP_STUDENT_IDENTITY_ENROLLMENT_CLAIM_ENABLED:false}
     oidc:
       enabled: ${APP_STUDENT_OIDC_ENABLED:false}
       public-base-url: ${APP_STUDENT_OIDC_PUBLIC_BASE_URL:http://localhost:3000}

@@ -18,3 +18,14 @@
 .footer a{font-size:13px;color:var(--ds-accent-text,#126c64);text-decoration:underline;text-underline-offset:3px}
 .primary:focus-visible,.secondary:focus-visible,.footer a:focus-visible{outline:3px solid var(--accent,#126c64);outline-offset:3px}
 @media(max-width:520px){.shell{align-items:start;padding:18px}.card{padding:24px 18px}.footer{display:grid;gap:16px}}
+
+.subheading{font-size:17px;margin:18px 0 6px}
+.classroomList{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.classroomList li{border:1px solid var(--border,#d9e1e1);background:var(--surface,#fff);padding:12px;border-radius:10px;display:grid;gap:3px}
+.classroomList strong{font-size:14px}
+.classroomList small{color:var(--muted,#68787c);line-height:1.4}
+.claimForm{margin-top:14px;display:grid;gap:10px}
+.claimForm label{font-size:14px;font-weight:650}
+.inviteInput{width:100%;min-width:0;min-height:46px;border:1px solid var(--border,#c3d0d0);border-radius:9px;background:var(--surface,#fff);color:var(--text,#14282d);padding:10px 12px;font-size:14px}
+.inviteInput:focus-visible{outline:3px solid var(--accent,#126c64);outline-offset:2px}
+.success{color:var(--success,#1c7656);font-size:14px;line-height:1.5;margin:12px 0}

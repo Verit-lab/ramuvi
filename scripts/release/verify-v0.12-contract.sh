@@ -11,8 +11,8 @@ fail() { printf 'ERRO: %s\n' "$*" >&2; exit 1; }
   fail "a fundação de identidade requer V68"
 next=(backend/src/main/resources/db/migration/V69__*.sql)
 [[ ! -e "${next[0]}" ]] || fail "V69 requer um gate próprio"
-node -e 'if(require("./frontend/package.json").version!=="0.12.0-dev.2") process.exit(1)' || \
-  fail "identidade I0 deve permanecer pré-release 0.12.0-dev.2"
+node -e 'if(require("./frontend/package.json").version!=="0.12.0-dev.3") process.exit(1)' || \
+  fail "identidade I0 deve permanecer pré-release 0.12.0-dev.3"
 
 grep -q 'uk_student_account_external_identity' backend/src/main/resources/db/migration/V68__*.sql || \
   fail "não há unicidade do identificador verificado"
@@ -20,9 +20,13 @@ grep -q 'ck_student_invite_hash' backend/src/main/resources/db/migration/V68__*.
   fail "convite deve armazenar somente hash"
 grep -q 'claimEnrollmentInvite' backend/src/main/java/br/com/arenadev/identity/account/StudentAccountService.java || \
   fail "não existe validação de resgate"
-# Never expose a public claim endpoint taking an account ID from request JSON.
+# A student claim endpoint is permitted only when it derives the identity from
+# Spring Security's OIDC principal, without user-controlled account/student IDs.
 if grep -Rq '@PostMapping.*claim' backend/src/main/java/br/com/arenadev/identity/account; then
-  fail "não publicar resgate antes de autenticação verificada"
+  grep -q '@AuthenticationPrincipal OidcUser principal' backend/src/main/java/br/com/arenadev/identity/account/StudentEnrollmentClaimController.java ||
+    fail "resgate de convite deve exigir principal OIDC"
+  grep -q 'requestMatchers("/api/student-account/\*\*").hasRole("STUDENT")' backend/src/main/java/br/com/arenadev/config/SecurityConfig.java ||
+    fail "resgate não protegido por ROLE_STUDENT"
 fi
 printf 'Contrato pré-release v0.12 I0 validado: Flyway V68, contas e convites sem auto-link.\n'
 
@@ -31,3 +35,9 @@ grep -q 'spring-boot-starter-security-oauth2-client' backend/pom.xml || fail 'OA
 grep -q 'OAuth2AuthorizationRequestCustomizers.withPkce()' backend/src/main/java/br/com/arenadev/config/SecurityConfig.java || fail 'PKCE não configurado'
 grep -q 'findActiveVerifiedOidcAccount' backend/src/main/java/br/com/arenadev/identity/account/StudentAccountService.java || fail 'revogação da sessão não validada'
 printf 'Contrato pré-release v0.12 I1: OIDC + PKCE, sessão revisada, flag default OFF.\n'
+
+# I2: POST claim must use the authenticated OIDC principal, not request-controlled IDs.
+grep -q '@AuthenticationPrincipal OidcUser principal' backend/src/main/java/br/com/arenadev/identity/account/StudentEnrollmentClaimController.java || fail 'resgate exige principal OIDC'
+grep -q 'claimEnrollmentInviteForVerifiedOidc' backend/src/main/java/br/com/arenadev/identity/account/StudentEnrollmentClaimController.java || fail 'resgate não validado'
+grep -q 'APP_STUDENT_IDENTITY_ENROLLMENT_CLAIM_ENABLED:false' backend/src/main/resources/application.yml || fail 'flag I2 deve estar OFF'
+printf 'Contrato pré-release v0.12 I2 validado: principal autenticado, resgate via POST, flag OFF.\n'

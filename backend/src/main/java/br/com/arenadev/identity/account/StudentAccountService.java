@@ -103,6 +103,90 @@ public class StudentAccountService {
 
     public record AccountView(UUID accountId, UUID studentId) { }
 
+    /**
+     * I2: the account must come from the cryptographically verified OIDC principal
+     * and be checked within the SAME transaction as the invitation consumption.
+     * A shared row lock prevents a concurrent identity revocation from racing the claim.
+     * Never call this with issuer/subject supplied directly in request JSON.
+     */
+    @Transactional
+    public ClaimedEnrollment claimEnrollmentInviteForVerifiedOidc(
+            String token, String issuer, String subject
+    ) {
+        if (issuer == null || subject == null || issuer.isBlank() || subject.isBlank()) {
+            throw new org.springframework.security.access.AccessDeniedException("Identidade inválida.");
+        }
+        var accounts = jdbc.query("""
+                select a.id
+                  from student_account_identities i
+                  join student_accounts a on a.id = i.account_id
+                  left join students s on s.id = a.student_id
+                 where i.issuer = ? and i.subject = ? and i.method = 'OIDC'
+                   and i.revoked_at is null and a.status = 'ACTIVE'
+                   and (a.student_id is null or (s.active and s.anonymized_at is null))
+                 for share of i
+                """, (rs, row) -> rs.getObject("id", UUID.class), issuer, subject);
+        if (accounts.size() != 1) {
+            throw new org.springframework.security.access.AccessDeniedException("Conta indisponível.");
+        }
+        UUID accountId = accounts.getFirst();
+        UUID studentId = claimEnrollmentInvite(token, accountId);
+        // Reads only the just-claimed row, never a list of other students' enrollments.
+        var claims = jdbc.query("""
+                select e.id as enrollment_id, c.id as classroom_id, c.name as classroom_name
+                  from student_enrollment_invites i
+                  join enrollments e on e.id = i.enrollment_id
+                  join classrooms c on c.id = e.classroom_id
+                 where i.token_hash = ? and i.claimed_by_account_id = ?
+                   and e.student_id = ? and i.claimed_at is not null
+                """, (rs, row) -> new ClaimedEnrollment(
+                studentId,
+                rs.getObject("enrollment_id", UUID.class),
+                rs.getObject("classroom_id", UUID.class),
+                rs.getString("classroom_name")), digest(token), accountId, studentId);
+        if (claims.size() != 1) throw invalidInvite();
+        return claims.getFirst();
+    }
+
+    /**
+     * Active memberships only, scoped to the exact current OIDC identity.
+     * This endpoint is a discovery view, NOT a replacement for the existing
+     * X-Study-Token access-control checks in /api/learn/**.
+     */
+    @Transactional(readOnly = true)
+    public java.util.List<ActiveClassroom> listActiveClassroomsForVerifiedOidc(
+            String issuer, String subject
+    ) {
+        var current = findActiveVerifiedOidcAccount(issuer, subject)
+                .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException(
+                        "Conta indisponível."));
+        if (current.studentId() == null) return java.util.List.of();
+        return jdbc.query("""
+                select e.id as enrollment_id, c.id as classroom_id, c.name as classroom_name,
+                       c.student_study_access_enabled
+                  from enrollments e
+                  join classrooms c on c.id = e.classroom_id
+                  join students s on s.id = e.student_id
+                  join student_accounts a on a.student_id = s.id
+                  join student_account_identities i on i.account_id = a.id
+                 where a.id = ? and a.status = 'ACTIVE'
+                   and i.issuer = ? and i.subject = ? and i.method = 'OIDC'
+                   and i.revoked_at is null and e.active and c.active and s.active
+                   and s.anonymized_at is null
+                 order by lower(c.name), e.id
+                """, (rs, row) -> new ActiveClassroom(
+                rs.getObject("enrollment_id", UUID.class),
+                rs.getObject("classroom_id", UUID.class),
+                rs.getString("classroom_name"),
+                rs.getBoolean("student_study_access_enabled")),
+                current.accountId(), issuer, subject);
+    }
+
+    public record ClaimedEnrollment(UUID studentId, UUID enrollmentId, UUID classroomId,
+                                    String classroomName) { }
+    public record ActiveClassroom(UUID enrollmentId, UUID classroomId, String classroomName,
+                                  boolean studentStudyAccessEnabled) { }
+
     /** Teacher-only invitation issuance. Token bytes are never stored, only their SHA-256. */
     @Transactional
     public IssuedInvite issueEnrollmentInvite(UUID enrollmentId) {
