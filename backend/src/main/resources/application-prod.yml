@@ -6,7 +6,10 @@ server:
       cookie:
         http-only: true
         secure: true
-        same-site: strict
+        # OAuth2/OIDC needs the session cookie on the provider's top-level
+        # cross-site GET callback; Strict would discard the saved state/nonce.
+        # Lax still blocks cross-site subresource cookies and CSRF protects POST.
+        same-site: lax
 
 spring:
   servlet:

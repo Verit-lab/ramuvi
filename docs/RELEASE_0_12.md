@@ -15,7 +15,7 @@
 - Dados e fluxo legados preservados; código de acesso do aluno continua disponível.
 - Flyway V68 acrescenta as tabelas de identidade sem apagar matrículas nem progresso existentes.
 - OIDC, emissão de convites, resgate e sessão verificada permanecem OFF por padrão. A simples instalação não habilita login social.
-- Deploy deve usar origem canônica https://ramuvi.io e cookies Secure/HttpOnly, com HTTPS no proxy reverso e backend restrito à rede interna.
+- Deploy deve usar origem canônica https://ramuvi.io e cookies Secure/HttpOnly/SameSite=Lax, com HTTPS no proxy reverso e backend restrito à rede interna. SameSite=Strict quebra o retorno top-level do OIDC.
 - Ativação real dos provedores depende de clientes OAuth próprios, callback HTTPS registrado e homologação separada.
 
 ## Não incluído

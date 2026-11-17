@@ -31,7 +31,14 @@ if grep -Rq '@PostMapping.*claim' backend/src/main/java/br/com/arenadev/identity
 fi
 printf 'Contrato v0.12 I0 validado: Flyway V68, contas e convites sem auto-link.\n'
 
-# I1 OIDC cannot be silently dropped from the pre-release.
+# Production redirects from the IdP are cross-site top-level GET navigations.
+# SameSite=Strict would lose the session-stored OAuth state/nonce on callback.
+grep -Eq '^[[:space:]]*same-site: lax([[:space:]]|$)' backend/src/main/resources/application-prod.yml || \
+  fail 'OIDC em produção requer SameSite=Lax para retorno do provedor'
+grep -Eq '^[[:space:]]*secure: true([[:space:]]|$)' backend/src/main/resources/application-prod.yml || \
+  fail 'OIDC em produção exige cookie Secure'
+
+# I1 OIDC cannot be silently dropped from the release.
 grep -q 'spring-boot-starter-security-oauth2-client' backend/pom.xml || fail 'OAuth2 client ausente'
 grep -q 'OAuth2AuthorizationRequestCustomizers.withPkce()' backend/src/main/java/br/com/arenadev/config/SecurityConfig.java || fail 'PKCE não configurado'
 grep -q 'findActiveVerifiedOidcAccount' backend/src/main/java/br/com/arenadev/identity/account/StudentAccountService.java || fail 'revogação da sessão não validada'

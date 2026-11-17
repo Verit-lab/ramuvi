@@ -53,7 +53,7 @@
 - Não confiar em X-Forwarded-* injetados por clientes, não publicar PostgreSQL nem backend na interface externa.
 - Certificado precisa cobrir ambos os hosts antes de manter redirecionamento de www. Testar nginx -t antes de recarregar; evitar reinicialização desnecessária.
 - Verificar se HSTS está configurado; introduzi-lo gradualmente somente após demonstrar HTTPS estável para todos os subdomínios aplicáveis.
-- Cookie de sessão: Secure, HttpOnly e SameSite configurados no perfil de produção; inspecionar cabeçalhos sem registrar o valor dos cookies.
+- Cookie de sessão: Secure, HttpOnly e SameSite=Lax no perfil de produção. SameSite=Strict impede o cookie JSESSIONID no redirecionamento de retorno Google/Microsoft e perde OAuth state/nonce; manter CSRF para POST. Inspecionar cabeçalhos sem registrar valores.
 
 ## 5. Atualização e verificação pós-deploy
 
