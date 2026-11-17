@@ -52,6 +52,28 @@ class ContentCopyProtectionIT {
     }
 
     @Test
+    void offlinePolicyDefaultsOnAndCanChangeWithoutChangingCopyOrStages() {
+        UUID classroomId = classroom();
+        var material = library(null);
+        var created = journeys.create(input(classroomId, material.id(), null));
+        assertThat(created.offlineAllowed()).isTrue();
+        assertThat(created.copyProtected()).isFalse();
+        UUID initialStage = created.stages().getFirst().id();
+
+        var disabled = journeys.update(created.id(), new JourneyService.JourneyInput(
+                classroomId, "Jornada SQL", null, null, true, false));
+        assertThat(disabled.offlineAllowed()).isFalse();
+        assertThat(disabled.copyProtected()).isTrue();
+        assertThat(disabled.stages()).extracting(JourneyService.StageView::id).containsExactly(initialStage);
+
+        var reenabled = journeys.update(created.id(), new JourneyService.JourneyInput(
+                classroomId, "Jornada SQL", null, null, null, true));
+        assertThat(reenabled.offlineAllowed()).isTrue();
+        assertThat(reenabled.copyProtected()).isTrue();
+        assertThat(reenabled.stages()).extracting(JourneyService.StageView::id).containsExactly(initialStage);
+    }
+
+    @Test
     void aProtectedMaterialStaysProtectedInAJourneyThatAllowsCopying() {
         UUID classroomId = classroom();
         var material = library(true);

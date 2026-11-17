@@ -65,6 +65,7 @@ public class JourneyService {
         Journey journey = new Journey(classroom, input.title().trim());
         journey.update(input.title().trim(), clean(input.description()));
         journey.changeCopyProtection(Boolean.TRUE.equals(input.copyProtected()));
+        journey.changeOfflineAllowed(input.offlineAllowed() == null || input.offlineAllowed());
         applyStages(journey, input.stages());
         return toView(journeyRepository.save(journey));
     }
@@ -79,8 +80,10 @@ public class JourneyService {
         journey.update(input.title().trim(), clean(input.description()));
         // A setting, not structure: it can change after publishing.
         if (input.copyProtected() != null) journey.changeCopyProtection(input.copyProtected());
+        if (input.offlineAllowed() != null) journey.changeOfflineAllowed(input.offlineAllowed());
         if (journey.getStatus() == JourneyStatus.DRAFT) {
-            applyStages(journey, input.stages());
+            // Updating only a policy must never erase draft contents.
+            if (input.stages() != null) applyStages(journey, input.stages());
         } else if (journey.getStatus() == JourneyStatus.PUBLISHED) {
             // Published Journeys stay editable; only study already started is protected.
             if (input.stages() != null) {
@@ -598,7 +601,7 @@ public class JourneyService {
                                 && stage.getLearningResource().getRevision() > stage.getResourceSnapshotRevision()
                 )).toList(),
                 journey.getCreatedAt(), journey.getUpdatedAt(),
-                journey.isCopyProtected(), journey.getReleasedChapterCount()
+                journey.isCopyProtected(), journey.isOfflineAllowed(), journey.getReleasedChapterCount()
         );
     }
 
@@ -609,10 +612,15 @@ public class JourneyService {
 
     private static String clean(String value) { return value == null || value.isBlank() ? null : value.trim(); }
 
-    /** copyProtected null keeps the current value on update and means off on create. */
-    public record JourneyInput(UUID classroomId, String title, String description, List<StageInput> stages, Boolean copyProtected) {
+    /** Null values preserve settings on UPDATE; new Journeys allow copy and optional downloads. */
+    public record JourneyInput(UUID classroomId, String title, String description, List<StageInput> stages,
+                               Boolean copyProtected, Boolean offlineAllowed) {
         public JourneyInput(UUID classroomId, String title, String description, List<StageInput> stages) {
-            this(classroomId, title, description, stages, null);
+            this(classroomId, title, description, stages, null, null);
+        }
+        public JourneyInput(UUID classroomId, String title, String description, List<StageInput> stages,
+                            Boolean copyProtected) {
+            this(classroomId, title, description, stages, copyProtected, null);
         }
     }
     public record StageInput(
@@ -629,7 +637,17 @@ public class JourneyService {
     ) {}
     public record StageContentView(UUID stageId, String title, String body, String format, boolean libraryMaterial, boolean readOnly) {}
     public record StageContentInput(String body) {}
-    public record JourneyView(UUID id, UUID classroomId, String title, String description, JourneyStatus status, List<StageView> stages, Instant createdAt, Instant updatedAt, boolean copyProtected, Integer releasedChapterCount) {}
+    public record JourneyView(UUID id, UUID classroomId, String title, String description, JourneyStatus status,
+                              List<StageView> stages, Instant createdAt, Instant updatedAt,
+                              boolean copyProtected, boolean offlineAllowed, Integer releasedChapterCount) {
+        /** Source-compatible overload for existing unit-test fixtures. */
+        public JourneyView(UUID id, UUID classroomId, String title, String description, JourneyStatus status,
+                           List<StageView> stages, Instant createdAt, Instant updatedAt,
+                           boolean copyProtected, Integer releasedChapterCount) {
+            this(id, classroomId, title, description, status, stages, createdAt, updatedAt,
+                    copyProtected, false, releasedChapterCount);
+        }
+    }
     public record StageView(
             UUID id,
             int position,
