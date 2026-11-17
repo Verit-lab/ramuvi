@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   bootstrapJourneyRedemption,
-  fetchAllStudyJourneys,
+  fetchStudyJourneyCatalog,
   previewJourneyCode,
   redeemJourneyCode,
   StudyApiError,
@@ -16,6 +16,7 @@ import styles from "@/components/study/study.module.css";
 export default function JourneysPage() {
   const [journeys, setJourneys] = useState<MultiClassroomJourneySummary[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  const [studyMode, setStudyMode] = useState<"ACCOUNT" | "DEVICE">("DEVICE");
   const [query, setQuery] = useState("");
   const [classroom, setClassroom] = useState("ALL");
   const [status, setStatus] = useState("ALL");
@@ -28,23 +29,30 @@ export default function JourneysPage() {
 
   async function refreshJourneys() {
     try {
-      setJourneys(await fetchAllStudyJourneys());
+      const catalog = await fetchStudyJourneyCatalog();
+      setStudyMode(catalog.mode);
+      setJourneys(catalog.journeys);
       setState("ready");
+      return catalog.mode;
     } catch {
       setState("error");
+      return null;
     }
   }
 
   useEffect(() => {
-    void refreshJourneys();
-    const incoming = new URLSearchParams(window.location.search).get("redeem");
-    if (incoming) {
-      const normalized = incoming.toUpperCase();
-      setRedeemCode(normalized);
-      setRedeemOpen(true);
-      window.history.replaceState(null, "", "/learn/journeys");
-      void redeem(normalized);
-    }
+    // Do not redeem a device code into a profile while a verified account is active.
+    void (async () => {
+      const mode = await refreshJourneys();
+      const incoming = new URLSearchParams(window.location.search).get("redeem");
+      if (incoming && mode === "DEVICE") {
+        const normalized = incoming.toUpperCase();
+        setRedeemCode(normalized);
+        setRedeemOpen(true);
+        window.history.replaceState(null, "", "/learn/journeys");
+        void redeem(normalized);
+      }
+    })();
   }, []);
 
   const classrooms = useMemo(
@@ -132,13 +140,14 @@ export default function JourneysPage() {
     <h1 className={styles.title}>Seus percursos de estudo</h1>
     <div className={styles.journeyHeading}>
       <p className={styles.lead}>Encontre conteúdos das suas turmas e materiais adicionados ao seu perfil.</p>
-      <button type="button" className={styles.redeemButton} onClick={() => {
+      {studyMode === "DEVICE" && state === "ready" && <button type="button" className={styles.redeemButton} onClick={() => {
         setRedeemOpen((value) => !value);
         resetRedemption();
-      }} aria-expanded={redeemOpen} aria-controls="journey-redeem-form">{redeemOpen ? "Fechar formulário" : "+ Adicionar com código"}</button>
+      }} aria-expanded={redeemOpen} aria-controls="journey-redeem-form">{redeemOpen ? "Fechar formulário" : "+ Adicionar com código"}</button>}
     </div>
 
-    {redeemOpen && !preview && <form id="journey-redeem-form" className={styles.redeemPanel} onSubmit={(event) => {
+    {studyMode === "ACCOUNT" && <p role="status">Acesso pela sua conta verificada. Para participar de outra turma, use o convite individual informado pelo professor em <Link href="/learn/login">Minha conta</Link>.</p>}
+    {studyMode === "DEVICE" && redeemOpen && !preview && <form id="journey-redeem-form" className={styles.redeemPanel} onSubmit={(event) => {
       event.preventDefault();
       void redeem();
     }}>
@@ -163,7 +172,7 @@ export default function JourneysPage() {
       {redeemMessage && <p>{redeemMessage}</p>}
     </form>}
 
-    {redeemOpen && preview && <form id="journey-redeem-form" className={styles.redeemPanel} onSubmit={(event) => void bootstrap(event)}>
+    {studyMode === "DEVICE" && redeemOpen && preview && <form id="journey-redeem-form" className={styles.redeemPanel} onSubmit={(event) => void bootstrap(event)}>
       <div>
         <strong>{preview.title}</strong>
         <span>{preview.classroomName} · informe sua matrícula ou nome completo para vincular esta Jornada ao seu perfil.</span>
@@ -219,7 +228,7 @@ export default function JourneysPage() {
 
     {state === "loading" && <div className={styles.empty}>Carregando jornadas…</div>}
     {state === "error" && <div className={styles.error}>
-      Este dispositivo ainda não possui um perfil de estudo. Use “Adicionar com código” ou <Link href="/learn/live">entre em uma aula ao vivo</Link>.
+      Não foi possível carregar suas Jornadas. Verifique sua conta ou <Link href="/learn/login">entre novamente</Link>.
     </div>}
     {state === "ready" && groups.map((group) => <section className={styles.journeyGroup} key={group.items[0].classroomId}>
       <div className={styles.sectionHead}><div><span className={styles.groupLabel}>TURMA</span><h2>{group.name}</h2></div></div>
@@ -232,6 +241,6 @@ export default function JourneysPage() {
         <span className={styles.percent}>{journey.progress.percent}%</span>
       </Link>)}</div>
     </section>)}
-    {state === "ready" && !filtered.length && <div className={styles.empty}>Nenhuma jornada corresponde aos filtros atuais.</div>}
+    {state === "ready" && !filtered.length && <div className={styles.empty}>{studyMode === "ACCOUNT" ? "Não há Jornadas publicadas e liberadas para suas matrículas atuais." : "Nenhuma jornada corresponde aos filtros atuais."}</div>}
   </>;
 }

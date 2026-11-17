@@ -57,7 +57,7 @@ test("release manifests and version derivation stay aligned", () => {
   const version = backendVersion();
 
   assert.equal(pkg.version, version);
-  assert.match(version, /^0\.12\.0-dev\.3$/);
+  assert.match(version, /^0\.12\.0-dev\.4$/);
 
   assert.equal(lock.version, version);
   assert.equal(lock.packages[""]?.version, version);
@@ -116,7 +116,7 @@ test("final v0.11.1 release requires 0.11.1, signed 11.6 attestation and validat
 });
 
 test("v0.12 I0 cannot be published and requires verified identity foundations", () => {
-  assert.match(gate, /v0\.12\.0-dev\.3 é candidata de desenvolvimento/);
+  assert.match(gate, /v0\.12\.0-dev\.4 é candidata de desenvolvimento/);
   assert.match(v012Contract, /V68__student_account_foundation\.sql/);
   assert.match(v012Contract, /verify-v0\.11-contract\.sh/);
   assert.match(v012Contract, /uk_student_account_external_identity/);

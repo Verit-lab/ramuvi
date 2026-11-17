@@ -106,6 +106,7 @@ export default function StudentLoginPage() {
             <p>{session.studentId
               ? "Sua identidade está vinculada a um aluno. Confira as turmas associadas abaixo."
               : "Sua identidade foi verificada. Para associá-la ao seu cadastro, peça um convite individual ao professor."}</p>
+            {session.studentId && <p><Link href="/learn/journeys">Abrir minhas Jornadas</Link></p>}
             {claimSuccess && <p role="status" className={styles.success}>{claimSuccess}</p>}
             {classroomsLoading ? <p role="status">Carregando turmas...</p> : classrooms !== null ? (
               <>

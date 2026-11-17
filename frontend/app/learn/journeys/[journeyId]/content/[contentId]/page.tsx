@@ -5,10 +5,11 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import JourneyContentReader from "@/components/study/JourneyContentReader";
 import { completeStudyContent, fetchStudyContent, fetchStudyJourney, fetchTeacherContentPreview, fetchTeacherStudyPreview, startStudyContent, studyDeviceClaims, type JourneyContentDetailView, type JourneyStudyView } from "@/lib/study-api";
+import { completeVerifiedContent, fetchVerifiedContent, fetchVerifiedJourney, startVerifiedContent, verifiedStudyAccess } from "@/lib/verified-study-api";
 import styles from "@/components/study/study.module.css";
 import { isExcerptOfBody, studyExcerpt } from "@/lib/study-excerpt";
 
-type ReaderData = { token: string; journey: JourneyStudyView; content: JourneyContentDetailView };
+type ReaderData = { mode: "TEACHER" | "DEVICE" | "ACCOUNT"; token: string; journey: JourneyStudyView; content: JourneyContentDetailView };
 
 export default function ContentReaderPage() {
   const { journeyId, contentId } = useParams<{ journeyId: string; contentId: string }>();
@@ -22,15 +23,31 @@ export default function ContentReaderPage() {
     if (teacherPreview) {
       try {
         const [journey, content] = await Promise.all([fetchTeacherStudyPreview(journeyId), fetchTeacherContentPreview(journeyId, contentId)]);
-        if (active) setData({ token: "", journey, content });
+        if (active) setData({ mode: "TEACHER", token: "", journey, content });
       } catch { if (active) setError("Não foi possível abrir a prévia deste conteúdo."); }
+      return;
+    }
+    try {
+      const access = await verifiedStudyAccess();
+      if (access.mode === "ACCOUNT") {
+        const [journey, content] = await Promise.all([
+          fetchVerifiedJourney(journeyId),
+          fetchVerifiedContent(journeyId, contentId),
+        ]);
+        if (content.state === "CURRENT") await startVerifiedContent(journeyId, contentId);
+        if (active) setData({ mode: "ACCOUNT", token: "", journey, content });
+        return;
+      }
+    } catch (caught) {
+      // Never retry with a device claim after a verified account is denied.
+      if (active) setError(caught instanceof Error ? caught.message : "Não foi possível validar sua conta.");
       return;
     }
     for (const claim of studyDeviceClaims()) {
       try {
         const [journey, content] = await Promise.all([fetchStudyJourney(journeyId, claim.token), fetchStudyContent(journeyId, contentId, claim.token)]);
         if (content.state === "CURRENT") await startStudyContent(journeyId, contentId, claim.token);
-        if (active) setData({ token: claim.token, journey, content });
+        if (active) setData({ mode: "DEVICE", token: claim.token, journey, content });
         return;
       } catch {}
     }
@@ -69,7 +86,9 @@ export default function ContentReaderPage() {
     if (!data || completing) return;
     setCompleting(true);
     try {
-      const updated = await completeStudyContent(journeyId, contentId, data.token);
+      const updated = data.mode === "ACCOUNT"
+        ? await completeVerifiedContent(journeyId, contentId)
+        : await completeStudyContent(journeyId, contentId, data.token);
       updated.newlyUnlockedAchievements.forEach((achievement) => window.dispatchEvent(new CustomEvent("arena:achievement-unlocked", { detail: { title: achievement.title, description: achievement.description } })));
       const flat = updated.modules.flatMap(module => module.contents);
       const next = flat.find(content => content.state === "CURRENT");

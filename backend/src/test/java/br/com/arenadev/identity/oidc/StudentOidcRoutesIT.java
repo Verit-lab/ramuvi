@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "app.student-identity.oidc.enabled=true",
         "app.student-identity.enrollment-claim-enabled=true",
+        "app.student-identity.study-session-enabled=true",
         "app.student-identity.oidc.google-client-id=test-google-client",
         "app.student-identity.oidc.google-client-secret=test-google-secret",
         "app.student-identity.oidc.public-base-url=http://localhost:3000",
@@ -95,6 +96,28 @@ class StudentOidcRoutesIT {
                 .statusCode()).isEqualTo(401);
         assertThat(get(teacher, "/api/student-account-invitations/capabilities")
                 .body()).contains("\"enabled\":false");
+    }
+
+    @Test
+    void verifiedStudyEndpointsRejectAnonymousAndTeacherWithValidCsrf() throws Exception {
+        HttpClient anonymous = client();
+        String anonCsrf = csrf(anonymous);
+        assertThat(get(anonymous, "/api/student-account/study/journeys").statusCode()).isEqualTo(401);
+        assertThat(send(anonymous, "POST",
+                "/api/student-account/study/journeys/11111111-1111-4111-8111-111111111111"
+                + "/contents/22222222-2222-4222-8222-222222222222/complete",
+                "{}", anonCsrf).statusCode()).isEqualTo(401);
+
+        HttpClient teacher = client();
+        String teacherCsrf = csrf(teacher);
+        assertThat(send(teacher, "POST", "/api/auth/login",
+                "{\"username\":\"oauth-teacher\",\"password\":\"oauth-test-password\"}",
+                teacherCsrf).statusCode()).isEqualTo(200);
+        assertThat(get(teacher, "/api/student-account/study/journeys").statusCode()).isEqualTo(403);
+        assertThat(send(teacher, "POST",
+                "/api/student-account/study/journeys/11111111-1111-4111-8111-111111111111"
+                + "/contents/22222222-2222-4222-8222-222222222222/complete",
+                "{}", teacherCsrf).statusCode()).isEqualTo(403);
     }
 
     private HttpClient client() {

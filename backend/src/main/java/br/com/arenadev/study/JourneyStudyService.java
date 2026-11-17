@@ -43,15 +43,20 @@ public class JourneyStudyService {
 
     @Transactional(readOnly = true)
     public List<JourneyStudySummary> list(StudyPrincipal principal) {
-        requirePrincipalEnrollment(principal);
+        if (!principal.verifiedAccount()) requirePrincipalEnrollment(principal);
         Map<UUID, JourneyStudySummary> available = new LinkedHashMap<>();
         enrollments.findByStudentIdAndActiveTrue(principal.userId()).stream()
-                .filter(accessPolicy::canAccessClassroomStudy)
+                .filter(enrollment -> principal.verifiedAccount()
+                        ? accessPolicy.canAccessVerifiedAccountStudy(enrollment)
+                        : accessPolicy.canAccessClassroomStudy(enrollment))
                 .forEach(enrollment -> journeys.findByClassroomIdAndStatusOrderByUpdatedAtDesc(enrollment.getClassroom().getId(), JourneyStatus.PUBLISHED)
                         .forEach(journey -> available.put(journey.getId(), summary(journey, AccessContext.enrollment(enrollment)))));
-        redeemedAccess.findByStudentIdOrderByRedeemedAtDesc(principal.userId()).stream()
-                .filter(access -> access.getJourney().getStatus() == JourneyStatus.PUBLISHED)
-                .forEach(access -> available.putIfAbsent(access.getJourney().getId(), summary(access.getJourney(), AccessContext.redeemed(access))));
+        // Code redemption is not an OIDC authorization grant.
+        if (!principal.verifiedAccount()) {
+            redeemedAccess.findByStudentIdOrderByRedeemedAtDesc(principal.userId()).stream()
+                    .filter(access -> access.getJourney().getStatus() == JourneyStatus.PUBLISHED)
+                    .forEach(access -> available.putIfAbsent(access.getJourney().getId(), summary(access.getJourney(), AccessContext.redeemed(access))));
+        }
         return available.values().stream()
                 .sorted(Comparator.comparing(JourneyStudySummary::started).reversed()
                         .thenComparing(JourneyStudySummary::lastStudiedAt, Comparator.nullsLast(Comparator.reverseOrder())))
@@ -198,6 +203,11 @@ public class JourneyStudyService {
     private AccessContext requireAccess(Journey journey, StudyPrincipal principal) {
         if (journey.getStatus() != JourneyStatus.PUBLISHED) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Jornada não encontrada.");
         Optional<Enrollment> enrollment = enrollments.findByStudentIdAndClassroomIdAndActiveTrue(principal.userId(), journey.getClassroom().getId());
+        if (principal.verifiedAccount()) {
+            return enrollment.filter(accessPolicy::canAccessVerifiedAccountStudy)
+                    .map(AccessContext::enrollment)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Jornada não encontrada."));
+        }
         if (enrollment.filter(accessPolicy::canAccessClassroomStudy).isPresent()) return AccessContext.enrollment(enrollment.get());
         return redeemedAccess.findByStudentIdAndJourneyId(principal.userId(), journey.getId())
                 .map(AccessContext::redeemed)
