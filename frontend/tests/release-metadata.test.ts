@@ -30,6 +30,10 @@ const v011Contract = readFileSync(
   resolve(root, "scripts/release/verify-v0.11-contract.sh"),
   "utf8",
 );
+const v012Contract = readFileSync(
+  resolve(root, "scripts/release/verify-v0.12-contract.sh"),
+  "utf8",
+);
 const rollbackRehearsal = readFileSync(
   resolve(root, "scripts/release/rehearse-v09-v010-rollback.sh"),
   "utf8",
@@ -53,7 +57,7 @@ test("release manifests and version derivation stay aligned", () => {
   const version = backendVersion();
 
   assert.equal(pkg.version, version);
-  assert.match(version, /^0\.11\.1(?:-(?:rc|beta)\.[0-9]+)?$/);
+  assert.match(version, /^0\.12\.0-dev\.1$/);
 
   assert.equal(lock.version, version);
   assert.equal(lock.packages[""]?.version, version);
@@ -66,6 +70,8 @@ test("release manifests and version derivation stay aligned", () => {
 
 test("release gate uses v0.11/V67 while preserving earlier v0.11 and v0.10 contract checks", () => {
   assert.match(gate, /verify-v0\.11-contract\.sh/);
+  assert.match(gate, /expected_schema_version=68/);
+  assert.match(gate, /verify-v0\.12-contract\.sh/);
   assert.match(gate, /expected_schema_version=67/);
   assert.match(gate, /expected_schema_version=66/);
   assert.match(gate, /expected_schema_version=61/);
@@ -101,12 +107,20 @@ test("final v0.11.1 release requires 0.11.1, signed 11.6 attestation and validat
   assert.match(v011Contract, /verify-v0\.10-contract\.sh/);
   assert.match(v011Contract, /V011_LAST_MIGRATION=67/);
   assert.match(v011Contract, /--check-template/);
-  assert.ok(v011Contract.includes(String.raw`^0\.11\.[01]`));
+  assert.ok(v011Contract.includes(String.raw`0\.11\.[01]`));
   assert.match(verifier, /arena_material_publications/);
   assert.match(verifier, /uq_arena_material_active_session/);
   assert.match(verifier, /arena_material_section_commands/);
   assert.match(verifier, /journey_overwrite_snapshots/);
   assert.match(verifier, /idx_journey_overwrite_snapshots_history/);
+});
+
+test("v0.12 I0 cannot be published and requires verified identity foundations", () => {
+  assert.match(gate, /v0\.12\.0-dev\.1 é candidata de desenvolvimento/);
+  assert.match(v012Contract, /V68__student_account_foundation\.sql/);
+  assert.match(v012Contract, /verify-v0\.11-contract\.sh/);
+  assert.match(v012Contract, /uk_student_account_external_identity/);
+  assert.match(v012Contract, /ck_student_invite_hash/);
 });
 
 test("v0.10-to-v0.11 rollback uses immutable tag, synthetic fixtures and isolated backup", () => {

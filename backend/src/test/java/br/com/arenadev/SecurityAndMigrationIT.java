@@ -138,7 +138,10 @@ class SecurityAndMigrationIT {
                     'arena_material_section_commands',
                     'teacher_preferences',
                     'app_secrets',
-                    'journey_overwrite_snapshots'
+                    'journey_overwrite_snapshots',
+                    'student_accounts',
+                    'student_account_identities',
+                    'student_enrollment_invites'
                   )
                 """, Integer.class);
 
@@ -146,10 +149,10 @@ class SecurityAndMigrationIT {
                 "1", "2", "3", "4", "5", "6", "7", "8", "9",
                 "10", "11", "12", "13", "14", "15", "16", "17",
                 "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32",
-                "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "62", "63", "64", "65", "66", "67"
+                "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "62", "63", "64", "65", "66", "67", "68"
         );
 
-        assertThat(expectedTables).isEqualTo(73);
+        assertThat(expectedTables).isEqualTo(76);
 
     }
 
@@ -170,6 +173,12 @@ class SecurityAndMigrationIT {
         assertThat(ready.body()).contains("\"check\":\"readiness\"");
         assertThat(ready.body()).contains("\"database\":\"UP\"");
         assertThat(classrooms.statusCode()).isEqualTo(401);
+        // A student-account invitation must never be anonymously issuable.
+        String csrf = csrfToken(sessionClient);
+        HttpResponse<String> invitation = send(sessionClient, "POST",
+                "/api/student-account-invitations/enrollments/00000000-0000-0000-0000-000000000001",
+                "{}", csrf);
+        assertThat(invitation.statusCode()).isEqualTo(401);
     }
 
     @Test
