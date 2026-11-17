@@ -609,7 +609,7 @@ export function StudentManager({
                   <input aria-label="Código individual do convite" className="input"
                     readOnly value={issuedInvite.token} autoComplete="off" onFocus={(event) => event.currentTarget.select()} />
                 </label>
-                <small>O aluno deve acessar /learn/login, autenticar-se com Google/Microsoft e colar este código.
+                <small>O aluno deve acessar /learn, autenticar-se com Google/Microsoft e colar este código.
                   Não encaminhe publicamente nem confunda com o código da aula.</small>
                 <div className="modal-footer">
                   <button type="button" className="button ghost" disabled={busy}

@@ -11,7 +11,7 @@ test("v0.12 / I1: aluno mantém ingresso por código quando OIDC está desligado
   await page.route("**/api/student-account/session", async (route) => {
     await route.fulfill({ status: 401 });
   });
-  await page.goto("/learn/login");
+  await page.goto("/learn");
   await expect(page.getByRole("heading", { name: "Acesse sua conta" })).toBeVisible();
   await expect(page.getByText("O acesso por conta ainda não foi habilitado")).toBeVisible();
   await expect(page.getByRole("link", { name: "Entrar em uma aula com código" }))
@@ -32,7 +32,7 @@ test("v0.12 / I1: login OIDC usa apenas links de provedores conhecidos", async (
   await page.route("**/api/student-account/session", async (route) => {
     await route.fulfill({ status: 401 });
   });
-  await page.goto("/learn/login");
+  await page.goto("/learn");
   await expect(page.getByRole("link", { name: "Continuar com Google" }))
     .toHaveAttribute("href", "/api/student-oidc/authorization/google");
   await expect(page.getByRole("link", { name: "Continuar com Microsoft" })).toHaveCount(0);
@@ -53,7 +53,7 @@ test("v0.12 / I1: conta verificada não libera matrícula sem convite", async ({
       }),
     });
   });
-  await page.goto("/learn/login");
+  await page.goto("/learn");
   await expect(page.getByText("Sua identidade foi verificada.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Sair desta conta" })).toBeVisible();
 });
@@ -93,7 +93,7 @@ test("v0.12 / I2: resgate usa POST, limpa token e revela apenas as turmas ativas
     });
   });
 
-  await page.goto("/learn/login");
+  await page.goto("/learn");
   const input = page.getByRole("textbox", { name: "Código individual do convite" });
   await expect(input).toBeVisible();
   await input.fill(token);
@@ -117,7 +117,7 @@ test("v0.12 / I2: flag desligada não oferece resgate nem oculta a entrada por c
         studentId: null, role: "STUDENT" }) }));
   await page.route("**/api/student-account/classrooms", async (route) =>
     route.fulfill({ status: 404 }));
-  await page.goto("/learn/login");
+  await page.goto("/learn");
   await expect(page.getByText("O vínculo de matrícula ainda não foi habilitado")).toBeVisible();
   await expect(page.getByRole("textbox", { name: "Código individual do convite" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Entrar em uma aula com código" }))

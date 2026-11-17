@@ -146,7 +146,7 @@ export default function JourneysPage() {
       }} aria-expanded={redeemOpen} aria-controls="journey-redeem-form">{redeemOpen ? "Fechar formulário" : "+ Adicionar com código"}</button>}
     </div>
 
-    {studyMode === "ACCOUNT" && <p role="status">Acesso pela sua conta verificada. Para participar de outra turma, use o convite individual informado pelo professor em <Link href="/learn/login">Minha conta</Link>.</p>}
+    {studyMode === "ACCOUNT" && <p role="status">Acesso pela sua conta verificada. Para participar de outra turma, use o convite individual informado pelo professor em <Link href="/learn?account=1">Minha conta</Link>.</p>}
     {studyMode === "DEVICE" && redeemOpen && !preview && <form id="journey-redeem-form" className={styles.redeemPanel} onSubmit={(event) => {
       event.preventDefault();
       void redeem();
@@ -228,7 +228,7 @@ export default function JourneysPage() {
 
     {state === "loading" && <div className={styles.empty}>Carregando jornadas…</div>}
     {state === "error" && <div className={styles.error}>
-      Não foi possível carregar suas Jornadas. Verifique sua conta ou <Link href="/learn/login">entre novamente</Link>.
+      Não foi possível carregar suas Jornadas. Verifique sua conta ou <Link href="/learn">entre novamente</Link>.
     </div>}
     {state === "ready" && groups.map((group) => <section className={styles.journeyGroup} key={group.items[0].classroomId}>
       <div className={styles.sectionHead}><div><span className={styles.groupLabel}>TURMA</span><h2>{group.name}</h2></div></div>

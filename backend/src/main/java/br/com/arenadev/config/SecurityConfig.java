@@ -125,7 +125,7 @@ public class SecurityConfig {
             // S256 PKCE even for confidential clients, in addition to the session-bound state and OIDC nonce.
             resolver.setAuthorizationRequestCustomizer(OAuth2AuthorizationRequestCustomizers.withPkce());
             http.oauth2Login(oidc -> oidc
-                    .loginPage("/learn/login")
+                    .loginPage("/learn")
                     .authorizationEndpoint(authorization -> authorization
                             .baseUri("/api/student-oidc/authorization")
                             .authorizationRequestResolver(resolver))
@@ -133,8 +133,8 @@ public class SecurityConfig {
                             .baseUri("/api/student-oidc/callback/*"))
                     .userInfoEndpoint(userInfo -> userInfo
                             .oidcUserService(studentOidcUsers.getObject()))
-                    .successHandler(new SimpleUrlAuthenticationSuccessHandler("/learn/login?connected=1"))
-                    .failureHandler(new SimpleUrlAuthenticationFailureHandler("/learn/login?error=oidc"))
+                    .successHandler(new SimpleUrlAuthenticationSuccessHandler("/learn?connected=1"))
+                    .failureHandler(new SimpleUrlAuthenticationFailureHandler("/learn?error=oidc"))
             );
         }
         return http.build();

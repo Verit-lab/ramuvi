@@ -564,3 +564,6 @@
 .liveRemembered a{display:inline-flex;align-items:center;justify-content:center;justify-self:start;min-height:44px;padding:10px 14px;border:1px solid var(--study-line);border-radius:9px;color:var(--study-ink-strong);font-weight:750;text-decoration:none}
 .liveRemembered a:focus-visible{outline:2px solid var(--study-focus);outline-offset:2px}
 @media(max-width:540px){.liveRemembered{padding:16px}.liveRemembered a{width:100%}}
+
+/* Root /learn shows the learner access gate before mounting the study shell. */
+.entryLoading{display:grid;min-height:100vh;place-items:center;padding:24px;color:var(--muted,#68787c)}
