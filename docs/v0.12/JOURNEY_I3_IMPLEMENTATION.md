@@ -47,11 +47,13 @@ Para habilitar em homologação: configurar OIDC de I1 com credenciais reais e c
 | I3-A1 | Anônimo e docente bloqueados do endpoint autenticado | Testes HTTP direcionados |
 | I3-A2 | Mesmo progresso lido/gravado por conta e fluxo legado | PostgreSQL/JourneyCoreIT |
 | I3-A3 | Outra conta não acessa ou grava Jornada de terceiro | PostgreSQL/JourneyCoreIT |
-| I3-A4 | Matrícula suspensa, turma sem liberação ou identidade revogada bloqueiam leitura e escrita | PostgreSQL/JourneyCoreIT |
+| I3-A4 | Matrícula suspensa, turma sem liberação, turma desativada, Student inativo, Jornada arquivada ou identidade revogada bloqueiam leitura e escrita sem apagar progresso | PostgreSQL/JourneyCoreIT |
 | I3-A5 | Catálogo e leitor funcionam no Chromium e WebKit móvel; conclusão recuperada em dois navegadores | E2E com API simulada |
 | I3-A6 | Frontend lint/typecheck/test/build, contrato e Compose | Verificação local e CI |
 | I3-A7 | CI oficial 3/3 no SHA final e revisão da ADR-0071 | Pendente até verificação da PR |
 | I3-A8 | Google/Microsoft reais, Safari físico, backup/restauração e GO institucional | Pendente / fora do escopo de desenvolvimento |
+
+**Validação local em 17/11:** o primeiro `mvn verify` da branch aprovou 214 testes iniciais + 190 de integração; 425 testes de frontend, lint, format, typecheck e build aprovados; oito E2E específicos Chromium/WebKit aprovados; novos testes de revogação passaram em execução dirigida 30/30. A regressão completa do SHA final e CI oficial ainda precisam ser confirmadas.
 
 O teste E2E com dois navegadores utiliza backend simulado para conferir a UX; a prova de persistência real no PostgreSQL é coberta separadamente pelo teste de integração Java. A homologação com IdP real ainda não foi feita.
 
