@@ -1,6 +1,6 @@
 # Ramuvi v0.12 — identidade única do aluno
 
-**Estado:** EM IMPLEMENTAÇÃO INCREMENTAL (não é release publicada).
+**Estado:** I0 VALIDADO NA PR #136; I1 LOGIN OIDC IMPLEMENTADO EM BRANCH EMPILHADA, sujeito a revisão e homologação. Não é release publicada.
 **Base:** `main@6893377940f2761693a6854f5a305f1af71122a1` (CI 3/3 aprovado).
 **Branch:** `feat/v0.12-student-account-foundation`.
 **Rastreabilidade:** [issue #119](https://github.com/Verit-lab/ramuvi/issues/119), ADR-0068, [roadmap Notion](https://app.notion.com/p/3f9f3eb198c38136b319e5807170f8bf).
@@ -29,7 +29,7 @@ Ingresso repetido via código de aula/Jornada; a lembrança de dispositivo não 
 
 ## Limites do incremento
 
-- **Ainda não existem:** login do aluno, OIDC/OTP configurados, rota pública de resgate autenticado, UI/UX aprovada, auto-descoberta de turmas, aprovação docente via painel.
+- **Limites da I0:** não havia login discente. A I1 acrescentou login OIDC e tela de acesso atrás de feature flag; **ainda faltam** ativar provedores com credenciais reais, OTP, rota de resgate autenticado, auto-descoberta de turmas e aprovação docente. O redesign/UX geral continua dependente de Figma.
 - **Não há rollback seguro de schema por troca de imagem** se V68 já foi aplicada. Backup/restauração em ambiente isolado antes do primeiro deploy.
 - **Não deployar V68 na VPS** nem habilitar a funcionalidade como disponível para alunos apenas por ter passado na CI.
 - Professor ainda é operador único por implantação (ADR-0053).

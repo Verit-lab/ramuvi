@@ -38,6 +38,23 @@ class StudentAccountFoundationIT {
     }
 
     @Test
+    void revokedExternalIdentityStopsAuthorizingAnExistingSession() {
+        var verified = new StudentAccountService.VerifiedIdentity(
+                StudentAccountService.Method.OIDC,
+                "https://accounts.google.com", UUID.randomUUID().toString());
+        UUID accountId = accounts.provisionVerifiedIdentity(verified);
+        assertThat(accounts.findActiveVerifiedOidcAccount(verified.issuer(), verified.subject()))
+                .get().extracting(StudentAccountService.AccountView::accountId)
+                .isEqualTo(accountId);
+        assertThat(accounts.findActiveVerifiedOidcAccount(verified.issuer(), "unknown")).isEmpty();
+
+        jdbc.update("update student_account_identities set revoked_at = now() where account_id = ?",
+                accountId);
+        assertThat(accounts.findActiveVerifiedOidcAccount(verified.issuer(), verified.subject()))
+                .isEmpty();
+    }
+
+    @Test
     void verifiedExternalIdentityDoesNotAutoLinkEmailOrDeviceClaim() {
         var s = scenario();
         String email = "student." + s.suffix + "@escola.org";
