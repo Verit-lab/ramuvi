@@ -1,6 +1,8 @@
 package br.com.arenadev.config;
 
 import br.com.arenadev.auth.LoginRateLimitService;
+import br.com.arenadev.identity.oidc.StudentOidcUserService;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,6 +16,11 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestCustomizers;
+import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
+import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
@@ -77,7 +84,12 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            @Value("${app.student-identity.oidc.enabled:false}") boolean oidcEnabled,
+            ObjectProvider<ClientRegistrationRepository> clientRegistrations,
+            ObjectProvider<StudentOidcUserService> studentOidcUsers
+    ) throws Exception {
         http
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf
@@ -101,9 +113,30 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/health", "/api/health/**", "/api/auth/csrf", "/api/auth/login", "/api/join/**", "/api/learn/**", "/api/projector/**", "/ws/**").permitAll()
+                        .requestMatchers("/api/student-oidc/authorization/**", "/api/student-oidc/callback/**", "/api/student-account/providers").permitAll()
+                        .requestMatchers("/api/student-account/**").hasRole("STUDENT")
                         .requestMatchers("/api/**").hasRole("TEACHER")
                         .anyRequest().permitAll()
                 );
+        if (oidcEnabled) {
+            ClientRegistrationRepository registrations = clientRegistrations.getObject();
+            var resolver = new DefaultOAuth2AuthorizationRequestResolver(
+                    registrations, "/api/student-oidc/authorization");
+            // S256 PKCE even for confidential clients, in addition to the session-bound state and OIDC nonce.
+            resolver.setAuthorizationRequestCustomizer(OAuth2AuthorizationRequestCustomizers.withPkce());
+            http.oauth2Login(oidc -> oidc
+                    .loginPage("/learn/login")
+                    .authorizationEndpoint(authorization -> authorization
+                            .baseUri("/api/student-oidc/authorization")
+                            .authorizationRequestResolver(resolver))
+                    .redirectionEndpoint(redirection -> redirection
+                            .baseUri("/api/student-oidc/callback/*"))
+                    .userInfoEndpoint(userInfo -> userInfo
+                            .oidcUserService(studentOidcUsers.getObject()))
+                    .successHandler(new SimpleUrlAuthenticationSuccessHandler("/learn/login?connected=1"))
+                    .failureHandler(new SimpleUrlAuthenticationFailureHandler("/learn/login?error=oidc"))
+            );
+        }
         return http.build();
     }
 }

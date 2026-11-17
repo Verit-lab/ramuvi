@@ -77,6 +77,32 @@ public class StudentAccountService {
         return accountId;
     }
 
+    /**
+     * Re-check current DB state for EVERY authenticated account request.
+     * Revocation and anonymization invalidate old sessions without changing
+     * the teacher login or the legacy code-based participation flow.
+     */
+    @Transactional(readOnly = true)
+    public java.util.Optional<AccountView> findActiveVerifiedOidcAccount(String issuer, String subject) {
+        if (issuer == null || subject == null || issuer.isBlank() || subject.isBlank()) {
+            return java.util.Optional.empty();
+        }
+        return jdbc.query("""
+                select a.id, a.student_id
+                  from student_accounts a
+                  join student_account_identities i on i.account_id = a.id
+                  left join students s on s.id = a.student_id
+                 where i.issuer = ? and i.subject = ? and i.method = 'OIDC'
+                   and i.revoked_at is null and a.status = 'ACTIVE'
+                   and (a.student_id is null
+                        or (s.active and s.anonymized_at is null))
+                """, (rs, row) -> new AccountView(
+                rs.getObject("id", UUID.class), rs.getObject("student_id", UUID.class)),
+                issuer, subject).stream().findFirst();
+    }
+
+    public record AccountView(UUID accountId, UUID studentId) { }
+
     /** Teacher-only invitation issuance. Token bytes are never stored, only their SHA-256. */
     @Transactional
     public IssuedInvite issueEnrollmentInvite(UUID enrollmentId) {

@@ -1,0 +1,20 @@
+.shell{min-height:100vh;display:grid;place-items:center;padding:24px;background:var(--bg,#f4f7f7);color:var(--text,#14282d)}
+.card{width:min(460px,100%);display:grid;gap:15px;padding:clamp(24px,5vw,40px);border:1px solid var(--border,#d9e1e1);border-radius:20px;background:var(--surface,#fff);box-shadow:0 12px 36px #14282d12}
+.brand{font-weight:850;font-size:21px;letter-spacing:-.035em;color:var(--accent,#126c64)}
+.eyebrow{text-transform:uppercase;letter-spacing:.13em;color:var(--muted,#68787c);font-size:12px;font-weight:700;margin:0}
+.card h1{font-size:clamp(24px,5vw,30px);line-height:1.2;margin:0}
+.description{margin:0;color:var(--muted,#68787c);font-size:14px;line-height:1.6}
+.actions{display:grid;gap:10px;margin-top:6px}
+.primary,.secondary{display:flex;align-items:center;justify-content:center;min-height:48px;padding:12px 16px;border-radius:11px;border:1px solid var(--accent,#126c64);font-size:15px;font-weight:750;text-align:center;cursor:pointer}
+.primary{color:#fff;background:var(--accent,#126c64);text-decoration:none}
+.primary:hover{filter:brightness(.93)}
+.secondary{background:transparent;color:var(--text,#14282d);margin-top:12px}
+.secondary:disabled{opacity:.6;cursor:wait}
+.status,.notice{border:1px solid var(--border,#d9e1e1);border-radius:12px;padding:18px;background:var(--surface-raised,#f7fafa);font-size:14px;line-height:1.6}
+.status p,.notice{color:var(--muted,#68787c);margin:0}
+.status strong{display:block;margin-bottom:8px}
+.error{margin:0;color:var(--danger,#ad2135);font-size:14px;line-height:1.5}
+.footer{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;border-top:1px solid var(--border,#d9e1e1);padding-top:16px;margin-top:6px}
+.footer a{font-size:13px;color:var(--ds-accent-text,#126c64);text-decoration:underline;text-underline-offset:3px}
+.primary:focus-visible,.secondary:focus-visible,.footer a:focus-visible{outline:3px solid var(--accent,#126c64);outline-offset:3px}
+@media(max-width:520px){.shell{align-items:start;padding:18px}.card{padding:24px 18px}.footer{display:grid;gap:16px}}
