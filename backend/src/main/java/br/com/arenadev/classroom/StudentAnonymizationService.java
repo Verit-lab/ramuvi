@@ -38,6 +38,22 @@ public class StudentAnonymizationService {
         student.anonymize(pseudonym(studentId), Instant.now());
         students.flush();
 
+        // Verified accounts and outstanding invitations must lose access before PII is cleared.
+        // History and XP remain on Student/Enrollment rows, never on login credentials.
+        jdbc.update("""
+                delete from student_enrollment_invites
+                where enrollment_id in (select id from enrollments where student_id = ?)
+                """, studentId);
+        // Erase OIDC subjects and email-OTP addresses rather than retaining PII in a revoked credential.
+        jdbc.update("""
+                delete from student_account_identities
+                where account_id in (select id from student_accounts where student_id = ?)
+                """, studentId);
+        jdbc.update("""
+                update student_accounts set student_id = null, status = 'DISABLED',
+                    disabled_at = now() where student_id = ?
+                """, studentId);
+
         jdbc.update("update enrollments set preferred_name = null where student_id = ?", studentId);
         jdbc.update("update external_result_rows set participant_name = null where matched_student_id = ?", studentId);
         jdbc.update("""

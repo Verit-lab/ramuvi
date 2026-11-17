@@ -199,6 +199,13 @@ if (( EXPECTED_SCHEMA_VERSION >= 67 )); then
   [[ "$overwrite_snapshot_columns" -eq 4 ]] || \
     fail "restore V67 perdeu as colunas de conteúdo e progresso da Jornada"
 fi
+if (( EXPECTED_SCHEMA_VERSION >= 68 )); then
+  for identity_table in student_accounts student_account_identities student_enrollment_invites; do
+    identity_exists="$(docker exec "$CONTAINER_NAME" psql --tuples-only --no-align       --username "$CHECK_USER" --dbname "$CHECK_DATABASE"       --command "select to_regclass('public.$identity_table') is not null")"
+    [[ "$identity_exists" == "t" ]] || fail "restore V68 perdeu $identity_table"
+  done
+fi
+
 semantic_columns="$(docker exec "$CONTAINER_NAME"   psql --tuples-only --no-align --username "$CHECK_USER" --dbname "$CHECK_DATABASE"   --command "select count(*) from information_schema.columns where table_schema='public' and table_name='learning_resources' and column_name in ('library_visible','revision','archived_at','subject','language','content_sha256','outline_json','outline_parser_version')")"
 [[ "$semantic_columns" -eq 8 ]] || fail "LearningResource não contém o contrato completo da Biblioteca semântica"
 

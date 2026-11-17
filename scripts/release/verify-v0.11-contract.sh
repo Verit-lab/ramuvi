@@ -20,7 +20,10 @@ for ((n = 57; n <= V011_LAST_MIGRATION; n++)); do
     fail "migration V${n} ausente ou duplicada"
 done
 extra=(backend/src/main/resources/db/migration/V$((V011_LAST_MIGRATION + 1))__*.sql)
-[[ ! -e "${extra[0]}" ]] || fail "V$((V011_LAST_MIGRATION + 1)) pertence a uma linha posterior; o contrato v0.11 termina em V${V011_LAST_MIGRATION}"
+if [[ -e "${extra[0]}" ]]; then
+  [[ "$(node -p 'require("./frontend/package.json").version')" == "0.12.0-dev.1" ]] ||
+    fail "V68 somente pode existir na linha pré-release v0.12"
+fi
 
 required=(
   backend/src/main/java/br/com/arenadev/learning/presentation/MaterialPublicationController.java
@@ -58,7 +61,7 @@ python3 scripts/release/v011-readiness.py \
   --attestation docs/v0.11/11.6_ACCEPTANCE_TEMPLATE.json --check-template >/dev/null || \
   fail "template de aceite 11.6 deixou de iniciar NO-GO"
 
-node -e 'const v=require("./frontend/package.json").version; if(!/^0\.11\.[01](?:-(?:rc|beta)\.[0-9]+)?$/.test(v)) process.exit(1)' || \
+node -e 'const v=require("./frontend/package.json").version; if(!/^(?:0\.11\.[01](?:-(?:rc|beta)\.[0-9]+)?|0\.12\.0-dev\.1)$/.test(v)) process.exit(1)' || \
   fail "artefatos v0.11 devem identificar 0.11.0 ou uma candidata 0.11.0-rc.N"
 
 printf 'Contrato mínimo v0.11 verificado: baseline v0.10 + Flyway V57–V%s, %s.\n' \

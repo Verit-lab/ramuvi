@@ -107,7 +107,10 @@ node_line="$(node --version)"
 [[ "$node_line" == v22.* ]] || fail "Node.js 22 é obrigatório; encontrado: $node_line"
 
 "$SCRIPT_DIR/check-metadata.sh"
-if [[ -f backend/src/main/resources/db/migration/V67__journey_overwrite_snapshots.sql ]]; then
+if [[ -f backend/src/main/resources/db/migration/V68__student_account_foundation.sql ]]; then
+  "$SCRIPT_DIR/verify-v0.12-contract.sh"
+  expected_schema_version=68
+elif [[ -f backend/src/main/resources/db/migration/V67__journey_overwrite_snapshots.sql ]]; then
   "$SCRIPT_DIR/verify-v0.11-contract.sh"
   expected_schema_version=67
 elif [[ -f backend/src/main/resources/db/migration/V66__journey_gradual_release.sql ]]; then
@@ -150,6 +153,9 @@ printf 'Branch: %s\n' "$branch"
 printf 'Java: %s\n' "$java_line"
 printf 'Node.js: %s\n' "$node_line"
 
+if [[ "$MODE" == "final" && "$expected_schema_version" -ge 68 ]]; then
+  fail "v0.12.0-dev.1 é candidata de desenvolvimento: o gate final depende do contrato e aceite próprios"
+fi
 if [[ "$MODE" == "final" ]]; then
   if [[ "$expected_schema_version" -ge 57 ]]; then
     [[ "$RELEASE_VERSION" == "0.11.1" ]] || \
