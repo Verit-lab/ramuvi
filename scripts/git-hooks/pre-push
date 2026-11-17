@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Guarda local: recusa qualquer ref publicada em refs/heads/main.
+# Pode ser contornada com --no-verify; não substitui proteção de branch no GitHub.
+set -euo pipefail
+while read -r local_ref local_sha remote_ref remote_sha; do
+  if [[ "$remote_ref" == "refs/heads/main" ]]; then
+    printf 'ERRO: push direto para main bloqueado. Abra uma PR e aguarde CI/aceite.\n' >&2
+    exit 1
+  fi
+done
+exit 0

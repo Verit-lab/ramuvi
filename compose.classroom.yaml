@@ -7,8 +7,11 @@ services:
     restart: unless-stopped
   backend:
     ports: !reset []
+    # Sala LAN requer origem explícita; nunca reutilizar esse padrão no perfil prod.
+    environment:
+      APP_ALLOWED_ORIGIN_PATTERNS: ${CLASSROOM_ALLOWED_ORIGIN_PATTERNS:-http://*:[3000]}
     restart: unless-stopped
   frontend:
     ports: !override
-      - "${FRONTEND_BIND:-0.0.0.0}:${FRONTEND_PORT:-3000}:3000"
+      - "${CLASSROOM_FRONTEND_BIND:-0.0.0.0}:${FRONTEND_PORT:-3000}:3000"
     restart: unless-stopped

@@ -17,8 +17,8 @@ Uso: scripts/arena.sh COMANDO [opções]
 
   install [--no-start]   cria o .env com senhas aleatórias (se ainda não existir)
                          e sobe o Arena Dev no perfil de sala
-  upgrade                faz backup, atualiza o código (git pull), reconstrói e
-                         confere a saúde; se falhar, mostra como restaurar
+  upgrade TAG            confere uma tag estável, faz backup, atualiza por SHA,
+                         reconstrói e valida saúde; exige rollback controlado
   backup [opções]        backup do banco (repassa opções a backup-postgres.sh,
                          ex.: --keep 14 --encrypt-to <chave-age>)
   restore ARQUIVO        restaura um backup (pede confirmação)
@@ -46,6 +46,8 @@ export_compose_files() {
     COMPOSE_FILE+=":compose.https.yaml"
   fi
   export COMPOSE_FILE
+  # Proveniência da imagem: cada build iniciado pelo script registra o SHA fonte.
+  export RAMUVI_BUILD_SHA="$(git -C "$PROJECT_ROOT" rev-parse HEAD 2>/dev/null || printf unknown)"
 }
 
 compose() {
@@ -153,33 +155,57 @@ cmd_install() {
 }
 
 cmd_upgrade() {
+  local target="${1:-}"
+  [[ "$#" -eq 1 && "$target" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || \
+    fail "informe uma tag estável explícita, por exemplo: scripts/arena.sh upgrade v0.11.1"
   cd "$PROJECT_ROOT"
   check_env_secrets
   check_https_config
   command -v git >/dev/null 2>&1 || fail "git não encontrado"
   [[ -z "$(git status --porcelain --untracked-files=no)" ]] || \
-    fail "há alterações locais no código; resolva-as antes de atualizar"
-  local backup_file previous keep
+    fail "há alterações locais rastreadas; não é seguro atualizar"
+  info "1/4 Conferindo tag imutável em origin..."
+  local remote_tag_sha target_sha previous
+  remote_tag_sha="$(git ls-remote --refs --tags origin "refs/tags/${target}" | awk '{print $1}')" || \
+    fail "não foi possível consultar o repositório remoto"
+  [[ -n "$remote_tag_sha" ]] || fail "tag ${target} não foi publicada em origin"
+  git fetch --tags origin
+  [[ "$(git rev-parse "refs/tags/${target}")" == "$remote_tag_sha" ]] || \
+    fail "a tag local não coincide com a referência remota"
+  target_sha="$(git rev-parse --verify "refs/tags/${target}^{commit}" 2>/dev/null)" || \
+    fail "a tag ${target} não aponta para um commit"
+  previous="$(git rev-parse HEAD)"
+  [[ "$previous" != "$target_sha" ]] || fail "esta instalação já está no commit ${target_sha}"
+  git merge-base --is-ancestor "$previous" "$target_sha" || \
+    fail "a tag escolhida não avança a versão atual; rollback exige procedimento separado"
+  local backup_file keep
   keep="${BACKUP_KEEP:-$(env_value BACKUP_KEEP)}"
-  info "1/4 Backup antes da atualização..."
-  backup_file="$("$RELEASE_DIR/backup-postgres.sh" --keep "${keep:-0}")" \
-    || fail "backup falhou; nada foi alterado"
-  previous="$(git rev-parse --short HEAD)"
-  info "2/4 Atualizando o código (atual: ${previous})..."
-  git pull --ff-only
-  info "3/4 Reconstruindo e reiniciando..."
-  compose up --detach --build --wait
+  info "2/4 Backup antes da atualização..."
+  backup_file="$("$RELEASE_DIR/backup-postgres.sh" --keep "${keep:-0}")" || \
+    fail "backup falhou; código e serviços não foram alterados"
+  info "3/4 Alternando para ${target} (${target_sha}) e reconstruindo..."
+  git -c advice.detachedHead=false switch --detach "$target_sha"
+  if ! compose up --detach --build --wait; then
+    info "A atualização não iniciou corretamente."
+    info "Commit anterior: ${previous}; backup: ${backup_file}"
+    info "NÃO restaure automaticamente: verifique a compatibilidade da migração do banco."
+    fail "inspecione logs e faça rollback controlado com os dados preservados"
+  fi
   info "4/4 Conferindo a saúde..."
   if ! wait_healthy; then
-    info "A nova versão não ficou saudável."
-    info "Para voltar: git checkout ${previous} && scripts/arena.sh restore ${backup_file}"
-    exit 1
+    info "Aplicação sem saúde confirmada. Commit anterior: ${previous}; backup: ${backup_file}"
+    info "Confira logs e compatibilidade de schema antes de qualquer rollback."
+    fail "health check falhou; implantação requer intervenção"
   fi
-  info "Atualizado de ${previous} para $(git rev-parse --short HEAD). Backup: ${backup_file}"
+  info "Atualizado de ${previous} para ${target} (${target_sha}). Backup: ${backup_file}"
 }
 
 cmd_status() {
   compose ps
+  info "Checkout local: $(git -C "$PROJECT_ROOT" rev-parse --short=12 HEAD 2>/dev/null || printf unknown)"
+  local running_sha
+  running_sha="$(compose exec -T backend printenv APP_BUILD_SHA 2>/dev/null || true)"
+  info "SHA da imagem backend: ${running_sha:-indisponível}"
   if wait_healthy; then
     info "Saúde: OK"
   else
@@ -200,7 +226,7 @@ shift || true
 export_compose_files
 case "$command" in
   install) cmd_install "$@" ;;
-  upgrade) cmd_upgrade ;;
+  upgrade) cmd_upgrade "$@" ;;
   backup) (cd "$PROJECT_ROOT" && "$RELEASE_DIR/backup-postgres.sh" "$@") ;;
   restore)
     [[ $# -eq 1 ]] || fail "use: scripts/arena.sh restore ARQUIVO"

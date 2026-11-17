@@ -16,7 +16,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     public WebSocketConfig(
             SessionSocketHandler sessionSocketHandler,
-            @Value("${app.allowed-origin-patterns:http://*:[3000]}") String allowedOriginPatterns
+            @Value("${app.allowed-origin-patterns:http://localhost:3000,http://127.0.0.1:3000}") String allowedOriginPatterns
     ) {
         this.sessionSocketHandler = sessionSocketHandler;
         this.allowedOriginPatterns = Arrays.stream(allowedOriginPatterns.split(","))

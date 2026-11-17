@@ -11,7 +11,7 @@ import java.util.Arrays;
 public class CorsConfig implements WebMvcConfigurer {
     private final String[] allowedOriginPatterns;
 
-    public CorsConfig(@Value("${app.allowed-origin-patterns:http://*:[3000]}") String allowedOriginPatterns) {
+    public CorsConfig(@Value("${app.allowed-origin-patterns:http://localhost:3000,http://127.0.0.1:3000}") String allowedOriginPatterns) {
         this.allowedOriginPatterns = Arrays.stream(allowedOriginPatterns.split(","))
                 .map(String::trim)
                 .filter(value -> !value.isBlank())

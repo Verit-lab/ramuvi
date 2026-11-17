@@ -137,7 +137,8 @@ class SecurityAndMigrationIT {
                     'arena_material_publications',
                     'arena_material_section_commands',
                     'teacher_preferences',
-                    'app_secrets'
+                    'app_secrets',
+                    'journey_overwrite_snapshots'
                   )
                 """, Integer.class);
 
@@ -145,10 +146,10 @@ class SecurityAndMigrationIT {
                 "1", "2", "3", "4", "5", "6", "7", "8", "9",
                 "10", "11", "12", "13", "14", "15", "16", "17",
                 "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32",
-                "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "62", "63", "64", "65", "66"
+                "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "62", "63", "64", "65", "66", "67"
         );
 
-        assertThat(expectedTables).isEqualTo(72);
+        assertThat(expectedTables).isEqualTo(73);
 
     }
 
@@ -161,6 +162,7 @@ class SecurityAndMigrationIT {
         assertThat(live.statusCode()).isEqualTo(200);
         assertThat(live.body()).contains("\"status\":\"UP\"");
         assertThat(live.body()).contains("\"check\":\"liveness\"");
+        assertThat(live.body()).contains("\"buildSha\":");
         assertThat(live.headers().firstValue("X-Request-Id")).isPresent();
         assertThat(live.headers().firstValue("X-Frame-Options")).contains("DENY");
         assertThat(live.headers().firstValue("Referrer-Policy")).contains("no-referrer");

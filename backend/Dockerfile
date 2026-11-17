@@ -9,6 +9,9 @@ COPY src ./src
 RUN --mount=type=cache,target=/root/.m2 mvn -B -ntp -Dmaven.test.skip=true package
 
 FROM eclipse-temurin:21-jre-alpine
+ARG RAMUVI_BUILD_SHA=unknown
+LABEL org.opencontainers.image.revision="${RAMUVI_BUILD_SHA}"
+ENV APP_BUILD_SHA=${RAMUVI_BUILD_SHA}
 WORKDIR /app
 RUN addgroup -S arena && adduser -S arena -G arena
 COPY --from=build --chown=arena:arena /app/target/*.jar app.jar

@@ -12,8 +12,8 @@ fail() { printf 'ERRO: %s\n' "$*" >&2; exit 1; }
 
 # The v0.11 schema line: V57-V58 (material presentation) plus the additive
 # pre-GO hardening V59-V61, learner/assessment additions V62-V65,
-# and gradual Journey chapter release V66. Next line starts at V67.
-V011_LAST_MIGRATION=66
+# gradual Journey chapter release V66, and additive overwrite snapshots V67.
+V011_LAST_MIGRATION=67
 for ((n = 57; n <= V011_LAST_MIGRATION; n++)); do
   migrations=(backend/src/main/resources/db/migration/V${n}__*.sql)
   [[ -f "${migrations[0]}" && ${#migrations[@]} -eq 1 ]] || \
@@ -58,7 +58,7 @@ python3 scripts/release/v011-readiness.py \
   --attestation docs/v0.11/11.6_ACCEPTANCE_TEMPLATE.json --check-template >/dev/null || \
   fail "template de aceite 11.6 deixou de iniciar NO-GO"
 
-node -e 'const v=require("./frontend/package.json").version; if(!/^0\.11\.0(?:-(?:rc|beta)\.[0-9]+)?$/.test(v)) process.exit(1)' || \
+node -e 'const v=require("./frontend/package.json").version; if(!/^0\.11\.[01](?:-(?:rc|beta)\.[0-9]+)?$/.test(v)) process.exit(1)' || \
   fail "artefatos v0.11 devem identificar 0.11.0 ou uma candidata 0.11.0-rc.N"
 
 printf 'Contrato mínimo v0.11 verificado: baseline v0.10 + Flyway V57–V%s, %s.\n' \

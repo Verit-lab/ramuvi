@@ -107,7 +107,10 @@ node_line="$(node --version)"
 [[ "$node_line" == v22.* ]] || fail "Node.js 22 é obrigatório; encontrado: $node_line"
 
 "$SCRIPT_DIR/check-metadata.sh"
-if [[ -f backend/src/main/resources/db/migration/V66__journey_gradual_release.sql ]]; then
+if [[ -f backend/src/main/resources/db/migration/V67__journey_overwrite_snapshots.sql ]]; then
+  "$SCRIPT_DIR/verify-v0.11-contract.sh"
+  expected_schema_version=67
+elif [[ -f backend/src/main/resources/db/migration/V66__journey_gradual_release.sql ]]; then
   "$SCRIPT_DIR/verify-v0.11-contract.sh"
   expected_schema_version=66
 elif [[ -f backend/src/main/resources/db/migration/V61__content_copy_protection.sql ]]; then
@@ -149,8 +152,8 @@ printf 'Node.js: %s\n' "$node_line"
 
 if [[ "$MODE" == "final" ]]; then
   if [[ "$expected_schema_version" -ge 57 ]]; then
-    [[ "$RELEASE_VERSION" == "0.11.0" ]] || \
-      fail "o gate final v0.11 exige versão estável 0.11.0; candidata $RELEASE_VERSION não pode ser publicada"
+    [[ "$RELEASE_VERSION" == "0.11.1" ]] || \
+      fail "o gate final v0.11.1 exige versão estável 0.11.1; candidata $RELEASE_VERSION não pode ser publicada"
     [[ -n "$ATTESTATION_FILE" ]] || fail "informe --attestation com o aceite 11.6 assinado"
     [[ -f "$ATTESTATION_FILE" ]] || fail "aceite não encontrado: $ATTESTATION_FILE"
   elif [[ "$expected_schema_version" -ge 55 && "$RELEASE_VERSION" != "0.10.0" ]]; then
@@ -161,7 +164,7 @@ if [[ "$MODE" == "final" ]]; then
 
   origin_url="$(git remote get-url origin 2>/dev/null)" || fail "remote origin não configurado"
   case "$origin_url" in
-    git@github.com:wesscosta/arena-dev.git|https://github.com/wesscosta/arena-dev.git)
+    git@github.com:Verit-lab/ramuvi.git|https://github.com/Verit-lab/ramuvi.git|git@github.com:verit-lab/ramuvi.git|https://github.com/verit-lab/ramuvi.git)
       ;;
     *)
       fail "origin não aponta para o repositório canônico: $origin_url"
@@ -188,7 +191,7 @@ if [[ "$MODE" == "final" ]]; then
 
   IFS=$'\t' read -r ci_status ci_conclusion ci_sha verified_ci_url < <(
     gh run view "$run_id" \
-      --repo wesscosta/arena-dev \
+      --repo Verit-lab/ramuvi \
       --json status,conclusion,headSha,url \
       --jq '[.status, .conclusion, .headSha, .url] | @tsv'
   )
