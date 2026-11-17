@@ -1,6 +1,14 @@
-# Arena Dev
+# Ramuvi
 
 **Arena Dev** é uma plataforma proprietária e self-hosted para condução, participação e gamificação de dinâmicas de sala, com foco em baixa fricção para o professor.
+
+## Estado vigente — 16/11/2026
+
+**Ramuvi v0.11.1:** release de estabilização em homologação, ainda sem tag estável ou implantação autorizada. O código candidato é `fix/v0.11.1-stabilization`; ver [PR #135](https://github.com/Verit-lab/ramuvi/pull/135), [plano](docs/v0.11.1/IMPLEMENTATION_PLAN.md), [notas candidatas](docs/v0.11.1/RELEASE_NOTES_DRAFT.md) e [status técnico atual](docs/STATUS_ATUAL.md).
+
+A v0.11.1 corrige o contrato Flyway V67, alinha o versionamento, restringe exposição de rede do Compose básico, preserva o perfil de sala e exige tags explícitas no comando de atualização. Os 7 commits funcionais posteriores à v0.11.0 foram incorporados ao escopo de validação. O cadastro/autenticação persistente de alunos **não faz parte** dessa release.
+
+**Última release publicada:** [v0.11.0](https://github.com/Verit-lab/ramuvi/releases/tag/v0.11.0). Os registros abaixo de 25/10 e 24/10 são históricos, não a situação atual da `main`.
 
 ## Estado do produto — 25/10/2026
 

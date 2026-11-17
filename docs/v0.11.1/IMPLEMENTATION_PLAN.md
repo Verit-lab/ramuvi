@@ -58,3 +58,8 @@ A v0.11.0 foi publicada no commit `1f23df6`. Sete commits funcionais entraram de
 - 16/11: G1 local: 67 migrações aplicadas em PostgreSQL de teste, `mvn verify` PASS (167 testes de integração, zero falhas). Compose local em loopback, sala apenas frontend na LAN; produção validada por `config --quiet`.
 - 16/11: G2 local: versões alinhadas para `0.11.1`, contratos de release PASS; atualização exige tag publicada, rejeita chamada sem argumento e downgrade; hook local de bloqueio à `main` validado.
 - 16/11: G3 parcial: frontend lint, formatação, 424 testes, typecheck e build PASS; falta CI 3/3 em PR, ensaio de rollback e testes físicos para G4/G5.
+
+- 16/11: ensaio isolado V56→V67→restauração V56: `ROLLBACK_REHEARSAL_RESULT=PASS`; vínculos e XP sintéticos preservados. Nenhuma instância real modificada.
+- 16/11: backup sintético do schema **V67**, SHA-256 e restauração em PostgreSQL isolado: `V67_BACKUP_RESTORE_VALIDATION=PASS`, com conferência de tabela, índice e colunas de snapshots.
+- 16/11: CI do GitHub foi liberada após o repositório se tornar público; backend e frontend aprovados no primeiro rerun. As alterações finais de verificação de release exigem nova CI no commit definitivo.
+- 16/11: 12 testes de scripts de release/operacionais PASS; o gate de aceite passou a rejeitar declarações da v0.11.0 para a v0.11.1.

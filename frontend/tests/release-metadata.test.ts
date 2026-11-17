@@ -105,6 +105,8 @@ test("final v0.11.1 release requires 0.11.1, signed 11.6 attestation and validat
   assert.match(verifier, /arena_material_publications/);
   assert.match(verifier, /uq_arena_material_active_session/);
   assert.match(verifier, /arena_material_section_commands/);
+  assert.match(verifier, /journey_overwrite_snapshots/);
+  assert.match(verifier, /idx_journey_overwrite_snapshots_history/);
 });
 
 test("v0.10-to-v0.11 rollback uses immutable tag, synthetic fixtures and isolated backup", () => {

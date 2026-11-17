@@ -14,6 +14,7 @@ SHA = "a" * 40
 
 def complete():
     return {
+        "version": "0.11.1",
         "candidateSha": SHA,
         "decision": "GO",
         "approvedBy": "Responsible operator",
@@ -27,6 +28,9 @@ def complete():
 
 
 class ReadinessGateTests(unittest.TestCase):
+    def test_release_verification_targets_canonical_repo(self):
+        self.assertIn('parser.add_argument("--repo", default="Verit-lab/ramuvi")', SOURCE.read_text())
+
     def test_template_remains_no_go(self):
         template = json.loads((SOURCE.parents[2] / "docs/v0.11/11.6_ACCEPTANCE_TEMPLATE.json").read_text())
         self.assertTrue(gate.decide(template, SHA))
@@ -35,6 +39,11 @@ class ReadinessGateTests(unittest.TestCase):
         doc = complete()
         doc["gates"] = doc["gates"][:-1]
         self.assertTrue(any("exactly" in x for x in gate.decide(doc, SHA)))
+
+    def test_previous_release_attestation_is_not_reusable(self):
+        doc = complete()
+        doc["version"] = "0.11.0"
+        self.assertTrue(any("version" in x for x in gate.decide(doc, SHA)))
 
     def test_sha_mismatch_blocks_release(self):
         self.assertTrue(any("candidateSha" in x for x in gate.decide(complete(), "b"*40)))

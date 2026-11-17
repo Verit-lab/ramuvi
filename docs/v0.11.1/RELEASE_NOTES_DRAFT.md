@@ -44,3 +44,6 @@ Contas de aluno, login OIDC/social/e-mail, aprovação de ingresso em turmas, m�
 - `docker compose config` local, sala e produção: sem erros; mapeamento verificado (local 127.0.0.1; sala 0.0.0.0 apenas frontend).
 - Hook de main: push de teste para `refs/heads/main` recusado; push para outra branch permitido.
 - `scripts/arena.sh upgrade` sem tag: falha de forma segura antes de tocar em serviços.
+- Ensaios sintéticos isolados de upgrade **Flyway V56→V67**, retorno à V56 e restauração do backup V67: **PASS**, com integridade SHA-256 e verificação da estrutura dos snapshots. Não valida um backup real da VPS.
+- Gate de readiness agora verifica o repositório `Verit-lab/ramuvi` e rejeita aceite de versão anterior, mesmo quando houver referências de evidência; 12 testes de scripts operacionais passaram.
+- A execução oficial do GitHub Actions voltou a iniciar após o repositório ficar público. A versão final depende de CI verde **no SHA atual**.

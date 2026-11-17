@@ -36,6 +36,8 @@ def decide(document: dict, candidate: str) -> list[str]:
     problems: list[str] = []
     if not re.fullmatch(r"[0-9a-f]{40}", candidate):
         return ["Candidate SHA must be full 40-character Git commit SHA"]
+    if document.get("version") != "0.11.1":
+        problems.append("Release attestation version must be 0.11.1")
     if document.get("candidateSha") != candidate:
         problems.append("Attestation candidateSha differs from the tested SHA")
     if document.get("decision") != "GO":
@@ -95,7 +97,7 @@ def main() -> int:
     parser.add_argument("--attestation", required=True, type=Path)
     parser.add_argument("--candidate", help="Full 40-character exact candidate SHA")
     parser.add_argument("--ci-run-id", help="Required to claim GO")
-    parser.add_argument("--repo", default="wesscosta/arena-dev")
+    parser.add_argument("--repo", default="Verit-lab/ramuvi")
     parser.add_argument("--check-template", action="store_true",
                         help="CI check: template must be deliberately incomplete")
     args = parser.parse_args()
@@ -122,7 +124,7 @@ def main() -> int:
     elif not problems:
         problems.extend(gh_verify(args.repo, args.candidate, args.ci_run_id))
     if problems:
-        print("NO-GO for v0.11.0 — release not authorized:")
+        print("NO-GO for v0.11.1 — release not authorized:")
         for issue in problems:
             print(f"  - {issue}")
         return 2

@@ -181,6 +181,24 @@ if (( EXPECTED_SCHEMA_VERSION >= 61 )); then
   [[ "$copy_columns" -eq 2 ]] || fail "restore V61 perdeu a proteção contra cópia de Jornadas e materiais"
 fi
 
+if (( EXPECTED_SCHEMA_VERSION >= 67 )); then
+  overwrite_snapshot_contract="$(docker exec "$CONTAINER_NAME" \
+    psql --tuples-only --no-align --username "$CHECK_USER" --dbname "$CHECK_DATABASE" \
+    --command "select (to_regclass('public.journey_overwrite_snapshots') is not null)::int + \
+      (select count(*) from pg_indexes where schemaname='public' \
+        and tablename='journey_overwrite_snapshots' \
+        and indexname='idx_journey_overwrite_snapshots_history')")"
+  [[ "$overwrite_snapshot_contract" -eq 2 ]] || \
+    fail "restore V67 perdeu tabela ou índice histórico de snapshots de Jornada"
+
+  overwrite_snapshot_columns="$(docker exec "$CONTAINER_NAME" \
+    psql --tuples-only --no-align --username "$CHECK_USER" --dbname "$CHECK_DATABASE" \
+    --command "select count(*) from information_schema.columns where table_schema='public' \
+      and table_name='journey_overwrite_snapshots' and column_name in \
+      ('snapshot','previous_stage_count','enrollment_progress_count','redeemed_progress_count')")"
+  [[ "$overwrite_snapshot_columns" -eq 4 ]] || \
+    fail "restore V67 perdeu as colunas de conteúdo e progresso da Jornada"
+fi
 semantic_columns="$(docker exec "$CONTAINER_NAME"   psql --tuples-only --no-align --username "$CHECK_USER" --dbname "$CHECK_DATABASE"   --command "select count(*) from information_schema.columns where table_schema='public' and table_name='learning_resources' and column_name in ('library_visible','revision','archived_at','subject','language','content_sha256','outline_json','outline_parser_version')")"
 [[ "$semantic_columns" -eq 8 ]] || fail "LearningResource não contém o contrato completo da Biblioteca semântica"
 
