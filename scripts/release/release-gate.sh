@@ -154,7 +154,7 @@ printf 'Java: %s\n' "$java_line"
 printf 'Node.js: %s\n' "$node_line"
 
 if [[ "$MODE" == "final" && "$expected_schema_version" -ge 68 ]]; then
-  fail "v0.12.0-dev.2 é candidata de desenvolvimento: o gate final depende do contrato e aceite próprios"
+  fail "v0.12.0-dev.3 é candidata de desenvolvimento: o gate final depende do contrato e aceite próprios"
 fi
 if [[ "$MODE" == "final" ]]; then
   if [[ "$expected_schema_version" -ge 57 ]]; then

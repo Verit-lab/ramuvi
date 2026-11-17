@@ -2,6 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { planStudentImport, type StudentImportStatus } from "@/lib/student-import";
 import { type Notify } from "@/components/ui";
 import { xpForStudent } from "@/lib/game";
+import {
+  invitationIssuanceEnabled,
+  issueEnrollmentInvitation,
+  revokeEnrollmentInvitation,
+  type IssuedEnrollmentInvite,
+} from "@/lib/student-invitation-api";
 import { anonymizeStudent, createAndEnrollStudent, enrollStudent, removeEnrollment, setEnrollmentActive, updateEnrollmentPreferredName, updateStudentEmail } from "@/lib/classroom-api";
 import { errorMessage } from "./format";
 import { Avatar, MiniEmpty, Modal } from "./ui";
@@ -48,6 +54,17 @@ export function StudentManager({
   const [searchQuery, setSearchQuery] = useState("");
   const [bulk, setBulk] = useState("");
   const [busy, setBusy] = useState(false);
+  const [canIssueInvites, setCanIssueInvites] = useState(false);
+  const [inviteTarget, setInviteTarget] = useState<{ name: string; enrollmentId: string } | null>(null);
+  const [issuedInvite, setIssuedInvite] = useState<IssuedEnrollmentInvite | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    void invitationIssuanceEnabled().then((enabled) => {
+      if (mounted) setCanIssueInvites(enabled);
+    }).catch(() => { if (mounted) setCanIssueInvites(false); });
+    return () => { mounted = false; };
+  }, []);
 
   const allRows = data.enrollments
     .filter((enrollment) => enrollment.classroomId === classroomId)
@@ -265,6 +282,39 @@ export function StudentManager({
       notify(
         active ? "Aluno inativado na turma." : "Aluno reativado na turma.",
       );
+    } catch (error) {
+      notify(errorMessage(error), "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function issueIndividualInvite(enrollmentId: string, studentName: string) {
+    if (busy) return;
+    setBusy(true);
+    setMenuStudentId(null);
+    setInviteTarget({ name: studentName, enrollmentId });
+    setIssuedInvite(null);
+    try {
+      const issued = await issueEnrollmentInvitation(enrollmentId);
+      setIssuedInvite(issued);
+      notify("Convite criado. Compartilhe o código apenas com o aluno correspondente.");
+    } catch (error) {
+      setInviteTarget(null);
+      notify(errorMessage(error), "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function revokeCurrentInvite() {
+    if (!issuedInvite || busy) return;
+    setBusy(true);
+    try {
+      await revokeEnrollmentInvitation(issuedInvite.inviteId);
+      setInviteTarget(null);
+      setIssuedInvite(null);
+      notify("Convite revogado.");
     } catch (error) {
       notify(errorMessage(error), "error");
     } finally {
@@ -501,6 +551,15 @@ export function StudentManager({
                         </button>
                         {menuOpen && (
                           <div id={`student-actions-${student.id}`} ref={menuRef} className="student-row-menu" role="menu" aria-label={`Ações para ${student.name}`}>
+                            {canIssueInvites && enrollment.active && student.active && (
+                              <button
+                                type="button"
+                                role="menuitem"
+                                onClick={() => { void issueIndividualInvite(enrollment.id, student.name); }}
+                              >
+                                Gerar convite de acesso
+                              </button>
+                            )}
                             <button
                               type="button"
                               role="menuitem"
@@ -528,6 +587,50 @@ export function StudentManager({
             </div>
           )}
         </section>
+      )}
+
+      {inviteTarget && (
+        <Modal
+          open
+          title="Convite individual de conta"
+          subtitle={inviteTarget.name}
+          onClose={() => {
+            if (!busy) { setInviteTarget(null); setIssuedInvite(null); }
+          }}
+          size="medium"
+        >
+          <div className="modal-section-stack">
+            <p>Este código permite vincular uma conta autenticada ao cadastro deste aluno.
+              Confira o destinatário antes de compartilhar. Um novo convite revoga o anterior pendente.</p>
+            {issuedInvite ? (
+              <>
+                <label className="field">
+                  <span>Código individual, válido até {new Date(issuedInvite.expiresAt).toLocaleString("pt-BR")}</span>
+                  <input aria-label="Código individual do convite" className="input"
+                    readOnly value={issuedInvite.token} autoComplete="off" onFocus={(event) => event.currentTarget.select()} />
+                </label>
+                <small>O aluno deve acessar /learn/login, autenticar-se com Google/Microsoft e colar este código.
+                  Não encaminhe publicamente nem confunda com o código da aula.</small>
+                <div className="modal-footer">
+                  <button type="button" className="button ghost" disabled={busy}
+                    onClick={() => { void revokeCurrentInvite(); }}>Revogar convite</button>
+                  <button type="button" className="button primary"
+                    onClick={() => {
+                      if (!navigator.clipboard?.writeText) {
+                        notify("Selecione e copie o código manualmente.", "error");
+                        return;
+                      }
+                      void navigator.clipboard.writeText(issuedInvite.token)
+                        .then(() => notify("Código copiado. Compartilhe somente com o aluno."))
+                        .catch(() => notify("Selecione e copie o código manualmente.", "error"));
+                    }}>Copiar código</button>
+                  <button type="button" className="button ghost" disabled={busy}
+                    onClick={() => { setInviteTarget(null); setIssuedInvite(null); }}>Fechar</button>
+                </div>
+              </>
+            ) : <p role="status">Criando convite...</p>}
+          </div>
+        </Modal>
       )}
 
       {anonymizeTarget && (

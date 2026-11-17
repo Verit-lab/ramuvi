@@ -1,6 +1,6 @@
 # Ramuvi v0.12 — identidade única do aluno
 
-**Estado:** I0 VALIDADO NA PR #136; I1 LOGIN OIDC IMPLEMENTADO EM BRANCH EMPILHADA, sujeito a revisão e homologação. Não é release publicada.
+**Estado:** I0 PR #136, I1 PR #137 e I2 IMPLEMENTADO EM BRANCH EMPILHADA, revisão/CI/GO pendentes. Não é release publicada.
 **Base:** `main@6893377940f2761693a6854f5a305f1af71122a1` (CI 3/3 aprovado).
 **Branch:** `feat/v0.12-student-account-foundation`.
 **Rastreabilidade:** [issue #119](https://github.com/Verit-lab/ramuvi/issues/119), ADR-0068, [roadmap Notion](https://app.notion.com/p/3f9f3eb198c38136b319e5807170f8bf).
@@ -49,3 +49,12 @@ Ingresso repetido via código de aula/Jornada; a lembrança de dispositivo não 
 - [ ] CI da PR verde no SHA final;
 - [ ] revisão de segurança da emissão do token e do controle de autorização;
 - [ ] PR para revisão, sem merge automático na `main` nem deploy.
+
+
+## I2 — vínculo de matrícula
+
+- Implementação: `docs/v0.12/ENROLLMENT_I2_TECHNICAL_PLAN.md`.
+- ADR proposta: `docs/adr/ADR-0070-student-enrollment-claim-authorization.md`.
+- Rotas docentes com convite individual e capabilities; resgate OIDC autenticado com CSRF e limite de tentativas; turmas ativas de múltiplas matrículas; interface aluno e professor sob flags OFF.
+- Versão de desenvolvimento `0.12.0-dev.3`, sem migrações posteriores a V68.
+- **I3 ainda pendente**: autorização transversal na Jornada e continuidade cross-device, perfil/aluno, onboarding genérico com aprovação docente quando adotado.
