@@ -20,6 +20,9 @@ import org.springframework.test.context.DynamicPropertySource;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -693,6 +696,36 @@ class JourneyCoreIT {
     void verifiedAccountStudyApiIsOffByDefault() {
         assertThat(applicationContext.getBeansOfType(
                 br.com.arenadev.identity.account.VerifiedStudentStudyController.class)).isEmpty();
+    }
+
+    @Test
+    void twoDevicesCompletingTheSameStageConcurrentKeepOneProgressRow() throws Exception {
+        Fixture f = fixture("Jornada concurrente", "JRNY-I3-CONC");
+        var journey = createPublishedJourney(f, List.of(
+                stage("Conteúdo único", null, JourneyUnlockRule.IMMEDIATE, JourneyCompletionRule.MANUAL)
+        ));
+        UUID contentId = journey.stages().getFirst().id();
+        StudyPrincipal principal = StudyPrincipal.verifiedAccount(f.enrollment().getStudent().getId());
+
+        try (var pool = Executors.newFixedThreadPool(2)) {
+            var ready = new CountDownLatch(2);
+            var go = new CountDownLatch(1);
+            java.util.concurrent.Callable<Integer> complete = () -> {
+                ready.countDown();
+                if (!go.await(5, TimeUnit.SECONDS)) throw new IllegalStateException("start timeout");
+                return journeyStudyService.complete(journey.id(), contentId, principal).progress().percent();
+            };
+            var first = pool.submit(complete);
+            var second = pool.submit(complete);
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            go.countDown();
+            assertThat(first.get(20, TimeUnit.SECONDS)).isEqualTo(100);
+            assertThat(second.get(20, TimeUnit.SECONDS)).isEqualTo(100);
+        }
+        var history = progressRepository.findByStageJourneyIdAndEnrollmentId(journey.id(), f.enrollment().getId());
+        assertThat(history).hasSize(1);
+        assertThat(history.getFirst().getCompletedAt()).isNotNull();
+        assertThat(journeyStudyService.get(journey.id(), principal).progress().percent()).isEqualTo(100);
     }
 
     @Test

@@ -49,6 +49,12 @@ public class StudentAccountService {
     @Transactional
     public UUID provisionVerifiedIdentity(VerifiedIdentity verified) {
         Objects.requireNonNull(verified, "verified");
+        // Serialize the first provisioning of an external identity before the
+        // select-then-insert sequence. A failed unique insert rolls back an OIDC
+        // callback; the PostgreSQL advisory transaction lock makes concurrent
+        // logins idempotent instead. Hash collisions only serialize more calls.
+        jdbc.queryForList("select pg_advisory_xact_lock(?, ?)",
+                0x53544143, (verified.issuer() + ":" + verified.subject()).hashCode());
         var rows = jdbc.query("""
                 select a.id, a.status, i.method, i.revoked_at
                   from student_account_identities i

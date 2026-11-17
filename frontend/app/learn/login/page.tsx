@@ -9,6 +9,8 @@ import {
   claimStudentEnrollment,
   type StudentActiveClassroom,
   logoutStudentOidc,
+  leaveStudentAccountMode,
+  StudentAccountSessionUnavailable,
   type StudentOidcProvider,
   type StudentOidcSession,
 } from "../../../lib/student-oidc-api";
@@ -22,6 +24,7 @@ export default function StudentLoginPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [oidcError, setOidcError] = useState(false);
+  const [accountSessionUnavailable, setAccountSessionUnavailable] = useState(false);
   const [classrooms, setClassrooms] = useState<StudentActiveClassroom[] | null>(null);
   const [classroomsLoading, setClassroomsLoading] = useState(false);
   const [inviteCode, setInviteCode] = useState("");
@@ -30,9 +33,25 @@ export default function StudentLoginPage() {
 
   useEffect(() => {
     setOidcError(new URLSearchParams(window.location.search).get("error") === "oidc");
-    Promise.all([fetchStudentOidcProviders(), fetchStudentOidcSession()])
-      .then(([available, current]) => {
-        setProviders(available);
+    // A revoked account session must not prevent the user from seeing the
+    // approved provider login links and explicitly choosing how to proceed.
+    void Promise.allSettled([fetchStudentOidcProviders(), fetchStudentOidcSession()])
+      .then(([providersResult, sessionResult]) => {
+        if (providersResult.status === "fulfilled") {
+          setProviders(providersResult.value);
+        } else {
+          setError("Não foi possível consultar os provedores de acesso.");
+        }
+        if (sessionResult.status === "rejected") {
+          if (sessionResult.reason instanceof StudentAccountSessionUnavailable) {
+            setAccountSessionUnavailable(true);
+            setError(sessionResult.reason.message);
+          } else {
+            setError("Não foi possível verificar sua sessão.");
+          }
+          return;
+        }
+        const current = sessionResult.value;
         setSession(current);
         if (current) {
           setClassroomsLoading(true);
@@ -42,7 +61,6 @@ export default function StudentLoginPage() {
             .finally(() => setClassroomsLoading(false));
         }
       })
-      .catch(() => setError("Não foi possível carregar as opções de acesso."))
       .finally(() => setLoading(false));
   }, []);
 
@@ -99,6 +117,14 @@ export default function StudentLoginPage() {
           O provedor não concluiu a autenticação. Confira sua conta e tente novamente.
         </p>}
         {error && <p role="alert" className={styles.error}>{error}</p>}
+        {accountSessionUnavailable && (
+          <button type="button" className={styles.secondary} onClick={() => {
+            leaveStudentAccountMode();
+            window.location.assign("/learn/journeys");
+          }}>
+            Continuar explicitamente com acesso por código
+          </button>
+        )}
 
         {loading ? <p role="status">Verificando opções de acesso...</p> : session ? (
           <div className={styles.status}>

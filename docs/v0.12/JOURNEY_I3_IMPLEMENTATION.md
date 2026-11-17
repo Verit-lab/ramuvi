@@ -14,7 +14,7 @@ O aluno cuja conta OIDC já está vinculada a um `Student` por convite I2 pode a
 - `VerifiedStudentStudyService` resolve `issuer + sub` de um principal OIDC ativo para o `Student` canônico, a cada operação.
 - Catálogo multi-turma, Jornada, material de conteúdo, início e conclusão reutilizam `JourneyStudyService` e `JourneyStageProgress` existentes.
 - Verificações por operação: aluno/conta ativos, matrícula ativa na turma, turma ativa, Jornada publicada e liberação de estudo pelo professor. As condições do acesso verificado ficam centralizadas em `StudyAccessPolicy.canAccessVerifiedAccountStudy`. Regras de capítulos bloqueados continuam válidas.
-- No frontend, o login autenticado utiliza automaticamente API de conta; uma negativa de Jornada não é contornada com claims salvos em localStorage. Sem conta ou com I3 desligado, permanece o fluxo antigo.
+- No frontend, o login autenticado utiliza automaticamente API de conta; uma negativa de Jornada não é contornada com claims de dispositivo. Após uma sessão OIDC previamente observada ser revogada ou expirar, a interface não muda silenciosamente para o dispositivo: exige novo login ou escolha explícita do modo legado. Sem conta anterior ou com I3 desligado, permanece o fluxo por código. A marca local não contém dados pessoais nem concede autorização.
 - `/learn/login` agora oferece acesso às Jornadas; navegação de estudo oferece entrada em Minha conta.
 - Todas as mudanças protegidas por **flag OFF** na configuração de backend e Compose; não modifica schema, XP, registro de matrícula ou login docente.
 
@@ -52,10 +52,20 @@ Para habilitar em homologação: configurar OIDC de I1 com credenciais reais e c
 | I3-A6 | Frontend lint/typecheck/test/build, contrato e Compose | Verificação local e CI |
 | I3-A7 | CI oficial 3/3 no SHA final e revisão da ADR-0071 | Pendente até verificação da PR |
 | I3-A8 | Google/Microsoft reais, Safari físico, backup/restauração e GO institucional | Pendente / fora do escopo de desenvolvimento |
+| I3-A9 | Primeiros logins OIDC simultâneos não duplicam conta; duas conclusões concorrentes usam um único progresso por matrícula | Regressão PostgreSQL introduzida na remediação pré-merge |
+| I3-A10 | Sessão revogada não recorre ao dispositivo; reentrada legada somente por decisão explícita; I1/I2/I3a em WebKit | Novos testes Chromium e WebKit; CI ampliada (aguardando novo SHA) |
 
 **Validação local em 17/11:** o primeiro `mvn verify` da branch aprovou 214 testes iniciais + 190 de integração; 425 testes de frontend, lint, format, typecheck e build aprovados; oito E2E específicos Chromium/WebKit aprovados; novos testes de revogação passaram em execução dirigida 30/30. A regressão local final passou com 214 testes iniciais e 191 testes de integração (405 no total), sem falhas. A CI oficial do commit da PR permanece pendente.
 
 O teste E2E com dois navegadores utiliza backend simulado para conferir a UX; a prova de persistência real no PostgreSQL é coberta separadamente pelo teste de integração Java. A homologação com IdP real ainda não foi feita.
+
+## Remediações da auditoria pré-merge (17/11/2026)
+
+- **R12-01:** marcado apenas o histórico de uma sessão OIDC válida (sem credenciais ou identidade pessoal no armazenamento local). A perda posterior dessa sessão passa a oferecer login renovado ou retorno explícito por código, sem fallback automático no catálogo de Jornadas.
+- **R12-02:** a CI WebKit deixa de filtrar apenas casos da v0.11 e passa a incluir I1/I2/I3a, sem remover a cobertura da v0.11.
+- **R12-03:** provisionamento inicial da identidade externa serializado por advisory lock transacional PostgreSQL, preservando a constraint por (issuer,subject) e evitando erro em callbacks concorrentes.
+- **R12-04:** criação inicial de JourneyStageProgress com ON CONFLICT DO NOTHING e atualização sob lock pessimista, usando a matrícula canônica, sem nova migration.
+- **Não homologado por este patch:** OIDC real Google/Microsoft, restauração de backup V68 de dados representativos, Safari/iOS físico, política LGPD/retenção e formalização das ADRs. Nenhuma flag foi ligada em produção; esta PR continua em draft e não autoriza merge ou deploy sem nova verificação.
 
 ## Sequência posterior (sem inclusão automática no I3)
 

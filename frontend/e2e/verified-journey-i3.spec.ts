@@ -150,3 +150,41 @@ test("I3: conclusão por OIDC é recuperada em segundo navegador sem token local
     await second.close();
   }
 });
+
+test("I3: sessão OIDC revogada não assume o token lembrado de outro aluno", async ({ page }) => {
+  const state = { completed: false, writes: 0, legacy: 0 };
+  await mockAccount(page.context(), state);
+  await page.addInitScript(() => {
+    window.localStorage.setItem("arena-dev-device:33333333-3333-4333-8333-333333333333", "another-student-token");
+  });
+  await page.goto("/learn/journeys");
+  await expect(page.getByText("Jornada entre dispositivos")).toBeVisible();
+  // The first successful OIDC response established the verified identity boundary.
+  expect(await page.evaluate(() => localStorage.getItem("ramuvi:student-account-observed"))).toBe("1");
+  await page.route("**/api/student-account/session", route => route.fulfill({ status: 401 }));
+  await page.reload();
+  await expect(page.getByText("Não foi possível carregar suas Jornadas.")).toBeVisible();
+  expect(state.legacy).toBe(0);
+});
+
+test("I3: aluno pode escolher explicitamente voltar ao fluxo legado", async ({ page }) => {
+  const state = { completed: false, writes: 0, legacy: 0 };
+  await mockAccount(page.context(), state);
+  await page.addInitScript(() => {
+    window.localStorage.setItem("arena-dev-device:33333333-3333-4333-8333-333333333333", "legacy-token");
+  });
+  await page.goto("/learn/journeys");
+  await expect(page.getByText("Jornada entre dispositivos")).toBeVisible();
+  await page.route("**/api/student-account/session", route => route.fulfill({ status: 401 }));
+  await page.route("**/api/student-account/providers", route =>
+    route.fulfill({ status: 200, contentType: "application/json",
+      body: JSON.stringify([{ id: "google", name: "Google", path: "/api/student-oidc/authorization/google" }]) }));
+  await page.goto("/learn/login");
+  await expect(page.getByRole("alert").filter({ hasText: "Sua sessão de conta" })).toContainText("encerrada ou revogada");
+  await expect(page.getByRole("link", { name: "Continuar com Google" })).toBeVisible();
+  await page.getByRole("button", { name: "Continuar explicitamente com acesso por código" }).click();
+  await expect(page).toHaveURL(/\/learn\/journeys$/);
+  // No silent fallback: the device identity was selected through an explicit user action.
+  expect(await page.evaluate(() => localStorage.getItem("ramuvi:student-account-observed"))).toBeNull();
+  await expect.poll(() => state.legacy).toBeGreaterThan(0);
+});
