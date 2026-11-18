@@ -326,7 +326,7 @@ export default function ArenaApp() {
   }
 
   if (!hydrated) {
-    return <div className="loading-screen">Carregando Arena Dev...</div>;
+    return <div className="loading-screen">Carregando Ramuvi Teach...</div>;
   }
 
   return (
@@ -350,10 +350,10 @@ export default function ArenaApp() {
             }}
             title="Voltar para Turmas"
           >
-            <span className="topbar-brand-mark">A</span>
+            <span className="topbar-brand-mark" aria-hidden="true">R</span>
             <span>
-              <strong>ARENA DEV</strong>
-              <small>Classroom Edition · V1</small>
+              <strong>RAMUVI</strong>
+              <small>Teach</small>
             </span>
           </button>
 
@@ -668,7 +668,7 @@ export default function ArenaApp() {
                 <div>
                   <span className="eyebrow accent">CONFIGURAÇÕES</span>
                   <h2>Professor e sistema</h2>
-                  <p>Preferências administrativas do Arena Dev, informações do ambiente e rotinas de segurança.</p>
+                  <p>Preferências administrativas da Ramuvi, informações do ambiente e rotinas de segurança.</p>
                 </div>
                 <button className="button ghost" onClick={() => setView("dashboard")}>
                   ← Turmas
@@ -717,7 +717,7 @@ export default function ArenaApp() {
                   <span className="eyebrow accent">INTEGRAÇÕES</span>
                   <h3>Plataformas educacionais</h3>
                   <p>
-                    Conecte o Arena Dev às plataformas usadas pela instituição. As turmas continuam únicas no Arena e recebem apenas um indicador quando existe vínculo externo.
+                    Conecte a Ramuvi às plataformas usadas pela instituição. As turmas continuam únicas no Arena e recebem apenas um indicador quando existe vínculo externo.
                   </p>
                 </div>
                 <IntegrationSettingsSummary onManage={() => setView("integrations")} />
@@ -727,13 +727,13 @@ export default function ArenaApp() {
                 <div className="settings-section-heading">
                   <span className="eyebrow accent">APARÊNCIA</span>
                   <h3>Tema da interface</h3>
-                  <p>Escolha como o Arena Dev deve aparecer neste navegador.</p>
+                  <p>Escolha como a Ramuvi deve aparecer neste navegador.</p>
                 </div>
 
                 <Panel title="Tema" subtitle="Preferência local deste dispositivo">
                   <div className="theme-choice-grid" role="radiogroup" aria-label="Tema da interface">
                     {([
-                      { id: "dark", label: "Escuro", description: "Tema padrão do Arena Dev." },
+                      { id: "dark", label: "Escuro", description: "Tema padrão da Ramuvi." },
                       { id: "light", label: "Claro", description: "Superfícies claras e contraste suave." },
                       { id: "system", label: "Sistema", description: "Segue a preferência do sistema operacional." },
                     ] as const).map((option) => (

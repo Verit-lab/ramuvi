@@ -70,7 +70,7 @@ export function connectProjectorSocket(
     try {
       onEvent(JSON.parse(String(message.data)) as SessionRealtimeEvent);
     } catch {
-      // Ignora frames que não pertencem ao contrato do Arena Dev.
+      // Ignora frames que não pertencem ao contrato da Ramuvi.
     }
   };
 

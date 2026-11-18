@@ -16,7 +16,7 @@ usage() {
 Uso: scripts/arena.sh COMANDO [opções]
 
   install [--no-start]   cria o .env com senhas aleatórias (se ainda não existir)
-                         e sobe o Arena Dev no perfil de sala
+                         e sobe a Ramuvi no perfil de sala
   upgrade TAG            confere uma tag estável, faz backup, atualiza por SHA,
                          reconstrói e valida saúde; exige rollback controlado
   backup [opções]        backup do banco (repassa opções a backup-postgres.sh,

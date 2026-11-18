@@ -144,8 +144,8 @@ export function ArenaSidebar({
     <aside className="arena-cockpit-nav" aria-label="Ferramentas da Arena">
       <button type="button" className="arena-nav-brand" onClick={onGoDashboard}
         aria-label="Voltar para Turmas" title="Voltar para Turmas">
-        <span className="topbar-brand-mark">A</span>
-        <span className="arena-nav-brand-copy"><strong>ARENA DEV</strong><small>Classroom Edition</small></span>
+        <span className="topbar-brand-mark" aria-hidden="true">R</span>
+        <span className="arena-nav-brand-copy"><strong>RAMUVI</strong><small>Teach</small></span>
       </button>
       <span className="arena-nav-mobile-title" aria-hidden="true"><strong>Arena</strong></span>
       <div className="arena-nav-mobile-projector">{projectorAction}</div>

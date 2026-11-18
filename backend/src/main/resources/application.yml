@@ -19,7 +19,7 @@ spring:
       max-file-size: 20MB
       max-request-size: 22MB
   application:
-    name: arena-dev-api
+    name: ramuvi-api
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/arena_dev}
     username: ${SPRING_DATASOURCE_USERNAME:arena}

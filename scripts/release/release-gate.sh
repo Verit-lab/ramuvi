@@ -76,7 +76,7 @@ cd "$PROJECT_ROOT"
 if [[ -z "$RELEASE_VERSION" ]]; then
   RELEASE_VERSION="$({
     awk '
-      /<artifactId>arena-dev-api<\/artifactId>/ { artifact = 1; next }
+      /<artifactId>ramuvi-api<\/artifactId>/ { artifact = 1; next }
       artifact && /<version>/ {
         line = $0
         sub(/^.*<version>/, "", line)
@@ -93,7 +93,7 @@ mkdir -p release-evidence
 evidence_file="release-evidence/v${RELEASE_VERSION}-${MODE}-$(date -u +%Y%m%dT%H%M%SZ).log"
 exec > >(tee "$evidence_file") 2>&1
 
-printf 'Arena Dev — gate %s da versão %s\n' "$MODE" "$RELEASE_VERSION"
+printf 'Ramuvi — gate %s da versão %s\n' "$MODE" "$RELEASE_VERSION"
 printf 'Início UTC: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 for command_name in git java mvn node npm docker python3; do

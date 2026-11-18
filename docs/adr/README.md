@@ -100,3 +100,7 @@ Use [TEMPLATE.md](TEMPLATE.md) para novas decisões.
 
 - [ADR-0067 — Publicação segura e versionada de materiais](ADR-0067-material-presentation-v011.md) — **Aceito para backend 11.1**; revisão do PR e extensões futuras ainda pendentes.
 - [ADR-0068 — Governança editorial e taxonomia](ADR-0068-editorial-provenance-taxonomy-proposal.md) — **Proposto; não aceito juridicamente/pedagogicamente e não implementado na 11.5**.
+
+### Decisões propostas para v0.12.1
+
+- [ADR-0072 — Landing pública e entradas Ramuvi Learn / Ramuvi Teach](ADR-0072-landing-publica-e-entradas-learn-teach.md) — **Proposto**; aguarda homologação da PR.

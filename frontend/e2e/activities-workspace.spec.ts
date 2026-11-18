@@ -34,7 +34,7 @@ test("Atividades: editor na página e importação JSON validada sem modal de cr
       headers: { "X-XSRF-TOKEN": ((await csrfBrowser.json()) as { token: string }).token },
     }), "Login browser");
 
-    await page.goto("/");
+    await page.goto("/teach");
     await page.getByRole("button", { name: "Abrir turma " + className }).click();
     await page.locator(".classroom-section-tab").filter({ hasText: "Atividades" }).click();
 

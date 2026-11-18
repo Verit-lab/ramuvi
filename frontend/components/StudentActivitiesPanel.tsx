@@ -343,7 +343,7 @@ export default function StudentActivitiesPanel({ access, disabled }: { access: S
 
         {open?.id === activity.id && <div className={styles.runner} role="dialog" aria-modal="true" aria-label={`Atividade ${open.title}`}>
             <header className={styles.runnerTop}>
-              <div className={styles.runnerBrand}><span>A</span><div><strong>ARENA DEV</strong><small>{access.classroomName}</small></div></div>
+              <div className={styles.runnerBrand}><span aria-hidden="true">R</span><div><strong>RAMUVI</strong><small>{access.classroomName}</small></div></div>
               <div className={styles.runnerTitle}><span>ATIVIDADE</span><strong>{open.title}</strong></div>
               <div className={styles.runnerActions}>
                 <details ref={accessibilityMenuRef} className={styles.runnerAccessibility}>

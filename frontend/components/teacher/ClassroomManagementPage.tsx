@@ -177,7 +177,7 @@ export function ClassroomManagementPage({
             <div className="classroom-settings-section-heading">
               <span className="eyebrow accent">GERAL</span>
               <h3>Identificação</h3>
-              <p>Defina como a turma é identificada no Arena Dev.</p>
+              <p>Defina como a turma é identificada na Ramuvi.</p>
             </div>
 
             <div className="classroom-settings-fields">

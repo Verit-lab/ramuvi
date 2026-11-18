@@ -198,6 +198,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .teacher-login-mark{margin-bottom:20px}.teacher-login-card h1{margin:var(--page-title-margin);font-size:var(--font-size-page-title);color:var(--text)}.teacher-login-card>p{margin:0 0 24px;color:var(--muted)}
 .teacher-login-form{display:grid;gap:15px}.teacher-login-form label{display:grid;gap:7px;font-size:var(--font-size-xs);color:var(--muted)}.teacher-login-form .button{width:100%;justify-content:center;margin-top:4px}
 .teacher-login-error{margin:0}.teacher-login-note{display:block;margin-top:18px;color:var(--muted);text-align:center}.teacher-login-note code{color:var(--ds-accent-text)}
+.teacher-login-links{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--space-2) var(--space-4);margin-top:var(--space-4);font-size:var(--font-size-sm)}.teacher-login-links a{color:var(--ds-accent-text);text-underline-offset:3px}.teacher-login-links a:focus-visible{outline:2px solid var(--ds-accent-text);outline-offset:3px;border-radius:4px}
 .topbar-logout{padding-inline:12px}.release-device{margin-left:auto;font-size:10px;white-space:nowrap}
 
 

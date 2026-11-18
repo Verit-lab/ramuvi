@@ -17,7 +17,7 @@ async function login(page: Page) {
     data: { username: teacherUsername, password: teacherPassword },
     headers: { "X-XSRF-TOKEN": token },
   }), "Login navegador");
-  await page.goto("/");
+  await page.goto("/teach");
   await expect(page.getByRole("heading", { name: "Suas turmas" })).toBeVisible();
 }
 

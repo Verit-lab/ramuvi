@@ -103,7 +103,7 @@ async function login(page: Page) {
     data: { username: teacherUsername, password: teacherPassword },
   });
   await expectOk(loginResponse, "Login do navegador");
-  await page.goto("/");
+  await page.goto("/teach");
   await expect(page.getByRole("heading", { name: "Suas turmas" })).toBeVisible({ timeout: 10_000 });
 }
 
