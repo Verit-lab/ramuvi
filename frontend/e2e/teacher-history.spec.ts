@@ -54,7 +54,7 @@ async function login(page: Page) {
     }),
     "Login navegador",
   );
-  await page.goto("/");
+  await page.goto("/teach");
   await expect(page.getByRole("heading", { name: "Suas turmas" })).toBeVisible({ timeout: 10_000 });
 }
 
@@ -70,7 +70,7 @@ test("back and reload follow the teacher's screens instead of leaving the app", 
 
     await page.goBack();
     await expect(page.getByRole("heading", { name: "Suas turmas" })).toBeVisible();
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/teach$/);
 
     await page.locator("article.overview-class-card").filter({ hasText: fixture.classroom.name }).click();
     await expect(page.getByTestId("classroom-home-hero")).toBeVisible();
@@ -102,7 +102,7 @@ test("Journey creation is a screen of its own that back and reload respect", asy
   const fixture = await createClassroom();
   try {
     await login(page);
-    await page.goto(`/?tela=turma&turma=${fixture.classroom.id}&aba=jornadas`);
+    await page.goto(`/teach?tela=turma&turma=${fixture.classroom.id}&aba=jornadas`);
     await page.getByRole("button", { name: "+ Nova jornada" }).click();
     const heading = page.getByRole("heading", { name: "Como você quer começar?" });
     await expect(heading).toBeVisible();
@@ -132,16 +132,16 @@ test("Journey creation is a screen of its own that back and reload respect", asy
 
 test("a link to a classroom that no longer exists falls back to the classroom list", async ({ page }) => {
   await login(page);
-  await page.goto("/?tela=turma&turma=00000000-0000-0000-0000-000000000000&aba=jornadas");
+  await page.goto("/teach?tela=turma&turma=00000000-0000-0000-0000-000000000000&aba=jornadas");
   await expect(page.getByRole("heading", { name: "Suas turmas" })).toBeVisible();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/teach$/);
 });
 
 test("the classroom history is one chronological feed with XP and conduction filters", async ({ page }) => {
   const fixture = await createClassroom();
   try {
     await login(page);
-    await page.goto(`/?tela=turma&turma=${fixture.classroom.id}&aba=historico`);
+    await page.goto(`/teach?tela=turma&turma=${fixture.classroom.id}&aba=historico`);
     const history = page.getByRole("region", { name: "Histórico da turma" });
     await expect(history).toBeVisible();
     await expect(history.getByRole("heading", { name: "Histórico de atividades e XP" })).toBeVisible();

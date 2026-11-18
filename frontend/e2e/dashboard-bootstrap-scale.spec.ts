@@ -15,7 +15,7 @@ test("Dashboard initializes from one batched snapshot, hydrates mechanics only o
   page.on("request", (req) => { if (req.url().includes("/api/")) urls.push(req.url()); });
   page.on("requestfailed", (req) => { failures.push(`${req.url()}: ${req.failure()?.errorText}`); });
 
-  await page.goto("/");
+  await page.goto("/teach");
   await page.getByLabel("Usuário").fill(process.env.E2E_TEACHER_USERNAME ?? "professor");
   await page.getByLabel("Senha").fill(process.env.E2E_TEACHER_PASSWORD ?? "arena-dev-change-me");
   const responsePromise = page.waitForResponse((response) =>

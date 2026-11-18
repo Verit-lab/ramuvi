@@ -100,7 +100,7 @@ export default function ContentReaderPage() {
   if (!data) return <div className={styles.empty}>Carregando conteúdo…</div>;
 
   return <div className={styles.readerView}>
-    {teacherPreview && <div className={styles.teacherPreviewBar}><span><strong>Prévia do professor</strong> · leitura sem registrar progresso</span><a href={`/?journey=${journeyId}`}>Editar jornada</a></div>}
+    {teacherPreview && <div className={styles.teacherPreviewBar}><span><strong>Prévia do professor</strong> · leitura sem registrar progresso</span><a href={`/teach?journey=${encodeURIComponent(journeyId)}`}>Editar jornada</a></div>}
     <header className={styles.readerTopbar} aria-label="Navegação do conteúdo">
       <div className={styles.readerTopbarRow}>
         <Link className={styles.readerBackLink}

@@ -101,7 +101,7 @@ for (const theme of ["dark", "light"] as const) {
       if (result.length) findings[screen] = result;
     };
 
-    await page.goto("/");
+    await page.goto("/teach");
     await expect(page.getByRole("button", { name: "Entrar", exact: true })).toBeVisible();
     await check("login");
     await page.getByLabel("Usuário").fill(teacherUsername);
@@ -211,7 +211,7 @@ for (const theme of ["dark", "light"] as const) {
       if (result.length) findings[screen] = result;
     };
 
-    await page.goto("/");
+    await page.goto("/teach");
     await page.getByLabel("Usuário").fill(teacherUsername);
     await page.getByLabel("Senha").fill(teacherPassword);
     await page.getByRole("button", { name: "Entrar", exact: true }).click();
@@ -236,7 +236,7 @@ test("prévia do professor ocupa a coluna, setas navegam e Editar jornada abre a
   const { journeyId, contentId, nextContentId } = await createJourneyWithCode();
   const context = await browser.newContext({ viewport: { width: 1920, height: 900 } });
   const page = await context.newPage();
-  await page.goto("/");
+  await page.goto("/teach");
   await page.getByLabel("Usuário").fill(teacherUsername);
   await page.getByLabel("Senha").fill(teacherPassword);
   await page.getByRole("button", { name: "Entrar", exact: true }).click();
@@ -276,7 +276,7 @@ test("leitor da Jornada: cabeçalho compacto e rodapé truncado no celular", asy
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await context.newPage();
   try {
-    await page.goto("/");
+    await page.goto("/teach");
     await page.getByLabel("Usuário").fill(teacherUsername);
     await page.getByLabel("Senha").fill(teacherPassword);
     await page.getByRole("button", { name: "Entrar", exact: true }).click();

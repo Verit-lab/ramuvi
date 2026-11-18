@@ -79,7 +79,7 @@ test("the teacher corrects a published Journey's text and title without unpublis
   const fixture = await publishedJourney();
   try {
     await login(page);
-    await page.goto(`/?tela=turma&turma=${fixture.classroom.id}&aba=jornadas`);
+    await page.goto(`/teach?tela=turma&turma=${fixture.classroom.id}&aba=jornadas`);
     const catalog = page.getByRole("complementary", { name: "Jornadas da turma" });
     await catalog.getByRole("button", { name: new RegExp(fixture.journey.title) }).click();
     await expect(page.getByText("Publicada e editável.", { exact: false })).toBeVisible();

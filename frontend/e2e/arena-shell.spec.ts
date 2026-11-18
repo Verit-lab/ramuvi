@@ -82,7 +82,7 @@ async function createArenaFixture(
 }
 
 async function openArena(page: Page, classroomName: string, _sessionTitle: string) {
-  await page.goto("/");
+  await page.goto("/teach");
   await page.getByLabel("Usuário").fill(teacherUsername);
   await page.getByLabel("Senha").fill(teacherPassword);
   await page.getByRole("button", { name: "Entrar", exact: true }).click();
@@ -1812,7 +1812,7 @@ test("v0.11 / 11.6: dois projetores conciliam seção, perda de rede e revogaç�
 
 test("v0.11 / 11.4: CSP, Markdown inerte, modal responsivo e navegação por teclado", async ({ page }) => {
   test.setTimeout(100_000);
-  const response = await page.goto("/");
+  const response = await page.goto("/teach");
   const headers = response?.headers() ?? {};
   const policy = headers["content-security-policy"] ?? "";
   expect(policy).toContain("object-src 'none'");

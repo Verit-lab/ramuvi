@@ -112,7 +112,7 @@ async function loginAndOpenArena(page: Page, classroomName: string, _sessionTitl
     data: { username: teacherUsername, password: teacherPassword },
   });
   await expectOk(loginResponse, "Login do navegador");
-  await page.goto("/");
+  await page.goto("/teach");
   await expect(page.getByRole("heading", { name: "Suas turmas" })).toBeVisible({ timeout: 10_000 });
   const card = page.locator("article.overview-class-card").filter({ hasText: classroomName });
   await expect(card).toBeVisible({ timeout: 10_000 });

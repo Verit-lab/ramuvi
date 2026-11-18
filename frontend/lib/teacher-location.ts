@@ -1,4 +1,4 @@
-// The teacher area is one page ("/"); the open screen lives in React state.
+// The teacher area is one page ("/teach"); the open screen lives in React state.
 // Mirroring it in the query string gives the browser (and the installed PWA)
 // history entries, so "back" returns to the previous screen instead of leaving
 // the app, and a reload keeps the teacher where they were.

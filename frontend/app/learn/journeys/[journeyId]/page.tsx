@@ -109,8 +109,8 @@ export default function JourneyStudyPage() {
 
   const current = !teacherPreview ? currentContent(journey) : null;
   return <div className={styles.studyView}>
-    {teacherPreview && <div className={styles.teacherPreviewBar}><span><strong>ⓘ Prévia do professor</strong><span className={styles.previewDetail}> · sem registrar progresso</span></span><a href={`/?journey=${journeyId}`}>Editar jornada</a></div>}
-    {teacherPreview && <Link href="/" className={styles.studyBack}>← Voltar para Jornadas</Link>}
+    {teacherPreview && <div className={styles.teacherPreviewBar}><span><strong>ⓘ Prévia do professor</strong><span className={styles.previewDetail}> · sem registrar progresso</span></span><a href={`/teach?journey=${encodeURIComponent(journeyId)}`}>Editar jornada</a></div>}
+    {teacherPreview && <Link href="/teach" className={styles.studyBack}>← Voltar para Jornadas</Link>}
     <header className={styles.studyHeader}>
       <div><p className={styles.eyebrow}>Jornada de estudo</p><h1 className={styles.studyTitle}>{journey.title}</h1>{learnerJourneyDescription(journey.description) && <p className={styles.studyLead}>{learnerJourneyDescription(journey.description)}</p>}</div>
       {!teacherPreview && <div className={styles.studyProgressNumber}><strong>{journey.progress.percent}%</strong><span>concluído</span></div>}

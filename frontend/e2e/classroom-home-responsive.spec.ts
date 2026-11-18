@@ -87,7 +87,7 @@ async function loginAndOpenClassroom(page: Page, classroomName: string) {
     data: { username: teacherUsername, password: teacherPassword },
   });
   await expectOk(loginResponse, "Login do navegador");
-  await page.goto("/");
+  await page.goto("/teach");
   await expect(page.getByRole("heading", { name: "Suas turmas" })).toBeVisible({ timeout: 10_000 });
 
   const card = page.locator("article.overview-class-card").filter({ hasText: classroomName });
