@@ -20,9 +20,19 @@ async function audit(page: import("@playwright/test").Page, selector: string) {
   return results.violations;
 }
 
+test("v0.12 / Ramuvi: landing pública sem achados sérios ou críticos no axe-core WCAG A/AA", async ({ page }) => {
+  const baseURL = process.env.E2E_FRONTEND_URL ?? "http://localhost:3000";
+  for (const scheme of ["dark", "light"] as const) {
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.goto(baseURL);
+    const findings = await audit(page, "body");
+    expect(findings.filter((issue) => issue.impact === "critical" || issue.impact === "serious"), scheme).toEqual([]);
+  }
+});
+
 test("login não apresenta achados críticos no axe-core WCAG A/AA", async ({ page }) => {
   const baseURL = process.env.E2E_FRONTEND_URL ?? "http://localhost:3000";
-  await page.goto(baseURL);
+  await page.goto(`${baseURL}/teach`);
   await page.getByLabel("Usuário").fill(process.env.E2E_TEACHER_USERNAME ?? "professor");
   await page.getByLabel("Senha").fill(process.env.E2E_TEACHER_PASSWORD ?? "arena-dev-change-me");
   await expect(page.getByRole("button", { name: "Entrar", exact: true })).toBeVisible();
