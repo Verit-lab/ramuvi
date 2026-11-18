@@ -1,6 +1,10 @@
-# Índice documental — Arena Dev
+# Índice documental — Ramuvi
 
 Este índice separa **fontes operacionais vigentes**, **propostas**, **diários de execução** e **histórico**. Um plano não é evidência de implementação; testes locais não são autorização de release.
+
+## v0.12.1 — Ramuvi (em desenvolvimento)
+
+- [Identidade Ramuvi, landing pública e entradas Learn/Teach](v0.12.1/RAMUVI_BRAND_AND_ROUTES.md) · [ADR-0072](adr/ADR-0072-landing-publica-e-entradas-learn-teach.md) · [entrada unificada do aluno](v0.12.1/STUDENT_ENTRY_ROUTING.md).
 
 ## Leitura atual — v0.11.0
 

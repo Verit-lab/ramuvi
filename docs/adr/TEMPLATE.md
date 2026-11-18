@@ -2,7 +2,7 @@
 
 - **Status:** Proposto
 - **Data:** AAAA-MM-DD
-- **Decisores:** equipe Arena Dev
+- **Decisores:** equipe Ramuvi
 - **Escopo:** arquitetura | produto | UX | dados | integração
 
 ## Contexto

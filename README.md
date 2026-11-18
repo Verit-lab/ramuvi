@@ -1,6 +1,14 @@
 # Ramuvi
 
-**Arena Dev** é uma plataforma proprietária e self-hosted para condução, participação e gamificação de dinâmicas de sala, com foco em baixa fricção para o professor.
+**Ramuvi** é uma plataforma educacional proprietária e self-hosted que reúne jornadas de aprendizagem, atividades interativas e experiências ao vivo, conectando professores e alunos. Até a v0.12.0 o produto se chamava **Arena Dev**; esse nome permanece apenas em registros históricos e identificadores internos/persistidos (ver [identidade e rotas](docs/v0.12.1/RAMUVI_BRAND_AND_ROUTES.md)).
+
+| Rota | Ambiente | Finalidade |
+| --- | --- | --- |
+| `/` | Ramuvi | Landing page pública |
+| `/learn` | Ramuvi Learn | Ambiente do aluno (conta, jornadas, progresso, conquistas, ao vivo) |
+| `/teach` | Ramuvi Teach | Ambiente do professor (turmas, biblioteca, atividades, jornadas, Arena ao vivo) |
+| `/join` | Ramuvi Learn | Participação ao vivo por código/QR, sem conta permanente |
+| `/projector` | Ramuvi Teach | Tela pública da aula |
 
 ## Estado vigente — 17/11/2026
 
@@ -52,7 +60,7 @@ Entregas    = fluxo assíncrono de submissão, correção e feedback
 Integrações = ponte provider-independent com plataformas educacionais
 ```
 
-Arena Dev não pretende ser um LMS completo. O produto concentra a condução da aula, participação dos estudantes, atividades, entregas, avaliação supervisionada e gamificação.
+A Ramuvi não pretende ser um LMS completo. O produto concentra a condução da aula, participação dos estudantes, atividades, entregas, avaliação supervisionada e gamificação.
 
 ## Capacidades principais
 
@@ -138,7 +146,7 @@ Provider Adapter
         ↓
 Integration Core
         ↓
-Arena Dev Domain
+Ramuvi Domain
 ```
 
 Regra arquitetural: IDs, tokens e detalhes específicos de Microsoft/Google não devem contaminar `ActivitySubmission`, `Assessment`, `ScoreEvent` ou os demais agregados centrais.
@@ -266,7 +274,7 @@ docker compose up -d --build          # perfil local: frontend em 127.0.0.1
 docker compose ps
 ```
 
-Frontend: `http://localhost:3000`
+Frontend: `http://localhost:3000` (landing), `http://localhost:3000/teach` (professor) e `http://localhost:3000/learn` (aluno)
 
 Backend: `http://localhost:8080`
 
