@@ -72,6 +72,22 @@ test("landing page is static, links both environments and carries Ramuvi metadat
   assert.doesNotMatch(landing, /depoimento|parceir|certifica|milhares|usuários ativos/i);
 });
 
+test("public legal documents exist with route links and remain clearly marked as drafts", () => {
+  const landing = read("app/page.tsx");
+  const student = read("components/student/StudentAccountAccess.tsx");
+  const teacher = read("components/TeacherLogin.tsx");
+  for (const source of [landing, student, teacher]) {
+    assert.ok(source.includes('href="/termos"'));
+    assert.ok(source.includes('href="/privacidade"'));
+  }
+  for (const page of ["termos", "privacidade"]) {
+    const body = read("app/" + page + "/page.tsx");
+    assert.match(body, /robots: \{ index: false, follow: false \}/);
+    assert.match(body, /LegalDocument/);
+  }
+  assert.match(read("components/legal/LegalDocument.tsx"), /Minuta em revisão/);
+});
+
 test("Teach renders the existing teacher app; Learn keeps its shell and gets its own title", () => {
   const teach = read("app/teach/page.tsx");
   assert.match(teach, /import ArenaApp from "@\/components\/ArenaApp"/);

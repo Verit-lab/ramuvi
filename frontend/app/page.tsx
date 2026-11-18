@@ -148,6 +148,8 @@ export default function LandingPage() {
             <Link href={ENTRY_ROUTES.learn}>{BRAND.learn}</Link>
             <Link href={ENTRY_ROUTES.teach}>{BRAND.teach}</Link>
             <Link href={ENTRY_ROUTES.liveJoin}>Entrar em uma aula</Link>
+            <Link href="/termos">Termos de Uso</Link>
+            <Link href="/privacidade">Política de Privacidade</Link>
           </nav>
         </div>
       </footer>

@@ -1,0 +1,42 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  color: var(--ds-text-primary);
+  background: var(--ds-canvas);
+}
+.header, .footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem 2rem;
+  padding: 1rem clamp(1rem, 5vw, 3rem);
+  border-bottom: 1px solid var(--ds-border);
+}
+.header { background: var(--ds-surface); }
+.brand { font-size: 1.25rem; font-weight: 850; letter-spacing: -.04em; color: var(--ds-accent-text); }
+.navigation, .footer nav { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; }
+.navigation a, .footer a { min-height: 44px; display: inline-flex; align-items: center; }
+.header a, .footer a { text-decoration: underline; text-underline-offset: 4px; }
+.main { width: min(100%, 53rem); flex: 1; margin: 0 auto; padding: clamp(2rem, 7vw, 4rem) 1.25rem 5rem; }
+.eyebrow { font-size: .8rem; color: var(--ds-accent-text); font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.main h1 { font-size: clamp(2rem, 5vw, 3rem); letter-spacing: -.04em; line-height: 1.15; margin: .75rem 0; }
+.intro { font-size: 1.1rem; color: var(--ds-text-secondary); line-height: 1.65; }
+.draft {
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--ds-border-strong);
+  border-left: 4px solid var(--ds-accent-text);
+  border-radius: .65rem;
+  background: var(--ds-surface-raised);
+  line-height: 1.65;
+}
+.draft strong { color: var(--ds-text-primary); }
+.updated { margin-top: 1.5rem; font-size: .85rem; color: var(--ds-text-secondary); }
+.section { border-top: 1px solid var(--ds-border); padding-top: 1.25rem; margin-top: 2rem; }
+.section h2 { font-size: clamp(1.15rem, 3vw, 1.5rem); letter-spacing: -.02em; }
+.section p, .section li { color: var(--ds-text-secondary); line-height: 1.75; }
+.section li { margin: .5rem 0; }
+.footer { border-top: 1px solid var(--ds-border); border-bottom: 0; color: var(--ds-text-secondary); font-size: .875rem; }
+.page a:focus-visible { outline: 3px solid var(--ds-accent-text); outline-offset: 4px; border-radius: 4px; }
+@media (max-width: 480px) { .header, .footer { align-items: flex-start; } }

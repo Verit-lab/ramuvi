@@ -42,6 +42,8 @@ test("v0.12 / Ramuvi: landing loads anonymously with links to Learn, Teach and l
   await expect(main.getByRole("link", { name: "Sou professor" })).toHaveAttribute("href", "/teach");
   await expect(page.getByRole("link", { name: "Acessar Learn" })).toHaveAttribute("href", "/learn");
   await expect(page.getByRole("link", { name: "Acessar Teach" })).toHaveAttribute("href", "/teach");
+  await expect(page.getByRole("contentinfo").getByRole("link", { name: "Termos de Uso" })).toHaveAttribute("href", "/termos");
+  await expect(page.getByRole("contentinfo").getByRole("link", { name: "Política de Privacidade" })).toHaveAttribute("href", "/privacidade");
   await expect(page.getByRole("heading", { name: "Ramuvi Learn" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Ramuvi Teach" })).toBeVisible();
   // No login form on the landing page and no session lookup.
@@ -87,6 +89,9 @@ test("v0.12 / Ramuvi: anonymous teacher at /teach gets the Ramuvi Teach login", 
 });
 
 test("v0.12 / Ramuvi: legacy teacher links at / keep their screen on /teach", async ({ page }) => {
+  // This scenario validates routing, not the backend. No API is started by the
+  // static frontend test server, so provide the expected anonymous session.
+  await page.route("**/api/auth/session", (route) => route.fulfill({ status: 401 }));
   await page.goto("/?tela=biblioteca");
   await expect(page).toHaveURL(/\/teach\?tela=biblioteca$/);
   await page.goto("/?microsoft=connected");

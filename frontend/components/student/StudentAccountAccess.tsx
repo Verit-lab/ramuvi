@@ -184,6 +184,8 @@ export default function StudentAccountAccess({ session, sessionUnavailable, sess
         <div className={styles.footer}>
           <Link href="/join">Entrar em uma aula com código</Link>
           {session?.studentId ? <Link href="/learn" onClick={onBackToStudies}>Voltar aos estudos</Link> : hasDeviceClaim && !sessionUnavailable ? <Link href="/learn/journeys">Acessar Jornadas com código</Link> : null}
+          <Link href="/termos">Termos de Uso</Link>
+          <Link href="/privacidade">Política de Privacidade</Link>
         </div>
       </section>
     </main>

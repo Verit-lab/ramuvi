@@ -64,6 +64,8 @@ export default function TeacherLogin({ onAuthenticated, mode = "page" }: Props) 
         <nav className="teacher-login-links" aria-label="Outros acessos">
           <Link href="/learn" prefetch={false}>Sou aluno: acessar Ramuvi Learn</Link>
           <Link href="/" prefetch={false}>Conhecer a Ramuvi</Link>
+          <Link href="/termos" prefetch={false}>Termos de Uso</Link>
+          <Link href="/privacidade" prefetch={false}>Política de Privacidade</Link>
         </nav>
       </section>
     </main>
