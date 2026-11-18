@@ -75,7 +75,7 @@ export function BackupView({ data, setData, notify, refreshClassroomDomain }: {
 
   return (
     <div className="two-col">
-      <Panel title="Backup dos dados" subtitle="Snapshot dos módulos atuais do Arena Dev">
+      <Panel title="Backup dos dados" subtitle="Snapshot dos módulos atuais da Ramuvi">
         <div className="backup-card"><span className="backup-icon">↓</span><div><h3>Exportar snapshot</h3><p>Inclui uma fotografia da visão atual carregada do backend/PostgreSQL.</p></div><button className="button primary" onClick={exportData}>Exportar JSON</button></div>
         <div className="backup-card"><span className="backup-icon">↑</span><div><h3>Validar snapshot</h3><p>Confere o JSON exportado. Restauração server-side será implementada separadamente para não sobrescrever dados persistentes de forma insegura.</p></div><label className="button file-button">Validar JSON<input type="file" accept="application/json" onChange={(e) => importData(e.target.files?.[0])} /></label></div>
       </Panel>

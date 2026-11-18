@@ -234,7 +234,7 @@ export default function ActivityQuestionBuilder({
 
       {tab === "import" && (
         <div className="question-tool-body">
-          <p className="tool-note">Cole a resposta JSON da IA ou selecione um arquivo <b>.json</b>. O Arena Dev valida o pacote antes de adicionar as questões ao rascunho.</p>
+          <p className="tool-note">Cole a resposta JSON da IA ou selecione um arquivo <b>.json</b>. A Ramuvi valida o pacote antes de adicionar as questões ao rascunho.</p>
           <textarea className="input textarea json-area" rows={12} value={jsonInput} onChange={(event) => { setJsonInput(event.target.value); setImportErrors([]); setImportWarnings([]); setLastImportedCount(0); }} placeholder={'{\n  "version": "1.0",\n  "questions": [...]\n}'} />
           {importErrors.length > 0 && <div className="validation-box"><strong>Revise antes de importar</strong>{importErrors.map((error) => <span key={error}>{error}</span>)}</div>}
           {importWarnings.length > 0 && <div className="validation-box" role="status"><strong>{lastImportedCount > 0 ? "Importado com avisos" : "Avisos"}</strong>{importWarnings.map((warning) => <span key={warning}>{warning}</span>)}</div>}

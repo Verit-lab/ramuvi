@@ -1,29 +1,30 @@
 import type { Metadata, Viewport } from "next";
 import PwaRuntime from "@/components/PwaRuntime";
+import { BRAND } from "@/lib/brand";
 import "./globals.css";
 import "../styles/classroom-overview.css";
 import "../styles/timer-panel.css";
 import "../styles/mobile-reflow.css";
 
 export const metadata: Metadata = {
-  title: "Arena Dev",
-  description: "Gamificação para turmas de Desenvolvimento de Sistemas",
-  applicationName: "Arena Dev",
+  // Routes set their own title; the template keeps "· Ramuvi" on all of them.
+  title: { default: BRAND.name, template: `%s · ${BRAND.name}` },
+  description: BRAND.description,
+  applicationName: BRAND.name,
   manifest: "/manifest.webmanifest",
-  // 11.7: icons repeat the in-app brand mark (green square, dark "A"); the
-  // previous purple diamond did not belong to the product identity.
+  // v0.12: icons repeat the in-app Ramuvi mark (accent square, dark "R").
   icons: {
     icon: [
-      { url: "/icons/arena.svg", type: "image/svg+xml" },
-      { url: "/icons/arena-32.png", sizes: "32x32", type: "image/png" },
-      { url: "/icons/arena-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icons/arena-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/icons/ramuvi.svg", type: "image/svg+xml" },
+      { url: "/icons/ramuvi-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/ramuvi-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/ramuvi-512.png", sizes: "512x512", type: "image/png" },
     ],
-    apple: { url: "/icons/arena-apple-180.png", sizes: "180x180" },
+    apple: { url: "/icons/ramuvi-apple-180.png", sizes: "180x180" },
   },
   appleWebApp: {
     capable: true,
-    title: "Arena Dev",
+    title: BRAND.name,
     statusBarStyle: "black-translucent",
   },
 };

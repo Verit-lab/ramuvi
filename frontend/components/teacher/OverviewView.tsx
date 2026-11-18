@@ -165,7 +165,7 @@ export function OverviewView({ data, onSelectClassroom, onManageClassroom, notif
       {!data.classrooms.length ? (
         <EmptyState
           title="Crie sua primeira turma"
-          text="Turmas é o ponto de entrada do Arena Dev. Crie a turma e, na etapa seguinte, inclua os alunos."
+          text="Turmas é o ponto de entrada da Ramuvi. Crie a turma e, na etapa seguinte, inclua os alunos."
           actionLabel="+ Nova turma"
           onAction={() => setCreateOpen(true)}
         />

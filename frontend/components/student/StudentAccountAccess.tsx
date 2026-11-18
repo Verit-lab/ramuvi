@@ -101,7 +101,7 @@ export default function StudentAccountAccess({ session, sessionUnavailable, sess
     <main className={styles.shell}>
       <section className={styles.card} aria-labelledby="student-login-title">
         <div className={styles.brand}>ramuvi</div>
-        <p className={styles.eyebrow}>Área do aluno</p>
+        <p className={styles.eyebrow}>Ramuvi Learn · Área do aluno</p>
         <h1 id="student-login-title">{session ? "Minha conta" : "Acesse sua conta"}</h1>
         <p className={styles.description}>
           Entre com uma conta verificada. Seu acesso às turmas será associado por convite do professor.

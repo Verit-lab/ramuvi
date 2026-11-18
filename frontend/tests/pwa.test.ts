@@ -18,7 +18,9 @@ test("manifest makes the join experience installable", () => {
 });
 
 test("service worker caches shell and static assets but never API domain state", () => {
-  assert.match(worker, /CACHE_PREFIX = "arena-dev-"/);
+  assert.match(worker, /CACHE_PREFIX = "ramuvi-"/);
+  // v0.12: caches created before the rebranding are still owned and evicted.
+  assert.match(worker, /LEGACY_CACHE_PREFIXES = \["arena-dev-"\]/);
   assert.match(worker, /url\.pathname\.startsWith\("\/api\/"\)/);
   assert.match(worker, /if \(isDomainRequest\(url\)\) return/);
 });
@@ -33,7 +35,7 @@ test("client registers worker and treats installation as progressive enhancement
   assert.match(runtime, /updateViaCache: "none"/);
   assert.match(runtime, /result\.update\(\)/);
   assert.match(runtime, /beforeinstallprompt/);
-  assert.match(runtime, /Instalar Arena Dev/);
+  assert.match(runtime, /Instalar Ramuvi/);
 });
 
 test("v0.10 worker discards stale join HTML and only evicts its own caches", () => {

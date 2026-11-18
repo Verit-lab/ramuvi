@@ -47,7 +47,7 @@ const licensingHistory = readFileSync(resolve(root, "LICENSING_HISTORY.md"), "ut
 
 function backendVersion(): string {
   const match = pom.match(
-    /<artifactId>arena-dev-api<\/artifactId>\s*<version>([^<]+)<\/version>/,
+    /<artifactId>ramuvi-api<\/artifactId>\s*<version>([^<]+)<\/version>/,
   );
   assert.ok(match, "backend version should be readable from pom.xml");
   return match[1];
@@ -65,7 +65,7 @@ test("release manifests and version derivation stay aligned", () => {
   assert.match(metadata, /EXPECTED_VERSION="\$\{ARENA_RELEASE_VERSION:-\}"/);
   assert.match(metadata, /EXPECTED_VERSION="\$\{EXPECTED_VERSION:-\$backend_version\}"/);
   assert.match(gate, /RELEASE_VERSION="\$\{ARENA_RELEASE_VERSION:-\}"/);
-  assert.match(gate, /artifactId>arena-dev-api/);
+  assert.match(gate, /artifactId>ramuvi-api/);
 });
 
 test("release gate uses v0.11/V67 while preserving earlier v0.11 and v0.10 contract checks", () => {

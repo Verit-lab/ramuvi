@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { loginTeacher, type TeacherSession } from "@/lib/auth-api";
 
@@ -49,10 +50,10 @@ export default function TeacherLogin({ onAuthenticated, mode = "page" }: Props) 
   return (
     <main className="teacher-login-shell">
       <section className="teacher-login-card">
-        <div className="brand-mark teacher-login-mark">A</div>
-        <span className="eyebrow accent">ARENA DEV</span>
+        <div className="brand-mark teacher-login-mark" aria-hidden="true">R</div>
+        <span className="eyebrow accent">RAMUVI TEACH</span>
         <h1>Acesso do professor</h1>
-        <p>Entre para administrar turmas, sessões, pontuação e mecânicas.</p>
+        <p>Entre para organizar turmas, preparar jornadas e conduzir aulas ao vivo.</p>
         <form onSubmit={submit} className="teacher-login-form">
           <label>Usuário<input className="input" autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} /></label>
           <label>Senha<input className="input" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} autoFocus /></label>
@@ -60,6 +61,10 @@ export default function TeacherLogin({ onAuthenticated, mode = "page" }: Props) 
           <button className="button primary large" type="submit" disabled={busy}>{busy ? "Entrando..." : "Entrar"}</button>
         </form>
         <small className="teacher-login-note">As credenciais do MVP são definidas no arquivo <code>.env</code>.</small>
+        <nav className="teacher-login-links" aria-label="Outros acessos">
+          <Link href="/learn" prefetch={false}>Sou aluno: acessar Ramuvi Learn</Link>
+          <Link href="/" prefetch={false}>Conhecer a Ramuvi</Link>
+        </nav>
       </section>
     </main>
   );

@@ -7,19 +7,19 @@ const password = process.env.E2E_TEACHER_PASSWORD ?? "arena-dev-change-me";
 
 test("avisos da PWA não bloqueiam a autenticação do professor no iPhone", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
+  await page.goto("/teach");
   await expect(page.getByRole("button", { name: "Entrar", exact: true })).toBeVisible();
   await page.evaluate(() => {
     const notice = document.createElement("aside");
     notice.className = "pwa-install-prompt";
     notice.setAttribute("role", "status");
-    notice.setAttribute("aria-label", "Atualização da Arena Dev");
+    notice.setAttribute("aria-label", "Atualização da Ramuvi");
     const message = document.createElement("strong");
     message.textContent = "Nova versão disponível";
     notice.append(message);
     document.body.insertBefore(notice, document.body.firstChild);
   });
-  const notice = page.getByRole("status", { name: "Atualização da Arena Dev" });
+  const notice = page.getByRole("status", { name: "Atualização da Ramuvi" });
   await expect(notice).toBeVisible();
   expect(await notice.evaluate((element) => getComputedStyle(element).position)).toBe("relative");
   const submit = page.getByRole("button", { name: "Entrar", exact: true });
@@ -63,7 +63,7 @@ test("PWA instala shell seguro; offline não reutiliza HTML antigo nem dados da 
 
     await context.setOffline(true);
     await page.goto("/join?code=OFFLINE");
-    await expect(page.getByRole("heading", { name: "Arena Dev está sem conexão" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Ramuvi está sem conexão" })).toBeVisible();
     await expect(page.getByText("UNSAFE_OLD_JOIN_HTML")).toHaveCount(0);
     const status = await page.evaluate(async () => {
       try { const response = await fetch("/api/auth/session"); return `CACHE_OR_NETWORK_${response.status}`; }
@@ -153,7 +153,7 @@ test("PWA atualiza controlador sem recarregar resposta não enviada e descarta c
         new Promise((_, reject) => setTimeout(() => reject(new Error("Service worker upgrade registration timed out")), 10000)),
       ]);
     });
-    await expect(page.getByRole("status", { name: "Atualização da Arena Dev" })).toBeVisible();
+    await expect(page.getByRole("status", { name: "Atualização da Ramuvi" })).toBeVisible();
     await expect(input).toHaveValue("RASCUNHO");
     // controllerchange fires during activation, whereas cache eviction runs
     // asynchronously in activate.waitUntil. Wait for the authoritative result.
@@ -166,7 +166,7 @@ test("PWA atualiza controlador sem recarregar resposta não enviada e descarta c
     await expect(input).toHaveValue("RASCUNHO");
     await context.setOffline(true);
     await page.goto("/join?code=NO_NETWORK");
-    await expect(page.getByRole("heading", { name: "Arena Dev está sem conexão" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Ramuvi está sem conexão" })).toBeVisible();
     await expect(page.getByText("HTML_ANTIGO_PRIVADO")).toHaveCount(0);
     await context.setOffline(false);
     await page.goto("/join");

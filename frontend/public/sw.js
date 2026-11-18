@@ -1,17 +1,21 @@
 /* PWA shell only. The backend, student tokens and interaction state are NEVER cached. */
-// v0.11: new shell icons; a new version invalidates the cached purple icon.
-const VERSION = "v0.11-pwa-icons-1";
-const CACHE_PREFIX = "arena-dev-";
+// v0.12: Ramuvi identity; a new version and prefix invalidate the cached
+// pre-rebranding icons and offline page.
+const VERSION = "v0.12-ramuvi-1";
+const CACHE_PREFIX = "ramuvi-";
+// Caches created by releases before the rebranding. Still owned by this app,
+// so they are removed on activation instead of being orphaned.
+const LEGACY_CACHE_PREFIXES = ["arena-dev-"];
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${VERSION}`;
 const STATIC_CACHE = `${CACHE_PREFIX}static-${VERSION}`;
 const OFFLINE_PAGE = "/offline.html";
 const SHELL_URLS = [
   OFFLINE_PAGE,
   "/manifest.webmanifest",
-  "/icons/arena-192.png",
-  "/icons/arena-512.png",
-  "/icons/arena-maskable-512.png",
-  "/icons/arena.svg",
+  "/icons/ramuvi-192.png",
+  "/icons/ramuvi-512.png",
+  "/icons/ramuvi-maskable-512.png",
+  "/icons/ramuvi.svg",
 ];
 
 self.addEventListener("install", (event) => {
@@ -34,7 +38,8 @@ self.addEventListener("activate", (event) => {
     const keep = new Set([SHELL_CACHE, STATIC_CACHE]);
     const names = await caches.keys();
     // Never delete caches owned by another app on the same origin.
-    await Promise.all(names.filter((name) => name.startsWith(CACHE_PREFIX) && !keep.has(name))
+    const owned = (name) => name.startsWith(CACHE_PREFIX) || LEGACY_CACHE_PREFIXES.some((prefix) => name.startsWith(prefix));
+    await Promise.all(names.filter((name) => owned(name) && !keep.has(name))
       .map((name) => caches.delete(name)));
     await self.clients.claim();
   })());

@@ -45,7 +45,7 @@ export default function StudyShell({ children }: { children: ReactNode }) {
   return <div className={`${styles.shell}${sidebarHidden ? ` ${styles.sidebarHidden}` : ""}`} style={{ "--study-text-scale": textScale, "--study-content-scale": textScale, "--study-text-percent": `${Math.round(textScale * 100)}%` } as React.CSSProperties} data-student-motion={reducedMotion ? "reduce" : undefined}>
     <aside className={styles.studySidebar} hidden={sidebarHidden}>
       <div className={styles.sidebarHead}>
-        <Link href="/learn" className={styles.brand} aria-label="Arena Dev — Estudos"><span className={styles.brandMark}>A</span><span className={styles.brandCopy}><strong>ARENA DEV</strong><small>ESTUDOS</small></span></Link>
+        <Link href="/learn" className={styles.brand} aria-label="Ramuvi Learn — início dos estudos"><span className={styles.brandMark} aria-hidden="true">R</span><span className={styles.brandCopy}><strong>RAMUVI</strong><small>LEARN</small></span></Link>
         <button type="button" className={styles.sidebarToggle} onClick={() => toggleSidebar(true)} aria-label="Ocultar menu lateral" title="Ocultar menu lateral"><SidebarIcon/></button>
       </div>
       <nav className={styles.nav} aria-label="Navegação de estudos">
@@ -62,7 +62,7 @@ export default function StudyShell({ children }: { children: ReactNode }) {
     <div className={styles.studyWorkspace}>
       {sidebarHidden && <div className={styles.sidebarRevealBar}><button type="button" className={styles.sidebarReveal} onClick={() => toggleSidebar(false)} aria-label="Mostrar menu lateral" title="Mostrar menu lateral"><SidebarIcon/></button></div>}
       <header className={styles.mobileHeader}>
-        <Link href="/learn" className={styles.brand} aria-label="Arena Dev — Estudos"><span className={styles.brandMark}>A</span><span className={styles.brandCopy}><strong>ARENA DEV</strong><small>ESTUDOS</small></span></Link>
+        <Link href="/learn" className={styles.brand} aria-label="Ramuvi Learn — início dos estudos"><span className={styles.brandMark} aria-hidden="true">R</span><span className={styles.brandCopy}><strong>RAMUVI</strong><small>LEARN</small></span></Link>
         <div className={styles.mobileHeaderActions}>
           <button type="button" className={styles.mobileMenuButton} aria-label={mobileMenuOpen ? "Fechar navegação" : "Abrir navegação"} aria-expanded={mobileMenuOpen} aria-controls="student-mobile-navigation" onClick={() => setMobileMenuOpen((value) => !value)}><SidebarIcon/></button>
         </div>
