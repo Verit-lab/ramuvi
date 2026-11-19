@@ -235,7 +235,7 @@ if [[ "$MODE" == "final" ]]; then
       fail "versão de schema do backup incompatível com a candidata"
   fi
   printf 'Verificando backup pré-implantação no schema V%s.\n' "$source_schema_version"
-  ARENA_SCHEMA_VERSION="$source_schema_version" \
+  BACKUP_REQUIRE_CHECKSUM=1 ARENA_SCHEMA_VERSION="$source_schema_version" \
     "$SCRIPT_DIR/verify-backup.sh" "$BACKUP_FILE"
 fi
 

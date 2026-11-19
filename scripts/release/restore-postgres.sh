@@ -15,6 +15,8 @@ usage() {
 Uso: scripts/release/restore-postgres.sh CAMINHO_DO_DUMP[.age] --confirm-replace
 
 Backups cifrados (.age) exigem BACKUP_AGE_IDENTITY com a chave privada.
+Checksum SHA-256 válido obrigatório. Exceção manual BACKUP_ALLOW_UNVERIFIED=1
+somente em recuperação de legado, nunca como configuração padrão.
 
 Operação destrutiva e explícita. Verifica o dump em um PostgreSQL temporário,
 para backend/frontend, cria um backup de segurança, recria o banco corrente,
@@ -30,15 +32,23 @@ EOF
 
 backup_file="$1"
 [[ -f "$backup_file" ]] || fail "backup não encontrado: $backup_file"
+[[ -s "$backup_file" ]] || fail "backup vazio: $backup_file"
+
+# Never overwrite a live database from a file without a valid checksum.
+# Legacy recovery requires an explicit exception recorded by the operator.
+if [[ ! -f "${backup_file}.sha256" ]]; then
+  [[ "${BACKUP_ALLOW_UNVERIFIED:-0}" == 1 ]] ||
+    fail "checksum SHA-256 ausente; restauração recusada (BACKUP_ALLOW_UNVERIFIED=1 para exceção manual)"
+else
+  (cd "$(dirname "$backup_file")" && sha256sum --check "$(basename "$backup_file").sha256") ||
+    fail "checksum SHA-256 inválido; restauração recusada"
+fi
 
 decrypted_dir=""
 if [[ "$backup_file" == *.age ]]; then
   command -v age >/dev/null 2>&1 || fail "age não encontrado (backup cifrado)"
   [[ -n "${BACKUP_AGE_IDENTITY:-}" && -f "$BACKUP_AGE_IDENTITY" ]] || \
     fail "defina BACKUP_AGE_IDENTITY com o arquivo da chave privada age"
-  if [[ -f "${backup_file}.sha256" ]]; then
-    (cd "$(dirname "$backup_file")" && sha256sum --check "$(basename "$backup_file").sha256")
-  fi
   decrypted_dir="$(mktemp -d)"
   chmod 700 "$decrypted_dir"
   trap 'rm -rf "$decrypted_dir"' EXIT
