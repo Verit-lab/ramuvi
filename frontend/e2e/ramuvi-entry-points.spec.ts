@@ -33,7 +33,7 @@ test("v0.12 / Ramuvi: landing loads anonymously with links to Learn, Teach and l
   expect(response?.status()).toBe(200);
   await expect(page).toHaveURL(/\/$/);
   await expect(page).toHaveTitle(/Ramuvi/);
-  await expect(page.getByRole("heading", { level: 1, name: "Ensinar e aprender, em uma nova experiência." })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Prepare a aula, conduza ao vivo e acompanhe cada aluno." })).toBeVisible();
   await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute("content", "Ramuvi");
   await expect(page.getByText(/Arena Dev/i)).toHaveCount(0);
 
@@ -57,8 +57,10 @@ test("v0.12 / Ramuvi: landing loads anonymously with links to Learn, Teach and l
     const linked = await page.request.get(href, { maxRedirects: 0 });
     expect(linked.status(), href).toBeLessThan(400);
   }
-  expect(hrefs.filter((value) => value.startsWith("#"))).toContain("#ambientes");
-  await expect(page.locator("#ambientes")).toHaveCount(1);
+  for (const anchor of hrefs.filter((value) => value.startsWith("#"))) {
+    await expect(page.locator(anchor), anchor).toHaveCount(1);
+  }
+  expect(hrefs).toContain("#como-funciona");
 });
 
 test("v0.12 / Ramuvi: landing is usable at 320px and by keyboard", async ({ page }) => {
@@ -82,10 +84,16 @@ test("v0.12 / Ramuvi: anonymous teacher at /teach gets the Ramuvi Teach login", 
   await page.goto("/teach");
   await expect(page).toHaveURL(/\/teach$/);
   await expect(page).toHaveTitle("Ramuvi Teach");
-  await expect(page.getByText("RAMUVI TEACH")).toBeVisible();
+  await expect(page.getByText("Ramuvi Teach", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Acesso do professor" })).toBeVisible();
   await expect(page.getByLabel("Senha")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Sou aluno: acessar Ramuvi Learn" })).toHaveAttribute("href", "/learn");
+  await expect(page.getByRole("link", { name: "Entrar no Ramuvi Learn" })).toHaveAttribute("href", "/learn");
+  await expect(page.getByRole("link", { name: /Voltar para a Ramuvi/ })).toHaveAttribute("href", "/");
+  // Legal links: one discreet line, outside the login card; no MVP hints.
+  const legal = page.getByRole("navigation", { name: "Documentos legais" });
+  await expect(legal.getByRole("link")).toHaveCount(2);
+  await expect(page.getByText(/\.env/)).toHaveCount(0);
+  await expect(page.getByLabel("Usuário")).toHaveValue("");
 });
 
 test("v0.12 / Ramuvi: legacy teacher links at / keep their screen on /teach", async ({ page }) => {
@@ -99,7 +107,7 @@ test("v0.12 / Ramuvi: legacy teacher links at / keep their screen on /teach", as
   // Unknown parameters never turn the landing page into a redirect.
   await page.goto("/?next=https://example.invalid");
   await expect(page).toHaveURL(/\/\?next=/);
-  await expect(page.getByRole("heading", { level: 1, name: "Ensinar e aprender, em uma nova experiência." })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Prepare a aula, conduza ao vivo e acompanhe cada aluno." })).toBeVisible();
 });
 
 test("v0.12 / Ramuvi: a student session does not open Teach; teacher APIs stay closed", async ({ page }) => {
@@ -158,6 +166,6 @@ test("v0.12 / Ramuvi: anonymous learner at /learn sees the Ramuvi Learn entry", 
   }));
   await page.goto("/learn");
   await expect(page).toHaveTitle("Ramuvi Learn");
-  await expect(page.getByText("Ramuvi Learn · Área do aluno")).toBeVisible();
+  await expect(page.getByRole("main").getByText("Ramuvi Learn", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Acesse sua conta" })).toBeVisible();
 });
