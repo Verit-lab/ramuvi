@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "@/styles/app-ui.css";
 import type { ReactNode } from "react";
 import LearnLayoutShell from "@/components/study/LearnLayoutShell";
 import { BRAND } from "@/lib/brand";

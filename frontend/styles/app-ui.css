@@ -1,0 +1,5 @@
+/* Domain UI is loaded only in /learn, /teach, /join and /projector. */
+@import "../app/globals.css";
+@import "./classroom-overview.css";
+@import "./timer-panel.css";
+@import "./mobile-reflow.css";
