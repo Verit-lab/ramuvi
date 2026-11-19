@@ -1,0 +1,13 @@
+# OPTIONAL: run on a dedicated recovery host with a built JAR available.
+# This is a synthetic test and DOES NOT validate actual offsite restore.
+[Unit]
+Description=Ramuvi isolated synthetic database recovery drill
+After=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/ramuvi
+EnvironmentFile=/etc/ramuvi/recovery.env
+ExecStart=/opt/ramuvi/scripts/release/run-periodic-recovery.sh
+UMask=0077
+TimeoutStartSec=600

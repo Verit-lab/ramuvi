@@ -11,7 +11,7 @@ latest_migration="$(find "$PROJECT_ROOT/backend/src/main/resources/db/migration"
     | sed -nE 's/^V([0-9]+)__.*$/\1/p' | sort -n | tail -n 1)"
 [[ "$latest_migration" =~ ^[0-9]+$ ]] || { echo 'Não foi possível detectar versão Flyway' >&2; exit 1; }
 EXPECTED_SCHEMA_VERSION="${ARENA_SCHEMA_VERSION:-$latest_migration}"
-CONTAINER_NAME="arena-dev-restore-check-$(date -u +%Y%m%d%H%M%S)-$$"
+CONTAINER_NAME="ramuvi-restore-check-$(date -u +%Y%m%d%H%M%S)-$$"
 CHECK_USER="arena_restore_check"
 CHECK_DATABASE="arena_restore_check"
 CHECK_PASSWORD="restore-check-only-$$"
@@ -52,6 +52,9 @@ if [[ -f "$checksum_file" ]]; then
     sha256sum --check "$(basename "$checksum_file")"
   )
 else
+  if [[ "${BACKUP_REQUIRE_CHECKSUM:-0}" == 1 ]]; then
+    fail "checksum SHA-256 obrigatório ausente: $checksum_file"
+  fi
   printf 'AVISO: checksum ausente; a integridade criptográfica não foi comprovada.\n' >&2
 fi
 
@@ -60,7 +63,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-docker run   --detach   --rm   --name "$CONTAINER_NAME"   --env "POSTGRES_USER=$CHECK_USER"   --env "POSTGRES_PASSWORD=$CHECK_PASSWORD"   --env "POSTGRES_DB=$CHECK_DATABASE"   "$POSTGRES_IMAGE" >/dev/null
+docker run   --detach   --rm   --network none   --name "$CONTAINER_NAME"   --env "POSTGRES_USER=$CHECK_USER"   --env "POSTGRES_PASSWORD=$CHECK_PASSWORD"   --env "POSTGRES_DB=$CHECK_DATABASE"   "$POSTGRES_IMAGE" >/dev/null
 
 ready=false
 for _ in {1..30}; do

@@ -1,0 +1,12 @@
+# Modelo de agendamento; fuso depende da configuração do servidor.
+[Unit]
+Description=Backup diário da Ramuvi (criptografado e externo)
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+Persistent=true
+RandomizedDelaySec=10m
+Unit=ramuvi-backup.service
+
+[Install]
+WantedBy=timers.target

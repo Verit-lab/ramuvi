@@ -22,6 +22,8 @@
 ## 2. Backup e teste de recuperação
 
 - Produzir um novo backup consistente com scripts/release/backup-postgres.sh, garantindo que COMPOSE_FILE e COMPOSE_PROJECT_NAME apontem para a instalação real.
+- Para backup diário de produção com cifra + armazenamento externo, consultar [procedimento operacional de recuperação](../ops/BACKUP_RECOVERY.md). Este incremento **não** instala timer, configura rclone nem altera a VPS; exige validação real, credenciais externas, chave pública age, política de retenção e aceite do operador.
+- O gate de release agora exige um SHA-256 verificável no arquivo usado para ensaio. Backups cifrados devem ser verificados/descriptografados em estação isolada com a chave privada; não copiar identidade privada para a VPS.
 - Criar/verificar checksum SHA-256. Preservar um exemplar com acesso restrito fora da pasta de deploy e manter referência do volume original.
 - Testar scripts/release/verify-backup.sh em contêiner isolado com o backup real ou representativo; verificar Flyway V67 no estado antigo e V68 após a evolução.
 - Confirmar preservação de matrícula, progresso, participação e XP. Documentar tempo de indisponibilidade e procedimento de recuperação.

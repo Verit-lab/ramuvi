@@ -1,0 +1,14 @@
+# Exemplo: configure WorkingDirectory, Docker permissions e EnvironmentFile.
+# Não instalar nem ativar sem verificar ambiente e destino de armazenamento.
+[Unit]
+Description=Ramuvi PostgreSQL encrypted offsite backup
+Wants=network-online.target
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/ramuvi
+EnvironmentFile=/etc/ramuvi/backup.env
+ExecStart=/opt/ramuvi/scripts/release/backup-offsite.sh
+UMask=0077
+TimeoutStartSec=7200

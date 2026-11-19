@@ -7,6 +7,8 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 OUTPUT_DIR="${BACKUP_DIR:-$PROJECT_ROOT/backups}"
 AGE_RECIPIENT="${BACKUP_AGE_RECIPIENT:-}"
 KEEP="${BACKUP_KEEP:-0}"
+REQUIRE_ENCRYPTION="${BACKUP_REQUIRE_ENCRYPTION:-0}"
+umask 077
 
 fail() {
   printf 'ERRO: %s\n' "$*" >&2
@@ -26,6 +28,9 @@ do arquivo criado é a única linha escrita em stdout; mensagens vão para stder
                 BACKUP_AGE_RECIPIENT. Restaure com BACKUP_AGE_IDENTITY.
   --keep N      mantém só os N backups mais recentes deste banco (também
                 BACKUP_KEEP). 0 mantém todos.
+
+  BACKUP_REQUIRE_ENCRYPTION=1 exige cifragem e recusa dumps sem age.
+  Com age, pg_dump é cifrado em streaming, sem arquivo claro no host.
 EOF
 }
 
@@ -58,6 +63,10 @@ while (($#)); do
 done
 
 [[ "$KEEP" =~ ^[0-9]+$ ]] || fail "--keep exige um número inteiro"
+[[ "$REQUIRE_ENCRYPTION" == 0 || "$REQUIRE_ENCRYPTION" == 1 ]] ||
+  fail "BACKUP_REQUIRE_ENCRYPTION exige 0 ou 1"
+[[ "$REQUIRE_ENCRYPTION" != 1 || -n "$AGE_RECIPIENT" ]] ||
+  fail "BACKUP_REQUIRE_ENCRYPTION=1 exige BACKUP_AGE_RECIPIENT ou --encrypt-to"
 [[ -z "$AGE_RECIPIENT" ]] || command -v age >/dev/null 2>&1 || fail "age não encontrado (necessário para --encrypt-to)"
 
 cd "$PROJECT_ROOT"
@@ -75,46 +84,47 @@ db_user="$(docker compose exec -T postgres sh -c 'printf %s "$POSTGRES_USER"')"
 timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
 mkdir -p "$OUTPUT_DIR"
 chmod 700 "$OUTPUT_DIR"
-backup_file="$OUTPUT_DIR/arena-dev-${db_name}-${timestamp}.dump"
+# Database identifiers are not safe filenames.
+db_slug="$(printf '%s' "$db_name" | LC_ALL=C tr -c 'A-Za-z0-9_.-' '_')"
+backup_file="$OUTPUT_DIR/ramuvi-${db_slug}-${timestamp}-$$.dump"
+[[ -z "$AGE_RECIPIENT" ]] || backup_file="${backup_file}.age"
 partial_file="${backup_file}.partial"
-umask 077
+checksum_file="${backup_file}.sha256"
+checksum_partial="${checksum_file}.partial"
+committed=false
 
 cleanup_partial() {
-  rm -f "$partial_file"
+  rm -f -- "$partial_file" "$checksum_partial"
+  if ! $committed; then rm -f -- "$backup_file" "$checksum_file"; fi
 }
 trap cleanup_partial EXIT
 
 printf 'Criando backup consistente de %s...\n' "$db_name" >&2
-docker compose exec -T postgres \
-  pg_dump \
-    --username "$db_user" \
-    --dbname "$db_name" \
-    --format custom \
-    --compress 9 \
-    --no-owner \
-    --no-privileges > "$partial_file"
-
-[[ -s "$partial_file" ]] || fail "o dump gerado está vazio"
-mv "$partial_file" "$backup_file"
-(
-  cd "$(dirname "$backup_file")"
-  sha256sum "$(basename "$backup_file")" > "$(basename "$backup_file").sha256"
-)
-
 if [[ -n "$AGE_RECIPIENT" ]]; then
-  # Backups hold students' personal data; keep only the encrypted copy.
-  age --recipient "$AGE_RECIPIENT" --output "${backup_file}.age" "$backup_file"
-  rm -f "$backup_file" "${backup_file}.sha256"
-  backup_file="${backup_file}.age"
-  (
-    cd "$(dirname "$backup_file")"
-    sha256sum "$(basename "$backup_file")" > "$(basename "$backup_file").sha256"
-  )
+  # pg_dump streams directly to age: no plaintext file is written to the host.
+  # pipefail rejects failed or partial streams.
+  docker compose exec -T postgres \
+    pg_dump --username "$db_user" --dbname "$db_name" \
+      --format custom --compress 9 --no-owner --no-privileges \
+    | age --recipient "$AGE_RECIPIENT" --output "$partial_file"
+else
+  docker compose exec -T postgres \
+    pg_dump --username "$db_user" --dbname "$db_name" \
+      --format custom --compress 9 --no-owner --no-privileges > "$partial_file"
+  docker compose exec -T postgres pg_restore --list < "$partial_file" >/dev/null
 fi
 
+[[ -s "$partial_file" ]] || fail "o dump gerado está vazio"
+mv -- "$partial_file" "$backup_file"
+(
+  cd "$(dirname "$backup_file")"
+  sha256sum "$(basename "$backup_file")" > "$(basename "$checksum_partial")"
+)
+mv -- "$checksum_partial" "$checksum_file"
+committed=true
 if ((KEEP > 0)); then
   mapfile -t old_backups < <(
-    ls -1t "$OUTPUT_DIR"/arena-dev-"${db_name}"-*.dump "$OUTPUT_DIR"/arena-dev-"${db_name}"-*.dump.age 2>/dev/null \
+    ls -1t "$OUTPUT_DIR"/ramuvi-"${db_slug}"-*.dump "$OUTPUT_DIR"/ramuvi-"${db_slug}"-*.dump.age 2>/dev/null \
       | tail -n +"$((KEEP + 1))"
   )
   for old in "${old_backups[@]}"; do
