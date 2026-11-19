@@ -39,7 +39,10 @@ app:
   student-identity:
     invitation-issuance-enabled: ${APP_STUDENT_IDENTITY_INVITATION_ISSUANCE_ENABLED:false}
     enrollment-claim-enabled: ${APP_STUDENT_IDENTITY_ENROLLMENT_CLAIM_ENABLED:false}
+    # ADR-0074: only consulted when a student accepts a classroom join link; never at login.
     auto-email-link-enabled: ${APP_STUDENT_IDENTITY_AUTO_EMAIL_LINK_ENABLED:false}
+    # ADR-0074: dedicated classroom join link (token 160 bits, hash, expiry, revocation, review queue).
+    classroom-join-links-enabled: ${APP_STUDENT_IDENTITY_CLASSROOM_JOIN_LINKS_ENABLED:false}
     study-session-enabled: ${APP_STUDENT_IDENTITY_STUDY_SESSION_ENABLED:false}
     offline-download-enabled: ${APP_STUDENT_IDENTITY_OFFLINE_DOWNLOAD_ENABLED:false}
     oidc:

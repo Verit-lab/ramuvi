@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -8,7 +8,16 @@ import {
   fetchStudentOidcSession,
   fetchStudentClassrooms,
   claimStudentEnrollment,
-  joinStudentClassroom,
+  acceptClassroomLink,
+  captureJoinLinkFromLocation,
+  clearPendingJoinLink,
+  ClassroomLinkError,
+  fetchOwnJoinRequests,
+  joinResultMessage,
+  normalizeJoinLinkToken,
+  previewClassroomLink,
+  type ClassroomLinkPreview,
+  type OwnJoinRequest,
   type StudentActiveClassroom,
   logoutStudentOidc,
   leaveStudentAccountMode,
@@ -45,15 +54,20 @@ export default function StudentAccountAccess({ session, sessionUnavailable, sign
   const [inviteCode, setInviteCode] = useState("");
   const [claimBusy, setClaimBusy] = useState(false);
   const [claimSuccess, setClaimSuccess] = useState("");
-  const [classCode, setClassCode] = useState("");
-  const [joining, setJoining] = useState(false);
-  const autoJoinAttempted = useRef<string | null>(null);
+  // ADR-0074: a join link is shown for explicit confirmation; never accepted silently.
+  const [pendingLink, setPendingLink] = useState<string | null>(null);
+  const [linkPreview, setLinkPreview] = useState<ClassroomLinkPreview | null>(null);
+  const [linkError, setLinkError] = useState<{ message: string; retryable: boolean } | null>(null);
+  const [linkBusy, setLinkBusy] = useState(false);
+  const [manualLink, setManualLink] = useState("");
+  const [ownRequests, setOwnRequests] = useState<OwnJoinRequest[]>([]);
 
   useEffect(() => {
     void fetchStudentOidcProviders()
       .then(setProviders)
       .catch(() => setError("Não foi possível consultar os provedores de acesso."))
       .finally(() => setLoading(false));
+    setPendingLink(captureJoinLinkFromLocation());
   }, []);
 
   useEffect(() => {
@@ -63,53 +77,75 @@ export default function StudentAccountAccess({ session, sessionUnavailable, sign
       .then((items) => { if (active) setClassrooms(items); })
       .catch(() => { if (active) setError("Não foi possível consultar suas turmas."); })
       .finally(() => { if (active) setClassroomsLoading(false); });
+    void fetchOwnJoinRequests().then((items) => { if (active) setOwnRequests(items); });
     return () => { active = false; };
   }, [session]);
 
-  // A teacher link survives the Google OAuth redirect without becoming a bearer
-  // authentication token. The backend still requires OIDC + CSRF and opt-in.
   useEffect(() => {
-    try {
-      const incoming = new URLSearchParams(window.location.search).get("classCode");
-      if (incoming && /^[A-Za-z0-9_-]{8,40}$/.test(incoming)) {
-        window.sessionStorage.setItem("ramuvi:pending-class-code", incoming.toUpperCase());
-      }
-      const pending = window.sessionStorage.getItem("ramuvi:pending-class-code");
-      if (pending) setClassCode(pending);
-    } catch { /* fallback: manual code entry */ }
-  }, []);
+    if (!session || !pendingLink) return;
+    void loadPreview(pendingLink);
+  }, [session, pendingLink]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    if (!session) return;
-    try {
-      const pending = window.sessionStorage.getItem("ramuvi:pending-class-code");
-      if (!pending || autoJoinAttempted.current === pending) return;
-      autoJoinAttempted.current = pending;
-      window.sessionStorage.removeItem("ramuvi:pending-class-code");
-      void joinWithCode(pending);
-    } catch { /* manual code entry remains available */ }
-  }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
+  function linkFailure(caught: unknown) {
+    setLinkError(caught instanceof ClassroomLinkError
+      ? { message: caught.message, retryable: caught.retryable }
+      : { message: "Não foi possível usar o link de ingresso.", retryable: true });
+  }
 
-  async function joinWithCode(rawCode: string) {
-    if (joining) return;
-    setJoining(true);
-    setError(null);
+  async function loadPreview(token: string) {
+    setLinkBusy(true);
+    setLinkError(null);
+    setLinkPreview(null);
+    try {
+      setLinkPreview(await previewClassroomLink(token));
+    } catch (caught) {
+      linkFailure(caught);
+    } finally {
+      setLinkBusy(false);
+    }
+  }
+
+  function discardLink() {
+    clearPendingJoinLink();
+    setPendingLink(null);
+    setLinkPreview(null);
+    setLinkError(null);
+  }
+
+  async function confirmJoin() {
+    if (!pendingLink || linkBusy) return;
+    setLinkBusy(true);
+    setLinkError(null);
     setClaimSuccess("");
     try {
-      const joined = await joinStudentClassroom(rawCode);
-      setClassCode("");
-      setClaimSuccess(`Você entrou na turma ${joined.classroomName}. As Jornadas publicadas já estão disponíveis.`);
-      const [current, memberships] = await Promise.all([
-        fetchStudentOidcSession(), fetchStudentClassrooms(),
+      const result = await acceptClassroomLink(pendingLink);
+      discardLink();
+      setClaimSuccess(joinResultMessage(result));
+      const [current, memberships, requests] = await Promise.all([
+        fetchStudentOidcSession(), fetchStudentClassrooms(), fetchOwnJoinRequests(),
       ]);
       onSessionChange(current);
       setClassrooms(memberships);
-      window.history.replaceState({}, "", "/learn?account=1");
+      setOwnRequests(requests);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Não foi possível ingressar na turma.");
+      // The pending link stays saved when a retry makes sense (network, throttling).
+      linkFailure(caught);
+      if (!(caught instanceof ClassroomLinkError && caught.retryable)) clearPendingJoinLink();
     } finally {
-      setJoining(false);
+      setLinkBusy(false);
     }
+  }
+
+  function submitManualLink(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const fromUrl = manualLink.includes("#ingresso=") ? manualLink.split("#ingresso=")[1] : manualLink;
+    const token = normalizeJoinLinkToken(fromUrl ?? "");
+    if (!token) {
+      setLinkError({ message: "Cole o link completo ou o código de ingresso de 32 caracteres enviado pelo professor.", retryable: false });
+      return;
+    }
+    setManualLink("");
+    setPendingLink(token);
   }
 
   async function claimInvite(event: React.FormEvent<HTMLFormElement>) {
@@ -144,6 +180,7 @@ export default function StudentAccountAccess({ session, sessionUnavailable, sign
       setClassrooms(null);
       setInviteCode("");
       setClaimSuccess("");
+      discardLink();
     } catch {
       setError("Não foi possível sair. Tente novamente.");
     } finally {
@@ -160,7 +197,7 @@ export default function StudentAccountAccess({ session, sessionUnavailable, sign
         <p className={styles.brand}><RamuviMark size={28} /><span>{BRAND.learn}</span></p>
         <h1 id="student-login-title">{session ? "Minha conta" : "Acesse sua conta"}</h1>
         <p className={styles.description}>
-          Entre com Google. Se seu e-mail já foi cadastrado pelo professor, suas turmas e pontuações serão recuperadas. Caso contrário, use um único código da turma.
+          Entre com Google e abra o link de ingresso enviado pelo professor. Você confirma a turma antes de entrar. Seu histórico só é recuperado quando o professor já tinha seu cadastro nesta turma ou aprova o vínculo.
         </p>
 
         {oidcError && <p role="alert" className={styles.error}>
@@ -186,12 +223,12 @@ export default function StudentAccountAccess({ session, sessionUnavailable, sign
             <strong>Conta autenticada</strong>
             <p>{session.studentId
               ? "Sua identidade está vinculada a um aluno. Confira as turmas associadas abaixo."
-              : "Conta verificada. Entre com o código compartilhado da turma ou peça ao professor para conferir seu e-mail cadastrado."}</p>
+              : "Conta verificada. Abra o link de ingresso da turma ou use o convite individual enviado pelo professor."}</p>
             {session.studentId && <p><Link href="/learn" onClick={onBackToStudies}>Voltar ao meu espaço de estudo</Link></p>}
             {!session.studentId && <ol className={styles.firstAccessSteps} aria-label="Etapas do primeiro acesso">
               <li><strong>Conta conectada.</strong> Sua identidade já foi verificada.</li>
-              <li><strong>Entre na turma.</strong> Se o professor já cadastrou seu e-mail, o vínculo é automático. Caso contrário, use o código da turma.</li>
-              <li><strong>Comece a estudar.</strong> Após a vinculação, suas Jornadas disponíveis aparecerão no espaço de estudo.</li>
+              <li><strong>Entre na turma.</strong> Abra o link de ingresso e confirme a turma. Em alguns casos o professor precisa aprovar.</li>
+              <li><strong>Comece a estudar.</strong> As Jornadas aparecem quando o professor libera o acesso a estudos da turma.</li>
             </ol>}
             {claimSuccess && <p role="status" className={styles.success}>{claimSuccess} <Link href="/learn" onClick={onBackToStudies}>Ir para meu espaço de estudo</Link></p>}
             {classroomsLoading ? <p role="status">Carregando turmas...</p> : classrooms !== null ? (
@@ -209,22 +246,58 @@ export default function StudentAccountAccess({ session, sessionUnavailable, sign
                     ))}
                   </ul>
                 ) : <p>Nenhuma turma ativa foi encontrada para esta conta.</p>}
-                <form onSubmit={(event) => {
-                  event.preventDefault();
-                  void joinWithCode(classCode);
-                }} className={styles.claimForm}>
-                  <label htmlFor="classroom-join-code">Código da turma</label>
-                  <input id="classroom-join-code" className={styles.inviteInput} type="text"
-                    autoComplete="off" autoCapitalize="characters" spellCheck={false}
-                    placeholder="Código compartilhado pelo professor"
-                    value={classCode} onChange={(event) => setClassCode(event.target.value.toUpperCase())}
-                    maxLength={40} required disabled={joining} />
-                  <p className={styles.inviteHelp}>Um único código libera a turma e suas Jornadas publicadas. Não é necessário outro código para estudar.</p>
-                  <button type="submit" className={styles.primary}
-                    disabled={joining || !/^[A-Z0-9_-]{8,40}$/.test(classCode.trim())}>
-                    {joining ? "Ingressando..." : "Entrar na turma"}
-                  </button>
-                </form>
+                {ownRequests.filter((item) => item.status !== "APPROVED").length > 0 && <>
+                  <h2 className={styles.subheading}>Pedidos de ingresso</h2>
+                  <ul className={styles.classroomList}>
+                    {ownRequests.filter((item) => item.status !== "APPROVED").map((item) => (
+                      <li key={item.requestId}>
+                        <strong>{item.classroomName}</strong>
+                        <small>{item.status === "PENDING"
+                          ? "Aguardando o professor. Nada foi vinculado ainda."
+                          : "Recusado pelo professor. Fale com ele ou peça um novo link."}</small>
+                      </li>
+                    ))}
+                  </ul>
+                </>}
+                {pendingLink ? (
+                  <section className={styles.claimForm} aria-labelledby="join-link-title">
+                    <h2 id="join-link-title" className={styles.subheading}>Link de ingresso</h2>
+                    {linkBusy && !linkPreview && <p role="status">Conferindo o link...</p>}
+                    {linkPreview && (linkPreview.alreadyMember
+                      ? <p role="status">Você já participa da turma <strong>{linkPreview.classroomName}</strong>.</p>
+                      : linkPreview.pendingRequest
+                        ? <p role="status">Seu pedido para <strong>{linkPreview.classroomName}</strong> já está com o professor.</p>
+                        : <p>Entrar na turma <strong>{linkPreview.classroomName}</strong> com esta conta?
+                          {linkPreview.requiresApproval && " O professor precisará aprovar seu ingresso."}</p>)}
+                    {linkError && <p role="alert" className={styles.error}>{linkError.message}</p>}
+                    {linkPreview && !linkPreview.alreadyMember && !linkPreview.pendingRequest && (
+                      <button type="button" className={styles.primary} disabled={linkBusy} onClick={() => { void confirmJoin(); }}>
+                        {linkBusy ? "Entrando..." : "Confirmar e entrar na turma"}
+                      </button>
+                    )}
+                    {linkError?.retryable && (
+                      <button type="button" className={styles.secondary} disabled={linkBusy}
+                        onClick={() => { void (linkPreview ? confirmJoin() : loadPreview(pendingLink)); }}>
+                        Tentar novamente
+                      </button>
+                    )}
+                    <button type="button" className={styles.secondary} disabled={linkBusy} onClick={discardLink}>
+                      {linkPreview?.alreadyMember || linkPreview?.pendingRequest ? "Fechar" : "Cancelar"}
+                    </button>
+                  </section>
+                ) : (
+                  <form onSubmit={submitManualLink} className={styles.claimForm}>
+                    <label htmlFor="classroom-join-link">Link ou código de ingresso da turma</label>
+                    <input id="classroom-join-link" className={styles.inviteInput} type="text"
+                      autoComplete="off" autoCapitalize="characters" spellCheck={false}
+                      placeholder="Cole o link enviado pelo professor"
+                      value={manualLink} onChange={(event) => setManualLink(event.target.value)}
+                      maxLength={200} required />
+                    {linkError && <p role="alert" className={styles.error}>{linkError.message}</p>}
+                    <p className={styles.inviteHelp}>O código administrativo da turma não serve para entrar. Use o link de ingresso; você confirma a turma antes de entrar.</p>
+                    <button type="submit" className={styles.primary} disabled={!manualLink.trim()}>Continuar</button>
+                  </form>
+                )}
                 <details>
                   <summary>Tenho um convite individual do professor</summary>
                 <form onSubmit={(event) => { void claimInvite(event); }} className={styles.claimForm}>
@@ -235,7 +308,7 @@ export default function StudentAccountAccess({ session, sessionUnavailable, sign
                     placeholder="Cole o código recebido do professor"
                     value={inviteCode} onChange={(event) => setInviteCode(event.target.value)}
                     maxLength={43} required disabled={claimBusy} />
-                  <p id="enrollment-invite-help" className={styles.inviteHelp}>Use somente quando o professor pedir. O convite individual é diferente do código da turma.</p>
+                  <p id="enrollment-invite-help" className={styles.inviteHelp}>Exceção: use somente quando o professor enviar um convite só para você. Ele é diferente do link de ingresso da turma.</p>
                   <button type="submit" className={styles.primary}
                     disabled={claimBusy || !/^[A-Za-z0-9_-]{43}$/.test(inviteCode.trim())}>
                     {claimBusy ? "Confirmando..." : "Vincular matrícula"}

@@ -202,6 +202,14 @@ if (( EXPECTED_SCHEMA_VERSION >= 67 )); then
   [[ "$overwrite_snapshot_columns" -eq 4 ]] || \
     fail "restore V67 perdeu as colunas de conteúdo e progresso da Jornada"
 fi
+if (( EXPECTED_SCHEMA_VERSION >= 72 )); then
+  join_tables="$(docker exec "$CONTAINER_NAME" psql --tuples-only --no-align --username "$CHECK_USER" --dbname "$CHECK_DATABASE" --command "select count(*) from information_schema.tables where table_schema='public' and table_name in ('classroom_join_links','classroom_join_requests')")"
+  [[ "$join_tables" -eq 2 ]] || fail "restore V72 perdeu links/pedidos de ingresso"
+fi
+if (( EXPECTED_SCHEMA_VERSION >= 71 )); then
+  claim_scope="$(docker exec "$CONTAINER_NAME" psql --tuples-only --no-align --username "$CHECK_USER" --dbname "$CHECK_DATABASE" --command "select count(*) from information_schema.columns where table_schema='public' and table_name='enrollment_device_claims' and column_name='scope'")"
+  [[ "$claim_scope" -eq 1 ]] || fail "restore V71 perdeu o escopo dos device claims"
+fi
 if (( EXPECTED_SCHEMA_VERSION >= 70 )); then
   self_enrollment_column="$(docker exec "$CONTAINER_NAME" psql --tuples-only --no-align     --username "$CHECK_USER" --dbname "$CHECK_DATABASE"     --command "select count(*) from information_schema.columns where table_schema='public' and table_name='classrooms' and column_name='self_enrollment_enabled'")"
   [[ "$self_enrollment_column" -eq 1 ]] || fail "restore V70 perdeu política self_enrollment_enabled"

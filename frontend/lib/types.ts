@@ -113,7 +113,6 @@ export interface Classroom {
   themeColor?: ClassroomThemeColor;
   themeIcon?: ClassroomThemeIcon;
   studentStudyAccessEnabled?: boolean;
-  selfEnrollmentEnabled?: boolean;
   createdAt: string;
 }
 

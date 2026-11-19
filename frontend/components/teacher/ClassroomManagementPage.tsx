@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { type Notify } from "@/components/ui";
-import { deleteClassroom as deleteClassroomApi, updateClassroom as updateClassroomApi, setClassroomSelfEnrollment } from "@/lib/classroom-api";
+import { deleteClassroom as deleteClassroomApi, updateClassroom as updateClassroomApi } from "@/lib/classroom-api";
+import { ClassroomJoinLinkPanel } from "./ClassroomJoinLinkPanel";
 import { errorMessage } from "./format";
 import type { ArenaData, Classroom, ClassroomThemeColor, ClassroomThemeIcon } from "@/lib/types";
 import { CLASSROOM_ACCENT_SCOPE_CLASS, CLASSROOM_THEME_COLORS, CLASSROOM_THEME_ICONS, classroomThemePresentation } from "@/lib/classroom-theme";
@@ -138,36 +139,6 @@ export function ClassroomManagementPage({
     }
   }
 
-  async function toggleSharedClassroomAccess() {
-    if (busy) return;
-    setBusy(true);
-    try {
-      const enabled = !(classroom.selfEnrollmentEnabled ?? false);
-      await setClassroomSelfEnrollment(classroom.id, enabled);
-      await refreshClassroomDomain(classroom.id);
-      notify(enabled
-        ? "Ingresso por código habilitado. Compartilhe o link com seus alunos."
-        : "Ingresso por código desabilitado. Matrículas existentes foram preservadas.");
-    } catch (error) {
-      notify(errorMessage(error), "error");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function copyClassroomLink() {
-    if (!classroom.code) return;
-    const url = new URL("/learn", window.location.origin);
-    url.searchParams.set("account", "1");
-    url.searchParams.set("classCode", classroom.code);
-    try {
-      await navigator.clipboard.writeText(url.toString());
-      notify("Link de ingresso copiado. Basta entrar com Google.");
-    } catch {
-      notify("Não foi possível copiar automaticamente. Compartilhe o código da turma.", "error");
-    }
-  }
-
   async function removeClassroom() {
     if (busy || hasActiveSession || !deleteConfirmed) return;
     setBusy(true);
@@ -282,35 +253,7 @@ export function ClassroomManagementPage({
             </div>
           </section>
 
-          <section className="classroom-settings-card">
-            <div className="classroom-settings-section-heading">
-              <span className="eyebrow accent">PRIMEIRO ACESSO</span>
-              <h3>Ingresso simplificado</h3>
-              <p>Permita que alunos com conta Google verificada ingressem usando o código ou link desta turma. A opção inicia desativada; não altera matrículas ou XP existentes.</p>
-            </div>
-            <button
-              type="button" role="switch"
-              className="classroom-study-access"
-              aria-checked={Boolean(classroom.selfEnrollmentEnabled)}
-              disabled={busy || classroom.active === false}
-              onClick={() => { void toggleSharedClassroomAccess(); }}
-            >
-              <span>
-                <strong>Permitir ingresso pelo código da turma</strong>
-                <small>{classroom.selfEnrollmentEnabled ? "Ingresso habilitado" : "Somente convites individuais"}</small>
-              </span>
-              <i className={classroom.selfEnrollmentEnabled ? "active" : ""} aria-hidden><b /></i>
-            </button>
-            {classroom.selfEnrollmentEnabled && (
-              <div className="stack-sm">
-                <p><strong>Código da turma:</strong> <code>{classroom.code}</code></p>
-                <button type="button" className="button secondary" onClick={() => { void copyClassroomLink(); }}>
-                  Copiar link para alunos
-                </button>
-                <p>O aluno entra pelo link, faz login e encontra as Jornadas publicadas sem outro código. Ao alterar o código ou arquivar a turma, o ingresso será desativado.</p>
-              </div>
-            )}
-          </section>
+          <ClassroomJoinLinkPanel classroomId={classroom.id} classroomActive={classroom.active !== false} notify={notify} />
 
           <section className="classroom-settings-card">
             <div className="classroom-settings-section-heading">

@@ -124,33 +124,142 @@ export async function claimStudentEnrollment(token: string): Promise<ClaimedEnro
   return (await response.json()) as ClaimedEnrollment;
 }
 
-/** A short classroom code is never an authentication credential: OIDC is mandatory. */
-export async function joinStudentClassroom(code: string): Promise<ClaimedEnrollment> {
-  const normalized = code.trim().toUpperCase();
-  if (!/^[A-Z0-9_-]{8,40}$/.test(normalized)) {
-    throw new Error("Informe o código da turma (8 a 40 caracteres).");
-  }
-  const response = await apiFetch("/api/student-account/classrooms/join", {
-    method: "POST",
-    body: JSON.stringify({ code: normalized }),
-  });
-  if (!response.ok) {
-    if (response.status === 401 || response.status === 403) {
-      throw new Error("Faça login novamente com uma conta verificada.");
+// ---- ADR-0074: classroom join link (token in URL fragment, POST body only) ----
+
+const pendingJoinLinkKey = "ramuvi:pending-join-link";
+const joinLinkToken = /^[A-Z2-7]{32}$/;
+
+/** Accepts the token as copied/typed: lowercase, spaces or hyphens between groups. */
+export function normalizeJoinLinkToken(raw: string): string | null {
+  const compact = raw.replace(/[\s-]/g, "").toUpperCase();
+  return joinLinkToken.test(compact) ? compact : null;
+}
+
+/**
+ * Moves "#ingresso=TOKEN" out of the address bar into sessionStorage (tab-scoped,
+ * cleared on logout) so it survives the OIDC redirect without staying in history.
+ */
+export function captureJoinLinkFromLocation(): string | null {
+  try {
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const incoming = hash.get("ingresso");
+    if (incoming !== null) {
+      const token = normalizeJoinLinkToken(incoming);
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      if (token) window.sessionStorage.setItem(pendingJoinLinkKey, token);
     }
-    if (response.status === 429) {
-      throw new Error("Muitas tentativas. Aguarde antes de tentar novamente.");
-    }
-    throw new Error(
-      "Não foi possível ingressar. Confirme o código e a liberação da turma. Se já possui cadastro, peça ao professor para conferir seu e-mail.",
-    );
+    return window.sessionStorage.getItem(pendingJoinLinkKey);
+  } catch {
+    return null;
   }
-  return (await response.json()) as ClaimedEnrollment;
+}
+
+export function clearPendingJoinLink(): void {
+  try { window.sessionStorage.removeItem(pendingJoinLinkKey); } catch { /* storage restricted */ }
+}
+
+export type ClassroomLinkPreview = {
+  classroomName: string;
+  expiresAt: string;
+  requiresApproval: boolean;
+  alreadyMember: boolean;
+  pendingRequest: boolean;
+};
+export type ClassroomJoinStatus =
+  | "JOINED_NEW_STUDENT" | "LINKED_EXISTING_STUDENT" | "JOINED" | "ALREADY_MEMBER" | "PENDING_APPROVAL";
+export type ClassroomJoinResult = { status: ClassroomJoinStatus; classroomName: string; journeysAvailable: boolean };
+export type OwnJoinRequest = {
+  requestId: string;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  classroomName: string;
+  createdAt: string;
+  decidedAt: string | null;
+};
+
+/** Kind of failure, so the UI can offer a retry only when retrying makes sense. */
+export class ClassroomLinkError extends Error {
+  constructor(message: string, readonly retryable: boolean) {
+    super(message);
+    this.name = "ClassroomLinkError";
+  }
+}
+
+async function linkFailure(response: Response): Promise<never> {
+  let message = "";
+  try {
+    const body = (await response.json()) as { message?: unknown };
+    if (typeof body.message === "string") message = body.message;
+  } catch { /* generic below */ }
+  if (response.status === 401 || response.status === 403) {
+    throw new ClassroomLinkError("Sua sessão expirou. Entre novamente com sua conta.", false);
+  }
+  if (response.status === 404) {
+    throw new ClassroomLinkError("O ingresso por link não está habilitado nesta instalação. Peça um convite individual ao professor.", false);
+  }
+  if (response.status === 429) {
+    throw new ClassroomLinkError("Muitas tentativas. Aguarde um minuto e tente novamente.", true);
+  }
+  if (response.status >= 500) {
+    throw new ClassroomLinkError("O servidor não respondeu como esperado. Tente novamente em instantes.", true);
+  }
+  throw new ClassroomLinkError(message || "Link de ingresso inválido, expirado ou revogado. Peça um novo link ao professor.", false);
+}
+
+async function linkPost(path: string, token: string): Promise<Response> {
+  try {
+    return await apiFetch(path, { method: "POST", body: JSON.stringify({ token }) });
+  } catch {
+    throw new ClassroomLinkError("Sem conexão com a Ramuvi. Verifique a internet e tente novamente.", true);
+  }
+}
+
+export async function previewClassroomLink(token: string): Promise<ClassroomLinkPreview> {
+  const response = await linkPost("/api/student-account/classroom-links/preview", token);
+  if (!response.ok) return linkFailure(response);
+  return (await response.json()) as ClassroomLinkPreview;
+}
+
+export async function acceptClassroomLink(token: string): Promise<ClassroomJoinResult> {
+  const response = await linkPost("/api/student-account/classroom-links/accept", token);
+  if (!response.ok) return linkFailure(response);
+  return (await response.json()) as ClassroomJoinResult;
+}
+
+/** Informational only: any failure (feature OFF, offline) simply shows no requests. */
+export async function fetchOwnJoinRequests(): Promise<OwnJoinRequest[]> {
+  try {
+    const response = await apiFetch("/api/student-account/classroom-links/requests");
+    if (!response.ok) return [];
+    const items: unknown = await response.json();
+    return Array.isArray(items) ? (items as OwnJoinRequest[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Honest copy: XP is recovered only when the teacher's record was proven (or approved). */
+export function joinResultMessage(result: ClassroomJoinResult): string {
+  const journeys = result.journeysAvailable
+    ? "As Jornadas publicadas desta turma aparecem no seu espaço de estudo."
+    : "As Jornadas aparecerão quando o professor liberar o acesso a estudos desta turma.";
+  switch (result.status) {
+    case "LINKED_EXISTING_STUDENT":
+      return `Você entrou na turma ${result.classroomName} com o cadastro que o professor já tinha, incluindo pontuações e progresso. ${journeys}`;
+    case "JOINED_NEW_STUDENT":
+      return `Você entrou na turma ${result.classroomName} com um cadastro novo. Se você já participava antes com outro e-mail, avise o professor para unir o histórico. ${journeys}`;
+    case "JOINED":
+      return `Você entrou na turma ${result.classroomName}. ${journeys}`;
+    case "ALREADY_MEMBER":
+      return `Você já participa da turma ${result.classroomName}. ${journeys}`;
+    case "PENDING_APPROVAL":
+      return `Seu pedido para entrar na turma ${result.classroomName} foi enviado ao professor. Nenhum cadastro foi criado ou vinculado ainda; volte depois de ele aprovar.`;
+  }
 }
 
 export async function logoutStudentOidc(): Promise<void> {
   const response = await apiFetch("/api/student-account/logout", { method: "POST" });
   if (!response.ok) throw new Error("Não foi possível sair desta conta.");
+  clearPendingJoinLink(); // Shared device: never leave a pending join link behind.
   // Preserve the verified identity boundary across reloads, while distinguishing a
   // deliberate sign-out from an unexpected session revocation in the UI.
   try { window.localStorage.setItem(signedOutAccountKey, "1"); }

@@ -109,9 +109,9 @@ test("vínculo por convite orienta primeiro acesso e apresenta erro de limite de
   await page.goto("/learn");
   await expect(page.getByRole("heading", { name: "Minha conta" })).toBeVisible();
   await expect(page.getByRole("list", { name: "Etapas do primeiro acesso" })).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "Código da turma" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Link ou código de ingresso da turma" })).toBeVisible();
   await page.getByText("Tenho um convite individual do professor").click();
-  await expect(page.getByText("O convite individual é diferente do código da turma.", { exact: false })).toBeVisible();
+  await expect(page.getByText("Ele é diferente do link de ingresso da turma.", { exact: false })).toBeVisible();
   const button = page.getByRole("button", { name: "Vincular matrícula" });
   await expect(button).toBeDisabled();
   await page.getByLabel("Código individual do convite").fill(code);

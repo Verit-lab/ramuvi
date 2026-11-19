@@ -48,15 +48,6 @@ public class ClassroomController {
         return service.update(id, request.name(), request.code(), request.active(), request.themeColor(), request.themeIcon(), request.studentStudyAccessEnabled());
     }
 
-    @PatchMapping("/{id}/self-enrollment")
-    public ClassroomService.ClassroomView setSelfEnrollment(
-            @PathVariable UUID id, @Valid @RequestBody SelfEnrollmentRequest request
-    ) {
-        return service.setSelfEnrollmentEnabled(id, request.enabled());
-    }
-
-    public record SelfEnrollmentRequest(boolean enabled) { }
-
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(

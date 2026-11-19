@@ -54,7 +54,7 @@ test("v0.12 / I1: conta verificada não libera matrícula sem convite", async ({
     });
   });
   await page.goto("/learn");
-  await expect(page.getByText("Sua identidade foi verificada.")).toBeVisible();
+  await expect(page.getByText("Conta verificada. Abra o link de ingresso da turma")).toBeVisible();
   await expect(page.getByRole("button", { name: "Sair desta conta" })).toBeVisible();
 });
 
@@ -94,6 +94,7 @@ test("v0.12 / I2: resgate usa POST, limpa token e revela apenas as turmas ativas
   });
 
   await page.goto("/learn");
+  await page.getByText("Tenho um convite individual do professor").click(); // exceção, recolhida
   const input = page.getByRole("textbox", { name: "Código individual do convite" });
   await expect(input).toBeVisible();
   await input.fill(token);

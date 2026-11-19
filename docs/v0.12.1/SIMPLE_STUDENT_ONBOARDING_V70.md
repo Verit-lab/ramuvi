@@ -1,3 +1,5 @@
+> **SUBSTITUÍDO (2026-11-19):** este desenho usava `classrooms.code` como prova e vinculava por e-mail no login. Ver `SECURE_STUDENT_ONBOARDING_V71_V72.md`, ADR-0074 e ADR-0075. A V70 permanece aplicada, mas sem efeito.
+
 # Ramuvi v0.12.1 — Primeiro acesso simplificado (V70)
 
 **Escopo:** branch de melhoria empilhada sobre a candidata PR #152. Não integrada à main, sem deploy nem alteração do banco de produção.

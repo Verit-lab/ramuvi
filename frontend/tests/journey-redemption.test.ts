@@ -14,12 +14,12 @@ test("student can add a journey with a one-time redemption code", () => {
   assert.match(studyApi, /\/api\/learn\/journeys\/redeem/);
 });
 
-test("first student access can bootstrap a study profile from a journey code", () => {
-  assert.match(studyApi, /\/api\/learn\/journeys\/redeem\/bootstrap/);
-  assert.match(studyApi, /deviceClaimStorageKey\(result\.classroomId\)/);
-  assert.match(journeys, /previewJourneyCode/);
-  assert.match(journeys, /bootstrapJourneyRedemption/);
-  assert.match(journeys, /Matrícula, e-mail ou nome completo/);
+test("ADR-0075: a journey code never bootstraps a study profile from typed identity", () => {
+  assert.doesNotMatch(studyApi, /\/api\/learn\/journeys\/redeem\/bootstrap/);
+  assert.doesNotMatch(journeys, /bootstrapJourneyRedemption/);
+  assert.doesNotMatch(journeys, /Matrícula, e-mail ou nome completo/);
+  assert.match(journeys, /Entre com sua conta para estudar/);
+  assert.match(journeys, /\/learn\?account=1/);
 });
 
 test("join routes journey codes to the study redemption flow", () => {

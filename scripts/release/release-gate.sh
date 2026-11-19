@@ -108,7 +108,10 @@ node_line="$(node --version)"
 [[ "$node_line" == v22.* ]] || fail "Node.js 22 é obrigatório; encontrado: $node_line"
 
 "$SCRIPT_DIR/check-metadata.sh"
-if [[ -f backend/src/main/resources/db/migration/V70__classroom_self_enrollment.sql ]]; then
+if [[ -f backend/src/main/resources/db/migration/V72__classroom_join_links_and_requests.sql ]]; then
+  "$SCRIPT_DIR/verify-v0.12.1-contract.sh"
+  expected_schema_version=72
+elif [[ -f backend/src/main/resources/db/migration/V70__classroom_self_enrollment.sql ]]; then
   "$SCRIPT_DIR/verify-v0.12.1-contract.sh"
   expected_schema_version=70
 elif [[ -f backend/src/main/resources/db/migration/V69__journey_offline_availability.sql ]]; then
@@ -238,7 +241,10 @@ if [[ "$MODE" == "final" ]]; then
   # The pre-upgrade production backup can be at V66/V67; the new release
   # migrates its restored copy to V68 only after a separately evidenced rehearsal.
   source_schema_version="${ARENA_SOURCE_SCHEMA_VERSION:-$expected_schema_version}"
-  if [[ "$expected_schema_version" -ge 70 ]]; then
+  if [[ "$expected_schema_version" -ge 72 ]]; then
+    [[ "$source_schema_version" =~ ^(68|69|70|71|72)$ ]] ||
+      fail "backup da v0.12.1 deve ter schema entre V68 e V72"
+  elif [[ "$expected_schema_version" -ge 70 ]]; then
     [[ "$source_schema_version" =~ ^(68|69|70)$ ]] ||
       fail "backup da v0.12.1 deve ter schema V68, V69 ou V70"
   elif [[ "$expected_schema_version" -ge 69 ]]; then

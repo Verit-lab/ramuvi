@@ -114,7 +114,6 @@ public class ClassroomService {
         if (!active && classroom.isActive() && classSessionRepository.existsByClassroomIdAndStatus(id, SessionStatus.ACTIVE)) {
             throw new IllegalArgumentException("Encerre a sessão ativa antes de arquivar a turma.");
         }
-        String oldCode = classroom.getCode();
         classroom.update(
                 name.trim(),
                 normalizedCode,
@@ -123,26 +122,13 @@ public class ClassroomService {
                 normalizeThemeIcon(themeIcon, classroom.getThemeIcon())
         );
         classroom.setStudentStudyAccessEnabled(studentStudyAccessEnabled);
-        if (!active || !java.util.Objects.equals(oldCode, normalizedCode)) {
-            classroom.setSelfEnrollmentEnabled(false);
+        if (!active) {
+            // ADR-0074: archiving a classroom closes its join link; enrollments are preserved.
+            jdbcTemplate.update("""
+                    update classroom_join_links set revoked_at = now()
+                     where classroom_id = ? and revoked_at is null
+                    """, id);
         }
-        return ClassroomView.from(classroom);
-    }
-
-    @Transactional
-    public ClassroomView setSelfEnrollmentEnabled(UUID id, boolean enabled) {
-        Classroom classroom = getClassroom(id);
-        if (enabled) {
-            if (!classroom.isActive()) {
-                throw new IllegalArgumentException("Reative a turma antes de compartilhar o ingresso.");
-            }
-            String code = classroom.getCode();
-            if (code == null || !code.matches("[A-Z0-9_-]{8,40}")) {
-                throw new IllegalArgumentException(
-                        "Configure um código de turma de 8 a 40 caracteres antes de habilitar o ingresso.");
-            }
-        }
-        classroom.setSelfEnrollmentEnabled(enabled);
         return ClassroomView.from(classroom);
     }
 
@@ -275,7 +261,6 @@ public class ClassroomService {
             String themeColor,
             String themeIcon,
             boolean studentStudyAccessEnabled,
-            boolean selfEnrollmentEnabled,
             Instant createdAt
     ) {
         static ClassroomView from(Classroom classroom) {
@@ -287,7 +272,6 @@ public class ClassroomService {
                     classroom.getThemeColor(),
                     classroom.getThemeIcon(),
                     classroom.isStudentStudyAccessEnabled(),
-                    classroom.isSelfEnrollmentEnabled(),
                     classroom.getCreatedAt()
             );
         }

@@ -25,7 +25,6 @@ type ClassroomView = {
   themeColor: ClassroomThemeColor;
   themeIcon: ClassroomThemeIcon;
   studentStudyAccessEnabled: boolean;
-  selfEnrollmentEnabled: boolean;
   createdAt: string;
 };
 
@@ -62,7 +61,6 @@ function mapClassroom(item: ClassroomView): Classroom {
     themeColor: item.themeColor ?? "emerald",
     themeIcon: item.themeIcon ?? "code",
     studentStudyAccessEnabled: item.studentStudyAccessEnabled ?? false,
-    selfEnrollmentEnabled: item.selfEnrollmentEnabled ?? false,
     createdAt: item.createdAt,
   };
 }
@@ -156,16 +154,6 @@ export async function updateClassroom(input: {
       studentStudyAccessEnabled: input.studentStudyAccessEnabled,
     }),
   });
-  return mapClassroom(result);
-}
-
-export async function setClassroomSelfEnrollment(
-  classroomId: string, enabled: boolean
-): Promise<Classroom> {
-  const result = await classroomRequest<ClassroomView>(
-    `/api/classrooms/${classroomId}/self-enrollment`,
-    { method: "PATCH", body: JSON.stringify({ enabled }) },
-  );
   return mapClassroom(result);
 }
 
