@@ -48,7 +48,9 @@ test("overview cards fill the content width with a stable selected-card cue", ()
   assert.match(css, /background:\s*var\(--ds-surface\)/);
   assert.match(css, /border:\s*1px solid var\(--ds-border\)/);
   assert.match(tokens, /--ds-shadow-panel:\s*var\(--theme-shadow-panel\)/);
-  assert.match(layout, /import "\.\.\/styles\/classroom-overview\.css"/);
+  assert.doesNotMatch(layout, /classroom-overview\.css/);
+  assert.match(read("styles/app-ui.css"), /@import "\.\/classroom-overview\.css"/);
+  assert.match(read("app/teach/layout.tsx"), /@\/styles\/app-ui\.css/);
   assert.match(tokens, /--ds-shadow-elevated:\s*var\(--theme-shadow-elevated\)/);
   assert.doesNotMatch(globals, /\.overview-class-card:before\{content:"<\/>"/);
 });

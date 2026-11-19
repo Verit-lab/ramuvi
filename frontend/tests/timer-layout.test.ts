@@ -35,7 +35,9 @@ test("Timer drawer uses one configuration surface without redundant headings", (
   assert.match(css, /@media \(max-width: 42rem\)[\s\S]*\.timer-preset-chips \{[\s\S]*min-width:\s*0;[\s\S]*gap:\s*0\.125rem/);
   assert.match(css, /@media \(max-width: 42rem\)[\s\S]*\.timer-preset-chips button \{[\s\S]*padding-inline:\s*0;/);
   assert.match(css, /\.timer-config-preferences[\s\S]*repeat\(2, minmax\(0, 1fr\)\)/);
-  assert.match(layout, /import "\.\.\/styles\/timer-panel\.css"/);
+  assert.doesNotMatch(layout, /timer-panel\.css/);
+  assert.match(read("styles/app-ui.css"), /@import "\.\/timer-panel\.css"/);
+  assert.match(read("app/teach/layout.tsx"), /@\/styles\/app-ui\.css/);
 });
 
 test("Timer layout no longer depends on the legacy inline simplification overrides", () => {
