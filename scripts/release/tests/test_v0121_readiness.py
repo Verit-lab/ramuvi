@@ -33,6 +33,18 @@ class ReleaseV0121ReadinessTests(unittest.TestCase):
         doc["gates"] = [v for v in doc["gates"] if v["id"] != "offline_journey_safari_android_cold_start_sync_revocation"]
         self.assertTrue(checker.decide(doc,SHA,"0.12.1"))
 
+    def test_new_onboarding_and_migration_gates_are_mandatory(self):
+        for gate_id in (
+            "onboarding_verified_google_scoped_join_link_xp_continuity",
+            "v71_v72_representative_backup_restore",
+            "legacy_device_claim_revocation_rollout_decision",
+            "join_link_google_oidc_https_csrf_and_teacher_approval",
+            "teacher_classroom_authorization_scope_decision",
+        ):
+            doc = self.complete()
+            doc["gates"] = [g for g in doc["gates"] if g["id"] != gate_id]
+            self.assertTrue(checker.decide(doc, SHA, "0.12.1"), gate_id)
+
     def test_old_v012_evidence_cannot_approve_v0121(self):
         doc = self.complete()
         self.assertTrue(checker.decide(doc,SHA,"0.12.0"))

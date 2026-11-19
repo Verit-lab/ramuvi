@@ -51,3 +51,14 @@ Todas foram adicionadas ao `compose.yaml`. O job de E2E do CI liga apenas o opt-
 Ver o relatório `Ramuvi-Implementacao-Ingresso-2026-11-19.md`: sem `hd`, sem limite de usos por link, sem
 mesclagem de cadastros, limitador em memória, sem trilha de auditoria dedicada, painel docente sem E2E
 próprio e template de aceite JSON não atualizado.
+
+## Gates específicos do ingresso (antes de GO)
+
+O aceite da v0.12.1 exige 17 gates no template, incluindo:
+- vínculo Google verificado somente com link de turma e preservação de ID, XP e Jornada;
+- restauração representativa de produção e migrations V71/V72 com checksum e rollback exercitado;
+- decisão registrada e configuração efetiva da política de revogação de device claims `LEGACY`;
+- login Google real em HTTPS e testes de CSRF, papéis, expiração, revogação e revisão docente;
+- definição explícita e comprovada do escopo de autorização de cada professor sobre turmas.
+
+Todas as evidências começam `PENDING`. A aprovação de merge de código não atesta o GO da produção.

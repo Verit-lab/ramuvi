@@ -32,7 +32,11 @@ V012_REQUIRED = REQUIRED + (
 )
 V0121_REQUIRED = V012_REQUIRED + (
     "offline_journey_safari_android_cold_start_sync_revocation",
-    "onboarding_verified_email_classroom_code_xp_continuity",
+    "onboarding_verified_google_scoped_join_link_xp_continuity",
+    "v71_v72_representative_backup_restore",
+    "legacy_device_claim_revocation_rollout_decision",
+    "join_link_google_oidc_https_csrf_and_teacher_approval",
+    "teacher_classroom_authorization_scope_decision",
 )
 
 def required_for_version(version: str) -> tuple[str, ...]:
