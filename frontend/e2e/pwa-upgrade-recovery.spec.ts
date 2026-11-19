@@ -1,4 +1,6 @@
 import { expect, request, test } from "./fixtures";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 const apiBaseUrl = process.env.E2E_API_URL ?? "http://127.0.0.1:8080";
 const username = process.env.E2E_TEACHER_USERNAME ?? "professor";
@@ -59,7 +61,10 @@ test("PWA instala shell seguro; offline não reutiliza HTML antigo nem dados da 
       return version;
     });
     // The active worker is the current release worker (see public/sw.js VERSION).
-    expect(current).toMatch(/^v0\.12-ramuvi-/);
+    const workerSource = readFileSync(resolve(process.cwd(), "public/sw.js"), "utf8");
+    const expectedVersion = workerSource.match(/const VERSION = "([^"]+)";/)?.[1];
+    expect(expectedVersion).toBeTruthy();
+    expect(current).toBe(expectedVersion);
 
     await context.setOffline(true);
     await page.goto("/join?code=OFFLINE");

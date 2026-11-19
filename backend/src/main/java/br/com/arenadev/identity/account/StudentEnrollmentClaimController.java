@@ -69,6 +69,40 @@ public class StudentEnrollmentClaimController {
         }
     }
 
+    @PostMapping("/classrooms/join")
+    public ResponseEntity<StudentAccountService.ClaimedEnrollment> joinClassroom(
+            @AuthenticationPrincipal OidcUser principal,
+            @Valid @RequestBody JoinClassroomRequest request,
+            HttpServletRequest servletRequest
+    ) {
+        Identity identity = requireOidc(principal);
+        String key = "student-classroom-join|" + identity.issuer() + "|" + identity.subject()
+                + "|" + servletRequest.getRemoteAddr();
+        LoginRateLimitService.Decision decision = rateLimit.beforeAttempt(key);
+        if (!decision.allowed()) {
+            throw new LoginRateLimitExceededException(
+                    "Muitas tentativas de ingresso. Aguarde antes de tentar novamente.",
+                    decision.retryAfterSeconds());
+        }
+        String email = Boolean.TRUE.equals(principal.getEmailVerified())
+                ? principal.getEmail() : null;
+        try {
+            var joined = accounts.joinClassroomByVerifiedOidc(
+                    identity.issuer(), identity.subject(), request.code(),
+                    email, principal.getFullName());
+            rateLimit.recordSuccess(key);
+            return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(joined);
+        } catch (IllegalArgumentException rejected) {
+            rateLimit.recordFailure(key);
+            throw rejected;
+        }
+    }
+
+    public record JoinClassroomRequest(
+            @NotBlank @Pattern(regexp = "[A-Za-z0-9_-]{8,40}",
+                    message = "Código de turma inválido.") String code
+    ) { }
+
     @GetMapping("/classrooms")
     public ResponseEntity<List<StudentAccountService.ActiveClassroom>> classrooms(
             @AuthenticationPrincipal OidcUser principal

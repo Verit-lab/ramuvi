@@ -54,3 +54,9 @@ Essas evidências são locais e não demonstram CI oficial no SHA final.
 8. Só após GO no SHA auditado: integrar a `main`, passar `release-gate.sh final`, criar tag `v0.12.1`, publicar Github Release, realizar deploy reversível na VPS e verificar HTTPS/health/rotas e logs após atualização.
 
 **Proibido usar esta página como certificado de publicação.** Não houve merge na `main`, criação de tag, alteração na VPS ou reconfiguração de produção durante esta consolidação.
+
+## Adendo: primeiro acesso simplificado (PR posterior empilhada)
+
+O primeiro acesso simplificado acrescenta Flyway V70 e ingresso por código da turma autorizado pelo professor, além de associação opcional por e-mail OIDC verificado ao aluno já cadastrado. A conta continua vinculada ao identificador original do aluno e, portanto, ao XP, matrícula e progresso existentes. A flag APP_STUDENT_IDENTITY_AUTO_EMAIL_LINK_ENABLED inicia false; ingresso compartilhado por turma também inicia false. Requer novo aceite explícito no gate onboarding_verified_email_classroom_code_xp_continuity e revalidação de toda a CI no SHA resultante.
+
+Este adendo não altera o fato de que a candidata PR #152 (V69) já tinha seus próprios resultados registrados; resultados adicionais precisam ser comprovados na branch que contém V70.

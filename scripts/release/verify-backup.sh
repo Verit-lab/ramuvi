@@ -202,6 +202,11 @@ if (( EXPECTED_SCHEMA_VERSION >= 67 )); then
   [[ "$overwrite_snapshot_columns" -eq 4 ]] || \
     fail "restore V67 perdeu as colunas de conteúdo e progresso da Jornada"
 fi
+if (( EXPECTED_SCHEMA_VERSION >= 70 )); then
+  self_enrollment_column="$(docker exec "$CONTAINER_NAME" psql --tuples-only --no-align     --username "$CHECK_USER" --dbname "$CHECK_DATABASE"     --command "select count(*) from information_schema.columns where table_schema='public' and table_name='classrooms' and column_name='self_enrollment_enabled'")"
+  [[ "$self_enrollment_column" -eq 1 ]] || fail "restore V70 perdeu política self_enrollment_enabled"
+fi
+
 if (( EXPECTED_SCHEMA_VERSION >= 69 )); then
   offline_allowed="$(docker exec "$CONTAINER_NAME" psql --tuples-only --no-align     --username "$CHECK_USER" --dbname "$CHECK_DATABASE"     --command "select count(*) from information_schema.columns where table_schema='public' and table_name='journeys' and column_name='offline_allowed'")"
   [[ "$offline_allowed" -eq 1 ]] || fail "restore V69 perdeu política offline_allowed"
