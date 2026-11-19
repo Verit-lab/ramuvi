@@ -23,6 +23,7 @@ import { studyDeviceClaims } from "@/lib/study-api";
 type Props = {
   session: StudentOidcSession | null;
   sessionUnavailable: boolean;
+  signedOut: boolean;
   sessionError: string;
   oidcError: boolean;
   onBackToStudies: () => void;
@@ -31,7 +32,7 @@ type Props = {
 };
 
 /** Unified access and account management on /learn; never grants study access itself. */
-export default function StudentAccountAccess({ session, sessionUnavailable, sessionError, oidcError, onBackToStudies, onSessionChange, onLogout }: Props) {
+export default function StudentAccountAccess({ session, sessionUnavailable, signedOut, sessionError, oidcError, onBackToStudies, onSessionChange, onLogout }: Props) {
   const router = useRouter();
   const hasDeviceClaim = studyDeviceClaims().length > 0;
   const [providers, setProviders] = useState<StudentOidcProvider[]>([]);
@@ -117,7 +118,8 @@ export default function StudentAccountAccess({ session, sessionUnavailable, sess
         </p>}
         {error && <p role="alert" className={styles.error}>{error}</p>}
         {sessionError && <p role="alert" className={styles.error}>{sessionError}</p>}
-        {sessionUnavailable && <p role="alert" className={styles.error}>
+        {signedOut && <p role="status" className={styles.success}>Você saiu da sua conta com segurança.</p>}
+        {sessionUnavailable && !signedOut && <p role="alert" className={styles.error}>
           Sua sessão de conta foi encerrada ou revogada. Entre novamente ou escolha explicitamente o acesso por código.
         </p>}
         {sessionUnavailable && (
@@ -136,7 +138,12 @@ export default function StudentAccountAccess({ session, sessionUnavailable, sess
               ? "Sua identidade está vinculada a um aluno. Confira as turmas associadas abaixo."
               : "Sua identidade foi verificada. Para associá-la ao seu cadastro, peça um convite individual ao professor."}</p>
             {session.studentId && <p><Link href="/learn" onClick={onBackToStudies}>Voltar ao meu espaço de estudo</Link></p>}
-            {claimSuccess && <p role="status" className={styles.success}>{claimSuccess}</p>}
+            {!session.studentId && <ol className={styles.firstAccessSteps} aria-label="Etapas do primeiro acesso">
+              <li><strong>Conta conectada.</strong> Sua identidade já foi verificada.</li>
+              <li><strong>Vincule sua turma.</strong> Solicite ao professor um convite individual e cole o código abaixo.</li>
+              <li><strong>Comece a estudar.</strong> Após a vinculação, suas Jornadas disponíveis aparecerão no espaço de estudo.</li>
+            </ol>}
+            {claimSuccess && <p role="status" className={styles.success}>{claimSuccess} <Link href="/learn" onClick={onBackToStudies}>Ir para meu espaço de estudo</Link></p>}
             {classroomsLoading ? <p role="status">Carregando turmas...</p> : classrooms !== null ? (
               <>
                 <h2 className={styles.subheading}>Minhas turmas</h2>
@@ -155,10 +162,12 @@ export default function StudentAccountAccess({ session, sessionUnavailable, sess
                 <form onSubmit={(event) => { void claimInvite(event); }} className={styles.claimForm}>
                   <label htmlFor="enrollment-invite-code">Código individual do convite</label>
                   <input id="enrollment-invite-code" className={styles.inviteInput} type="text"
+                    aria-describedby="enrollment-invite-help"
                     autoComplete="off" autoCapitalize="none" spellCheck={false}
                     placeholder="Cole o código recebido do professor"
                     value={inviteCode} onChange={(event) => setInviteCode(event.target.value)}
                     maxLength={43} required disabled={claimBusy} />
+                  <p id="enrollment-invite-help" className={styles.inviteHelp}>O convite individual tem 43 caracteres e é diferente do código da aula ao vivo.</p>
                   <button type="submit" className={styles.primary}
                     disabled={claimBusy || !/^[A-Za-z0-9_-]{43}$/.test(inviteCode.trim())}>
                     {claimBusy ? "Confirmando..." : "Vincular matrícula"}

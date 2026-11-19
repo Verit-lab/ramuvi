@@ -167,11 +167,19 @@ export function studyDeviceClaims(): Array<{ classroomId: string; token: string 
 
 export async function fetchAllStudyLiveSessions(): Promise<LiveSessionSummary[]> {
   const claims = studyDeviceClaims();
-  const groups = await Promise.all(claims.map(async (claim) => {
-    try { return await fetchStudyLiveSessions(claim.token); } catch { return []; }
-  }));
+  if (!claims.length) return []; // No remembered code-based classrooms to consult.
+  const results = await Promise.allSettled(claims.map((claim) => fetchStudyLiveSessions(claim.token)));
+  // A total outage must not look like "no live classes". When at least one
+  // classroom answers, keep its sessions even if other saved claims are stale.
+  if (results.every((result) => result.status === "rejected")) {
+    throw new StudyApiError("Não foi possível consultar as aulas ao vivo. Verifique a conexão e tente novamente.", 503);
+  }
   const unique = new Map<string, LiveSessionSummary>();
-  groups.flat().forEach((session) => unique.set(session.sessionId, session));
+  results.forEach((result) => {
+    if (result.status === "fulfilled") {
+      result.value.forEach((session) => unique.set(session.sessionId, session));
+    }
+  });
   return [...unique.values()].sort((a, b) => b.startedAt.localeCompare(a.startedAt));
 }
 

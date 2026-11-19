@@ -5,7 +5,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import StudyShell from "@/components/study/StudyShell";
 import StudentAccountAccess from "@/components/student/StudentAccountAccess";
-import { fetchStudentOidcSession, StudentAccountSessionUnavailable, type StudentOidcSession } from "@/lib/student-oidc-api";
+import { fetchStudentOidcSession, StudentAccountSessionUnavailable, studentAccountWasSignedOut, type StudentOidcSession } from "@/lib/student-oidc-api";
 import { fetchAllStudyJourneys, fetchAllStudyLiveSessions, type LiveSessionSummary, type MultiClassroomJourneySummary } from "@/lib/study-api";
 import styles from "@/components/study/study.module.css";
 
@@ -24,8 +24,12 @@ function learnerDescription(description: string | null | undefined) {
 function StudyDashboard() {
   const [journeys, setJourneys] = useState<MultiClassroomJourneySummary[]>([]);
   const [liveSessions, setLiveSessions] = useState<LiveSessionSummary[]>([]);
+  const [liveLoading, setLiveLoading] = useState(true);
+  const [liveError, setLiveError] = useState(false);
+  const [liveRetry, setLiveRetry] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [journeyRetry, setJourneyRetry] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -34,22 +38,43 @@ function StudyDashboard() {
       .catch((caught) => { if (active) setError(caught instanceof Error ? caught.message : "Não foi possível recuperar seu espaço de estudo."); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, []);
+  }, [journeyRetry]);
+
+  function retryJourneys() {
+    setLoading(true);
+    setError("");
+    setJourneyRetry((value) => value + 1);
+  }
+
+  function retryLive() {
+    setLiveLoading(true);
+    setLiveError(false);
+    setLiveRetry((value) => value + 1);
+  }
 
   // A live class is the most urgent thing on a student's phone: load it on its
   // own (a journeys failure must not hide it) and refresh when the tab returns.
   useEffect(() => {
     let active = true;
+    let request = 0;
     const refreshLive = () => {
       if (document.visibilityState !== "visible") return;
+      const current = ++request;
       void fetchAllStudyLiveSessions()
-        .then((sessions) => { if (active) setLiveSessions(sessions); })
-        .catch(() => undefined);
+        .then((sessions) => { if (active && current === request) setLiveSessions(sessions); })
+        .catch(() => { if (active && current === request) setLiveError(true); })
+        .finally(() => { if (active && current === request) setLiveLoading(false); });
     };
     refreshLive();
-    document.addEventListener("visibilitychange", refreshLive);
-    return () => { active = false; document.removeEventListener("visibilitychange", refreshLive); };
-  }, []);
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      setLiveLoading(true);
+      setLiveError(false);
+      refreshLive();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { active = false; document.removeEventListener("visibilitychange", onVisible); };
+  }, [liveRetry]);
 
   const current = useMemo(() => journeys.find((journey) => journey.started && journey.progress.percent < 100)
     ?? journeys.find((journey) => journey.progress.percent < 100)
@@ -61,12 +86,22 @@ function StudyDashboard() {
     <h1 className={styles.title}>{journeys.length ? "Continue de onde parou." : "Seu espaço de estudo"}</h1>
     <p className={styles.lead}>Retome seus estudos, acompanhe o progresso e acesse rapidamente o próximo conteúdo.</p>
 
-    {liveSessions.length > 0 && <section className={styles.homeLive} aria-label="Aula ao vivo">
+    {liveLoading && <p className={styles.liveLoadStatus} role="status">Consultando aulas ao vivo...</p>}
+    {!liveLoading && liveError && <div className={styles.liveLoadError} role="alert">
+      <span>Não foi possível consultar suas aulas ao vivo. Confira sua conexão.</span>
+      <button type="button" onClick={retryLive}>Tentar novamente</button>
+    </div>}
+    {!liveLoading && !liveError && liveSessions.length > 0 && <section className={styles.homeLive} aria-label="Aula ao vivo">
       <div><span>AGORA</span><strong>{liveSessions.length === 1 ? liveSessions[0].classroomName : liveSessions.length + " aulas acontecendo"}</strong><p>{liveSessions.length === 1 ? liveSessions[0].sessionTitle : "Escolha a aula que deseja acompanhar."}</p></div>
       <Link href="/learn/live" className={styles.button}>Entrar ao vivo</Link>
     </section>}
     {loading && <div className={`${styles.hero} ${styles.skeleton}`}><h2>Carregando seus estudos…</h2><p className={styles.muted}>Recuperando jornadas e progresso.</p></div>}
-    {!loading && error && <div className={styles.error}><strong>Não foi possível abrir seu espaço de estudo.</strong><p>{error}</p><Link href="/join" className={styles.button}>Entrar em uma aula</Link></div>}
+    {!loading && error && <div className={styles.error} role="alert">
+      <strong>Não foi possível abrir seu espaço de estudo.</strong>
+      <p>{error}</p>
+      <button type="button" className={styles.button} onClick={retryJourneys}>Tentar novamente</button>
+      <Link href="/join" className={styles.errorSecondary}>Entrar em uma aula com código</Link>
+    </div>}
     {!loading && !error && !current && journeys.length === 0 && <div className={styles.empty}><strong>Seu espaço de estudo ainda está vazio.</strong><p>Quando uma jornada for publicada em uma das suas turmas, ela aparecerá aqui.</p></div>}
     {!loading && !error && !current && journeys.length > 0 && <div className={styles.empty}><strong>Você está em dia.</strong><p>Todas as jornadas disponíveis foram concluídas. <Link href="/learn/journeys">Ver jornadas concluídas</Link></p></div>}
 
@@ -89,6 +124,7 @@ function LearnEntry() {
   const [status, setStatus] = useState<"checking" | "guest" | "authenticated">("checking");
   const [session, setSession] = useState<StudentOidcSession | null>(null);
   const [sessionUnavailable, setSessionUnavailable] = useState(false);
+  const [signedOut, setSignedOut] = useState(false);
   const [sessionError, setSessionError] = useState("");
   const [showAccountAfterClaim, setShowAccountAfterClaim] = useState(false);
 
@@ -98,11 +134,14 @@ function LearnEntry() {
       .then((current) => {
         if (!active) return;
         setSession(current);
+        setSessionUnavailable(false);
+        setSignedOut(false);
         setStatus(current ? "authenticated" : "guest");
       })
       .catch((error: unknown) => {
         if (!active) return;
         setSessionUnavailable(error instanceof StudentAccountSessionUnavailable);
+        setSignedOut(error instanceof StudentAccountSessionUnavailable && studentAccountWasSignedOut());
         if (!(error instanceof StudentAccountSessionUnavailable)) setSessionError("Não foi possível verificar a sessão. Confira sua conexão e tente novamente.");
         setStatus("guest"); // Never silently fall back to a remembered device token.
       });
@@ -118,17 +157,21 @@ function LearnEntry() {
     return <StudentAccountAccess
       session={session}
       sessionUnavailable={sessionUnavailable}
+      signedOut={signedOut}
       sessionError={sessionError}
       oidcError={searchParams.get("error") === "oidc"}
       onBackToStudies={() => setShowAccountAfterClaim(false)}
       onSessionChange={(updated) => {
         setSession(updated);
+        setSignedOut(false);
         setStatus(updated ? "authenticated" : "guest");
         setShowAccountAfterClaim(true);
       }}
       onLogout={() => {
         setSession(null);
-        setSessionUnavailable(true);
+        setSessionError("");
+        setSessionUnavailable(true); // Keep device-token fallback blocked until explicit selection.
+        setSignedOut(true);
         setStatus("guest");
       }}
     />;

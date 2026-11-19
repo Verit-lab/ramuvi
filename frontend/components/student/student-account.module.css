@@ -34,3 +34,9 @@
 .inviteInput{width:100%;min-width:0;min-height:46px;border:1px solid var(--border,#c3d0d0);border-radius:9px;background:var(--surface,#fff);color:var(--text,#14282d);padding:10px 12px;font-size:14px}
 .inviteInput:focus-visible{outline:3px solid var(--accent,#126c64);outline-offset:2px}
 .success{color:var(--ds-accent-text,#58f3a7);font-size:14px;line-height:1.5;margin:12px 0}
+
+/* First account linking: clear next action, without changing provider authorization. */
+.firstAccessSteps{display:grid;gap:8px;margin:14px 0;padding-left:22px;color:var(--muted,#a3b7ae)}
+.firstAccessSteps li{padding-left:3px}
+.firstAccessSteps strong{display:inline;color:var(--text,#f3f7f5)}
+.inviteHelp{margin:0;color:var(--muted,#a3b7ae);font-size:13px;line-height:1.45}
