@@ -1,7 +1,7 @@
 /* PWA shell only. The backend, student tokens and interaction state are NEVER cached. */
 // v0.12: Ramuvi identity; a new version and prefix invalidate the cached
 // pre-rebranding icons and offline page.
-const VERSION = "v0.12-ramuvi-1";
+const VERSION = "v0.12.1-offline-reader-1";
 const CACHE_PREFIX = "ramuvi-";
 // Caches created by releases before the rebranding. Still owned by this app,
 // so they are removed on activation instead of being orphaned.
@@ -9,8 +9,12 @@ const LEGACY_CACHE_PREFIXES = ["arena-dev-"];
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${VERSION}`;
 const STATIC_CACHE = `${CACHE_PREFIX}static-${VERSION}`;
 const OFFLINE_PAGE = "/offline.html";
+const OFFLINE_READER = "/offline-journeys.html";
+const OFFLINE_READER_ASSETS = ["/offline-journeys.js", "/offline-journeys.css"];
 const SHELL_URLS = [
   OFFLINE_PAGE,
+  OFFLINE_READER,
+  ...OFFLINE_READER_ASSETS,
   "/manifest.webmanifest",
   "/icons/ramuvi-192.png",
   "/icons/ramuvi-512.png",
@@ -25,7 +29,14 @@ self.addEventListener("install", (event) => {
     const offlineResponse = await fetch(OFFLINE_PAGE, { cache: "reload" });
     if (!offlineResponse.ok) throw new Error("Offline shell unavailable");
     await cache.put(OFFLINE_PAGE, offlineResponse);
-    await Promise.allSettled(SHELL_URLS.filter((url) => url !== OFFLINE_PAGE).map(async (url) => {
+    // The opt-in academic reader must be complete before this SW takes control.
+    await Promise.all([OFFLINE_READER, ...OFFLINE_READER_ASSETS].map(async (url) => {
+      const response = await fetch(url, { cache: "reload" });
+      if (!response.ok) throw new Error("Offline reader unavailable");
+      await cache.put(url, response);
+    }));
+    await Promise.allSettled(SHELL_URLS.filter((url) => url !== OFFLINE_PAGE
+      && url !== OFFLINE_READER && !OFFLINE_READER_ASSETS.includes(url)).map(async (url) => {
       const response = await fetch(url, { cache: "reload" });
       if (response.ok) await cache.put(url, response);
     }));
@@ -76,8 +87,19 @@ self.addEventListener("fetch", (event) => {
         return await fetch(request);
       } catch {
         const cache = await caches.open(SHELL_CACHE);
+        if (url.pathname === OFFLINE_READER) {
+          return (await cache.match(OFFLINE_READER)) || Response.error();
+        }
         return (await cache.match(OFFLINE_PAGE)) || Response.error();
       }
+    })());
+    return;
+  }
+
+  if (OFFLINE_READER_ASSETS.includes(url.pathname)) {
+    event.respondWith((async () => {
+      const cache = await caches.open(SHELL_CACHE);
+      return (await cache.match(url.pathname)) || fetch(request);
     })());
     return;
   }

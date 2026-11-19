@@ -1,24 +1,45 @@
-# v0.12.1 — Registro de implementação
+# Ramuvi v0.12.1 — Jornadas offline
 
-**17/11/2026 — incremento I1: domínio e controles docentes (em validação).**
+**Estado em 18/11/2026: incrementos I1–I4 implementados em branch draft, ainda não publicados, Safari/iPhone real pendente.**
 
-## Entregue em código na branch (não na main)
-- V69: offline_allowed falso nas Jornadas anteriores e default verdadeiro nas próximas.
-- JPA/DTO de Journey: GET/listagem/POST/PUT recebem e retornam offlineAllowed.
-- Criação: offline permitido e cópia permitida por padrão; não inicia downloads.
-- Editor: duas permissões independentes na criação e edição publicada.
-- Reutilização da V61 para cópia; materiais da Biblioteca com proteção própria continuam protegidos.
-- Correção: edição por PUT sem stages não remove etapas de rascunho.
-- Testes backend das permissões e integridade de etapas; contrato V69 atualizado; teste frontend de UI.
+## I1 — Permissões docentes e migração V69
 
-## Ainda não entregue
-- Download/manifesto autenticado (incremento I2).
-- Armazenamento IndexedDB, quotas, atualização e remoção (incremento I3).
-- Shell/leitor offline e E2E em modo avião, iOS/Android físicos (incremento I4).
-- Homologação OIDC real v0.12 e rollout/deploy (gate operacional).
+- Jornadas antigas offline OFF; novas offline ON por padrão. Controle de copiar/colar independente da permissão de download; material protegido mantém restrição.
+- Edição de Jornada existente ou rascunho preserva estágios e progresso. Não há download automático.
 
-**Não chamar o recurso de Jornada offline funcional até concluir I2–I4.**
+## I2 — Manifesto autenticado
+
+- Endpoint de capacidades e pacote opcional para identidade OIDC verificada, matrícula ativa, Jornada publicada, permissão docente e etapas desbloqueadas.
+- Até 80 conteúdos de texto e 2 milhões de caracteres; externos e anexos não são baixados. Validade de sete dias; respostas no-store.
+- Flag global APP_STUDENT_IDENTITY_OFFLINE_DOWNLOAD_ENABLED=false, desativada por padrão até liberação.
+
+## I3 — Armazenamento e gestão no navegador
+
+- Ação Disponibilizar offline somente para conta verificada, quando a Jornada permite download e a flag global está ativa.
+- Leitor e gestão em /offline-journeys.html: senha offline independente (mínimo 12 caracteres), criptografia AES-GCM 256 e PBKDF2-SHA256 250 mil iterações.
+- IndexedDB com pacotes criptografados particionados por conta e Jornada; senha e chave não ficam persistidas. O leitor oferece remoção e atualização manual, mantendo conclusões pendentes antes da substituição.
+
+## I4 — Leitura e sincronização
+
+- HTML, JS e CSS do leitor pré-cacheados pelo Service Worker. Nenhuma API de identidade, conteúdo acadêmico ou progresso passa pelo Cache API.
+- Conteúdo textual / Markdown simplificado, leitura offline e conclusão local pendente. Conteúdos ainda bloqueados não são exportados nem desbloqueados offline.
+- Sincronização manual com a mesma conta OIDC e CSRF; backend valida o progresso. Revogação confirmada remove pacote; erros transitórios preservam o trabalho.
+- Não há garantia de revogação instantânea desconectado ou garantia absoluta contra captura/cópia de tela.
 
 ## Evidências
-- Preencher com SHA final e comandos/testes aprovados após execução.
-- Nenhum dado de produção pode ser migrado antes do aceite e backup.
+
+- Backend: compilação e testes de integração PostgreSQL 17 com Flyway V69, autorização por matrícula, restrição de capítulo e revogação da permissão.
+- Frontend: typecheck, unitários, build e E2E em Chromium com download, WebCrypto, SW, IndexedDB e sincronização.
+- WebKit headless: cache e leitura criptografada na aba já aberta com rede desligada, mas navegação fria offline não passou por erro interno do navegador automatizado.
+- Permissão docente OFF oculta o download. Pacotes de alunos distintos ficam separados. Logout e troca de conta não dão acesso automático ao pacote, que exige senha offline.
+- CI oficial GitHub Actions: verificações históricas bloqueadas por cobrança; revisar status atual da PR.
+
+## Gates para release
+
+1. Homologar PWA offline com abertura a frio em Safari/iPhone físico e Android físico, quota/evicção de armazenamento e persistência após encerrar o aplicativo.
+2. Homologar OIDC Google real ponta a ponta, sincronização, conta revogada, dispositivo compartilhado e material alterado/retirado.
+3. Ensaiar backup e rollback com Flyway V69 (não assumir downgrade automático para imagem V68).
+4. Executar CI oficial no mesmo SHA, resolver apontamentos de segurança e aprovar formalmente a liberação.
+5. Somente após esses gates considerar ativar APP_STUDENT_IDENTITY_OFFLINE_DOWNLOAD_ENABLED=true na VPS e anunciar o recurso como disponível.
+
+**A PR #140 e o ADR-0073 não constituem aprovação de deploy. A VPS e a main não foram alteradas.**

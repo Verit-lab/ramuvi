@@ -37,9 +37,19 @@ test("verified learner sees their study dashboard and manages the account at the
 
   await page.goto("/learn");
   await expect(page.getByRole("heading", { name: "Seu espaço de estudo" })).toBeVisible();
-  const accountLink = page.locator("aside").getByRole("link", { name: "Minha conta" });
-  await expect(accountLink).toHaveAttribute("href", "/learn?account=1");
-  await accountLink.click();
+  const desktopSidebar = page.locator("aside");
+  if (await desktopSidebar.isVisible()) {
+    const accountLink = desktopSidebar.getByRole("link", { name: "Minha conta" });
+    await expect(accountLink).toHaveAttribute("href", "/learn?account=1");
+    await accountLink.click();
+  } else {
+    // The mobile layout exposes the same destination inside the navigation drawer.
+    await page.getByRole("button", { name: "Abrir navegação" }).click();
+    const accountLink = page.getByRole("navigation", { name: "Navegação de estudos no celular" })
+      .getByRole("link", { name: "Minha conta" });
+    await expect(accountLink).toHaveAttribute("href", "/learn?account=1");
+    await accountLink.click();
+  }
   await expect(page).toHaveURL(/\/learn\?account=1$/);
   await expect(page.getByRole("heading", { name: "Minha conta" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Voltar ao meu espaço de estudo" })).toBeVisible();

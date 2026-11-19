@@ -109,6 +109,51 @@ public class JourneyStudyService {
         return detail(stage, state);
     }
 
+    /**
+     * Account-only offline package. This is never called for a device claim or
+     * teacher preview. Authorization, teacher opt-in and chapter release are
+     * checked at the moment of download. Offline clients must revalidate before
+     * replaying any progress: revocation is not instantaneous without a network.
+     */
+    @Transactional(readOnly = true)
+    public OfflineJourneySnapshot offlineSnapshot(UUID journeyId, StudyPrincipal principal) {
+        if (!principal.verifiedAccount()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Conta verificada necessária.");
+        }
+        Journey journey = requireJourney(journeyId);
+        AccessContext access = requireAccess(journey, principal);
+        if (!journey.isOfflineAllowed()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Download offline indisponível.");
+        }
+        JourneyStudyView view = view(journey, access);
+        List<JourneyContentDetailView> contents = new ArrayList<>();
+        int totalChars = 0;
+        for (JourneyModuleView module : view.modules()) {
+            for (JourneyContentView content : module.contents()) {
+                if (content.state() == StudyState.LOCKED) continue;
+                JourneyStage stage = requireContent(journey, content.id());
+                JourneyContentDetailView detail = detail(stage, content.state());
+                // Only text is embedded. External media, links and attachments
+                // are never fetched or cached as academic resources.
+                if (detail.body() == null || detail.body().isBlank()) continue;
+                if (detail.format() == null
+                        || !Set.of("MARKDOWN", "TEXT", "PLAIN_TEXT").contains(detail.format())) continue;
+                totalChars += detail.body().length();
+                if (contents.size() >= 80 || totalChars > 2_000_000) {
+                    throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE,
+                            "Jornada excede o limite de conteúdo offline.");
+                }
+                contents.add(detail);
+            }
+        }
+        if (contents.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Não há conteúdo de texto liberado para baixar.");
+        }
+        return new OfflineJourneySnapshot(1, view, contents,
+                journey.getUpdatedAt(), Instant.now().plus(java.time.Duration.ofDays(7)));
+    }
+
     @Transactional
     public JourneyStudyView start(UUID journeyId, UUID contentId, StudyPrincipal principal) {
         Journey journey = requireJourney(journeyId);
@@ -165,7 +210,8 @@ public class JourneyStudyService {
                 journey.getId(), journey.getTitle(), journey.getDescription(), projection.progress(),
                 current == null ? null : current.getId(), current == null ? null : current.getTitle(),
                 projection.started(), projection.lastStudiedAt(),
-                journey.getClassroom().getId(), journey.getClassroom().getName(), journey.getClassroom().getCode()
+                journey.getClassroom().getId(), journey.getClassroom().getName(), journey.getClassroom().getCode(),
+                journey.isOfflineAllowed()
         );
     }
 
@@ -329,8 +375,11 @@ public class JourneyStudyService {
 
     public enum StudyState { COMPLETED, CURRENT, AVAILABLE, LOCKED }
     public record JourneyProgressSummary(int completedContents, int totalContents, int percent) {}
-    public record JourneyStudySummary(UUID id, String title, String description, JourneyProgressSummary progress, UUID currentContentId, String currentContentTitle, boolean started, Instant lastStudiedAt, UUID classroomId, String classroomName, String classroomCode) {}
+    public record JourneyStudySummary(UUID id, String title, String description, JourneyProgressSummary progress, UUID currentContentId, String currentContentTitle, boolean started, Instant lastStudiedAt, UUID classroomId, String classroomName, String classroomCode, boolean offlineAllowed) {}
     public record JourneyStudyView(UUID id, String title, String description, JourneyProgressSummary progress, List<JourneyModuleView> modules, List<AchievementService.AchievementView> newlyUnlockedAchievements, Integer releasedChapterCount) {}
+    public record OfflineJourneySnapshot(int schemaVersion, JourneyStudyView journey,
+                                         List<JourneyContentDetailView> contents,
+                                         Instant updatedAt, Instant expiresAt) {}
     public record JourneyModuleView(UUID id, String title, String description, List<JourneyContentView> contents) {}
     public record JourneyContentView(UUID id, String title, String description, StudyState state, UUID resourceId, boolean hasExternalSource) {}
     /** copyProtected: the Journey or the linked material forbids copying in the reader. */

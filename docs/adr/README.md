@@ -104,3 +104,4 @@ Use [TEMPLATE.md](TEMPLATE.md) para novas decisões.
 ### Decisões propostas para v0.12.1
 
 - [ADR-0072 — Landing pública e entradas Ramuvi Learn / Ramuvi Teach](ADR-0072-landing-publica-e-entradas-learn-teach.md) — **Proposto**; aguarda homologação da PR.
+- [ADR-0073 — Download seletivo e cópia de Jornadas](ADR-0073-journey-offline-permissions.md) — **Implementado em branch; rollout não aceito**.

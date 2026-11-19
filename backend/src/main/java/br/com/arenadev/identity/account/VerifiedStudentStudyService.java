@@ -42,6 +42,11 @@ public class VerifiedStudentStudyService {
         return study.content(journey, content, principal(issuer, subject));
     }
 
+    @Transactional(readOnly = true)
+    public JourneyStudyService.OfflineJourneySnapshot offline(UUID journey, String issuer, String subject) {
+        return study.offlineSnapshot(journey, principal(issuer, subject));
+    }
+
     @Transactional
     public JourneyStudyService.JourneyStudyView start(UUID journey, UUID content,
                                                        String issuer, String subject) {

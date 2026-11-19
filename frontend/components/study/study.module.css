@@ -567,3 +567,9 @@
 
 /* Root /learn shows the learner access gate before mounting the study shell. */
 .entryLoading{display:grid;min-height:100vh;place-items:center;padding:24px;color:var(--muted,#68787c)}
+
+/* v0.12.1: download is a sibling action, never nested inside the Journey link. */
+.offlineJourneyRow{display:grid;gap:5px}
+.offlineDownloadLink{display:inline-flex;align-items:center;justify-content:center;min-height:44px;justify-self:start;padding:0 12px;margin:0 0 7px;border:1px solid var(--study-tint-line-2);border-radius:8px;color:var(--study-accent-ink);font-size:.8rem;font-weight:800;text-decoration:none}
+.offlineDownloadLink:hover{background:var(--study-tint)}
+.offlineDownloadLink:focus-visible{outline:3px solid var(--study-accent-ink);outline-offset:3px}
