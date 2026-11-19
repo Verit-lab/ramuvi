@@ -81,6 +81,92 @@ class ManualScoreIdempotencyIT {
     }
 
     @Test
+    void retriedBatchWithIndividualKeysDoesNotDoubleXpOrRegenerateEventIds() {
+        var fx = fixture();
+        var keyA = UUID.randomUUID();
+        var keyB = UUID.randomUUID();
+        var batch = java.util.List.of(fx.request(keyA, 5), fx.request(keyB, 7));
+        var first = scores.createBatch(batch);
+        var replay = scores.createBatch(batch);
+
+        assertThat(replay).extracting(ScoreEventService.ScoreEventView::id)
+                .containsExactly(first.get(0).id(), first.get(1).id());
+        assertThat(events.findBySessionIdOrderByCreatedAtAsc(fx.sessionId())).hasSize(2);
+    }
+
+    @Test
+    void batchWithCommittedAndNewKeysReusesOldEventAndInsertsOnlyNewOne() {
+        var fx = fixture();
+        var priorKey = UUID.randomUUID();
+        var newKey = UUID.randomUUID();
+        var prior = scores.create(fx.request(priorKey, 5));
+
+        var response = scores.createBatch(java.util.List.of(
+                fx.request(priorKey, 5), fx.request(newKey, 8)));
+        assertThat(response.getFirst().id()).isEqualTo(prior.id());
+        assertThat(response.getLast().id()).isNotEqualTo(prior.id());
+        assertThat(events.findBySessionIdOrderByCreatedAtAsc(fx.sessionId())).hasSize(2);
+    }
+
+    @Test
+    void duplicateKeyWithinBatchIsOnlyInsertedOnce() {
+        var fx = fixture();
+        var key = UUID.randomUUID();
+        var request = fx.request(key, 4);
+        var response = scores.createBatch(java.util.List.of(request, request));
+
+        assertThat(response).hasSize(2);
+        assertThat(response.get(0).id()).isEqualTo(response.get(1).id());
+        assertThat(events.findBySessionIdOrderByCreatedAtAsc(fx.sessionId())).hasSize(1);
+    }
+
+    @Test
+    void batchWithReusedKeyAndDifferentPayloadRollsBackAllNewEvents() {
+        var fx = fixture();
+        var key = UUID.randomUUID();
+        scores.create(fx.request(key, 5));
+        var newKey = UUID.randomUUID();
+
+        assertThatThrownBy(() -> scores.createBatch(java.util.List.of(
+                fx.request(newKey, 3), fx.request(key, 8))))
+                .isInstanceOf(ScoreConflictException.class);
+        assertThat(events.findBySessionIdOrderByCreatedAtAsc(fx.sessionId())).hasSize(1);
+        assertThat(events.findByCreateRequestId(newKey)).isEmpty();
+    }
+
+    @Test
+    void reversedBatchesWithSameRequestKeysSerializeWithoutDeadlock() throws Exception {
+        var fx = fixture();
+        var a = fx.request(UUID.randomUUID(), 5);
+        var b = fx.request(UUID.randomUUID(), 7);
+        var gate = new CountDownLatch(1);
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var first = executor.submit(() -> {
+                gate.await(); return scores.createBatch(java.util.List.of(a, b));
+            });
+            var reverse = executor.submit(() -> {
+                gate.await(); return scores.createBatch(java.util.List.of(b, a));
+            });
+            gate.countDown();
+            var resultA = first.get(30, TimeUnit.SECONDS);
+            var resultB = reverse.get(30, TimeUnit.SECONDS);
+            assertThat(resultA).extracting(ScoreEventService.ScoreEventView::id)
+                    .containsExactly(resultB.get(1).id(), resultB.get(0).id());
+        }
+        assertThat(events.findBySessionIdOrderByCreatedAtAsc(fx.sessionId())).hasSize(2);
+    }
+
+    @Test
+    void noKeyBatchStillPermitsRepeatedLegacyPoints() {
+        var fx = fixture();
+        var request = fx.request(null, 4);
+        var first = scores.createBatch(java.util.List.of(request));
+        var second = scores.createBatch(java.util.List.of(request));
+        assertThat(first.get(0).id()).isNotEqualTo(second.get(0).id());
+        assertThat(events.findBySessionIdOrderByCreatedAtAsc(fx.sessionId())).hasSize(2);
+    }
+
+    @Test
     void legacyClientsWithoutKeysRemainCompatibleButAreNotIdempotent() {
         var fx = fixture();
         var first = scores.create(fx.request(null, 3));
