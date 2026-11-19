@@ -216,3 +216,13 @@ test("full journey overwrite requires typed title and displays progress reset be
   assert.match(manager, /A substituição somente será habilitada/);
   assert.match(manager, /setDraft\(toDraft\(saved\)\)/);
 });
+
+test("v0.12.1: new Journeys permit selective offline use and copy by default", () => {
+  assert.match(manager, /status: "DRAFT", copyProtected: false, offlineAllowed: true/);
+  assert.match(manager, /offlineAllowed: draft.offlineAllowed/);
+  assert.match(manager, /checked=\{draft.offlineAllowed\}/);
+  assert.match(manager, /checked=\{!draft.copyProtected\}/);
+  assert.match(manager, /Permitir acesso offline/);
+  assert.match(manager, /Permitir copiar e colar conteúdo/);
+  assert.match(api, /offlineAllowed\?: boolean/);
+});

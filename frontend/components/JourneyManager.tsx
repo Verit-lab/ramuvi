@@ -55,6 +55,7 @@ type Draft = {
   description: string;
   status: Journey["status"];
   copyProtected: boolean;
+  offlineAllowed: boolean;
   releasedChapterCount: number | null;
   stages: DraftStage[];
 };
@@ -66,6 +67,7 @@ function toDraft(journey: Journey): Draft {
     description: journey.description ?? "",
     status: journey.status,
     copyProtected: journey.copyProtected ?? false,
+    offlineAllowed: journey.offlineAllowed ?? false,
     releasedChapterCount: journey.releasedChapterCount ?? null,
     stages: journey.stages.map((stage) => ({
       id: stage.id,
@@ -83,7 +85,7 @@ function toDraft(journey: Journey): Draft {
 }
 
 function emptyDraft(): Draft {
-  return { title: "", description: "", status: "DRAFT", copyProtected: false, releasedChapterCount: null, stages: [] };
+  return { title: "", description: "", status: "DRAFT", copyProtected: false, offlineAllowed: true, releasedChapterCount: null, stages: [] };
 }
 
 function statusLabel(status: Journey["status"]) {
@@ -299,6 +301,7 @@ export default function JourneyManager({ classroomId, classroomName, notify, ini
       title: draft.title.trim(),
       description: draft.description.trim() || undefined,
       copyProtected: draft.copyProtected,
+      offlineAllowed: draft.offlineAllowed,
       stages: draft.stages.map((stage, index) => ({
         id: stage.id,
         title: stage.title.trim(),
@@ -357,6 +360,24 @@ export default function JourneyManager({ classroomId, classroomName, notify, ini
       notify(copyProtected ? "Cópia do conteúdo desativada para os alunos." : "Cópia do conteúdo liberada para os alunos.");
     } catch (error) {
       notify(error instanceof Error ? error.message : "Não foi possível alterar a proteção contra cópia.", "error");
+    } finally { setBusy(false); }
+  }
+
+  async function changeOfflineAccess(offlineAllowed: boolean) {
+    if (!draft?.id || busy || draft.status !== "PUBLISHED") return;
+    if (!offlineAllowed && !window.confirm(
+      "Novos downloads serão bloqueados. Cópias já baixadas serão removidas quando o dispositivo se reconectar; não é possível apagá-las imediatamente sem rede. Continuar?"
+    )) return;
+    setBusy(true);
+    try {
+      const saved = await updateJourney(draft.id, {
+        classroomId, title: draft.title, description: draft.description || undefined, offlineAllowed,
+      });
+      setJourneys((current) => current.map((journey) => journey.id === saved.id ? saved : journey));
+      setDraft(toDraft(saved));
+      notify(offlineAllowed ? "Acesso offline permitido para esta Jornada." : "Novos downloads offline desativados.");
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Não foi possível atualizar o acesso offline.", "error");
     } finally { setBusy(false); }
   }
 
@@ -571,12 +592,20 @@ export default function JourneyManager({ classroomId, classroomName, notify, ini
                           <p>{draft.description || "Sem descrição."}</p>
                         </>
                       )}
-                      <label className={`${styles.field} ${styles.copyToggle}`}>
-                        <input type="checkbox" checked={draft.copyProtected} disabled={busy} onChange={(event) => void changeCopyProtection(event.target.checked)} />
-                        <span>Impedir cópia do conteúdo
-                          <small>Vale imediatamente para os alunos. Desencoraja a cópia, mas não impede captura de tela.</small>
-                        </span>
-                      </label>
+                      {published && <div className={styles.fields}>
+                        <label className={[styles.field, styles.full, styles.copyToggle].join(" ")}>
+                          <input type="checkbox" checked={draft.offlineAllowed} disabled={busy} onChange={(event) => void changeOfflineAccess(event.target.checked)} />
+                          <span>Permitir acesso offline
+                            <small>O aluno pode escolher baixar conteúdos já liberados. Recursos externos podem exigir internet.</small>
+                          </span>
+                        </label>
+                        <label className={[styles.field, styles.full, styles.copyToggle].join(" ")}>
+                          <input type="checkbox" checked={!draft.copyProtected} disabled={busy} onChange={(event) => void changeCopyProtection(!event.target.checked)} />
+                          <span>Permitir copiar e colar conteúdo
+                            <small>Materiais da Biblioteca com proteção própria continuam restritos. Não impede capturas de tela.</small>
+                          </span>
+                        </label>
+                      </div>}
                       {published && <section className={styles.releasePanel} aria-label="Liberação gradual de capítulos">
                         <div><strong>Liberação gradual</strong><p>Escolha quantos capítulos iniciais ficarão disponíveis para a turma. Todos os conteúdos desses capítulos poderão ser estudados; os demais ficam bloqueados até sua liberação. O progresso é preservado.</p></div>
                         <div className={styles.releaseControls}>
@@ -605,10 +634,16 @@ export default function JourneyManager({ classroomId, classroomName, notify, ini
                     <div className={styles.fields}>
                       <label className={styles.field}><span>Título</span><input value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} placeholder="Ex.: Fundamentos de Backend" /></label>
                       <label className={`${styles.field} ${styles.full}`}><span>Descrição</span><textarea value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} placeholder="Objetivo e contexto da jornada." /></label>
-                      <label className={`${styles.field} ${styles.full} ${styles.copyToggle}`}>
-                        <input type="checkbox" checked={draft.copyProtected} onChange={(event) => setDraft({ ...draft, copyProtected: event.target.checked })} />
-                        <span>Impedir cópia do conteúdo
-                          <small>Os alunos não conseguem selecionar, copiar nem usar o botão direito no leitor. Desencoraja a cópia, mas não impede captura de tela.</small>
+                      <label className={[styles.field, styles.full, styles.copyToggle].join(" ")}>
+                        <input type="checkbox" checked={draft.offlineAllowed} onChange={(event) => setDraft({ ...draft, offlineAllowed: event.target.checked })} />
+                        <span>Permitir acesso offline
+                          <small>O aluno pode baixar materiais liberados por escolha própria. Nenhum download automático.</small>
+                        </span>
+                      </label>
+                      <label className={[styles.field, styles.full, styles.copyToggle].join(" ")}>
+                        <input type="checkbox" checked={!draft.copyProtected} onChange={(event) => setDraft({ ...draft, copyProtected: !event.target.checked })} />
+                        <span>Permitir copiar e colar conteúdo
+                          <small>Materiais da Biblioteca com proteção própria permanecem restritos. Não impede extração técnica.</small>
                         </span>
                       </label>
                     </div>

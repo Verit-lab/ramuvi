@@ -12,11 +12,13 @@ import {
   type MultiClassroomJourneySummary,
 } from "@/lib/study-api";
 import styles from "@/components/study/study.module.css";
+import { apiFetch } from "@/lib/auth-api";
 
 export default function JourneysPage() {
   const [journeys, setJourneys] = useState<MultiClassroomJourneySummary[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [studyMode, setStudyMode] = useState<"ACCOUNT" | "DEVICE">("DEVICE");
+  const [offlineFeatureEnabled, setOfflineFeatureEnabled] = useState(false);
   const [query, setQuery] = useState("");
   const [classroom, setClassroom] = useState("ALL");
   const [status, setStatus] = useState("ALL");
@@ -31,6 +33,11 @@ export default function JourneysPage() {
     try {
       const catalog = await fetchStudyJourneyCatalog();
       setStudyMode(catalog.mode);
+      if (catalog.mode === "ACCOUNT") {
+        void apiFetch("/api/student-account/study/offline/capabilities")
+          .then((response) => setOfflineFeatureEnabled(response.ok))
+          .catch(() => setOfflineFeatureEnabled(false));
+      } else setOfflineFeatureEnabled(false);
       setJourneys(catalog.journeys);
       setState("ready");
       return catalog.mode;
@@ -232,14 +239,24 @@ export default function JourneysPage() {
     </div>}
     {state === "ready" && groups.map((group) => <section className={styles.journeyGroup} key={group.items[0].classroomId}>
       <div className={styles.sectionHead}><div><span className={styles.groupLabel}>TURMA</span><h2>{group.name}</h2></div></div>
-      <div className={styles.list}>{group.items.map((journey) => <Link key={`${journey.classroomId}:${journey.id}`} href={`/learn/journeys/${journey.id}`} className={styles.card}>
-        <div><h3>{journey.title}</h3><p>{journey.progress.percent === 100
-          ? "Jornada concluída"
-          : journey.currentContentTitle
-            ? `${journey.started ? "Continuar" : "Começar"}: ${journey.currentContentTitle}`
-            : journey.description || "Percurso de estudo"}</p></div>
-        <span className={styles.percent}>{journey.progress.percent}%</span>
-      </Link>)}</div>
+      <div className={styles.list}>{group.items.map((journey) => (
+        <div className={styles.offlineJourneyRow} key={journey.classroomId + ":" + journey.id}>
+          <Link href={"/learn/journeys/" + journey.id} className={styles.card}>
+            <div><h3>{journey.title}</h3><p>{journey.progress.percent === 100
+              ? "Jornada concluída"
+              : journey.currentContentTitle
+                ? (journey.started ? "Continuar: " : "Começar: ") + journey.currentContentTitle
+                : journey.description || "Percurso de estudo"}</p></div>
+            <span className={styles.percent}>{journey.progress.percent}%</span>
+          </Link>
+          {studyMode === "ACCOUNT" && offlineFeatureEnabled && journey.offlineAllowed && (
+            <a className={styles.offlineDownloadLink}
+              href={"/offline-journeys.html?journey=" + encodeURIComponent(journey.id)}>
+              Disponibilizar offline
+            </a>
+          )}
+        </div>
+      ))}</div>
     </section>)}
     {state === "ready" && !filtered.length && <div className={styles.empty}>{studyMode === "ACCOUNT" ? "Não há Jornadas publicadas e liberadas para suas matrículas atuais." : "Nenhuma jornada corresponde aos filtros atuais."}</div>}
   </>;

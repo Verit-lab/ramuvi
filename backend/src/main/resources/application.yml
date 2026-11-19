@@ -40,6 +40,7 @@ app:
     invitation-issuance-enabled: ${APP_STUDENT_IDENTITY_INVITATION_ISSUANCE_ENABLED:false}
     enrollment-claim-enabled: ${APP_STUDENT_IDENTITY_ENROLLMENT_CLAIM_ENABLED:false}
     study-session-enabled: ${APP_STUDENT_IDENTITY_STUDY_SESSION_ENABLED:false}
+    offline-download-enabled: ${APP_STUDENT_IDENTITY_OFFLINE_DOWNLOAD_ENABLED:false}
     oidc:
       enabled: ${APP_STUDENT_OIDC_ENABLED:false}
       public-base-url: ${APP_STUDENT_OIDC_PUBLIC_BASE_URL:http://localhost:3000}

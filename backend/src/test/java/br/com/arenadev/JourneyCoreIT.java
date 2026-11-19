@@ -693,9 +693,66 @@ class JourneyCoreIT {
     }
 
     @Test
+    void offlineSnapshotRequiresVerifiedEnrollmentTeacherPermissionAndReleasedText() {
+        Fixture f = fixture("Jornada offline protegida", "JRNY-OFFLINE");
+        LearningResource firstResource = new LearningResource(f.classroom(), "Aula 1");
+        firstResource.update("Aula 1", null, "# Aula 1\\nConteúdo de texto offline.",
+                LearningResourceFormat.MARKDOWN, LearningResourceSourceType.MANUAL, null, null);
+        firstResource = learningResourceRepository.save(firstResource);
+        LearningResource secondResource = new LearningResource(f.classroom(), "Aula 2");
+        secondResource.update("Aula 2", null, "# Aula 2\\nNão liberar antes da conclusão.",
+                LearningResourceFormat.MARKDOWN, LearningResourceSourceType.MANUAL, null, null);
+        secondResource = learningResourceRepository.save(secondResource);
+        var published = createPublishedJourney(f, List.of(
+                new JourneyService.StageInput(null, "Aula 1", null, null,
+                        JourneyUnlockRule.IMMEDIATE, JourneyCompletionRule.MANUAL,
+                        null, "Capítulo 1", JourneyItemType.CONTENT, firstResource.getId()),
+                new JourneyService.StageInput(null, "Aula 2", null, null,
+                        JourneyUnlockRule.PREVIOUS_STAGE_COMPLETED, JourneyCompletionRule.MANUAL,
+                        null, "Capítulo 2", JourneyItemType.CONTENT, secondResource.getId())
+        ));
+        UUID first = published.stages().getFirst().id();
+        UUID second = published.stages().get(1).id();
+
+        StudyPrincipal verified = StudyPrincipal.verifiedAccount(f.enrollment().getStudent().getId());
+        var snapshot = journeyStudyService.offlineSnapshot(published.id(), verified);
+        assertThat(snapshot.schemaVersion()).isEqualTo(1);
+        assertThat(snapshot.expiresAt()).isAfter(java.time.Instant.now());
+        assertThat(snapshot.contents()).extracting(JourneyStudyService.JourneyContentDetailView::id)
+                .containsExactly(first);
+        assertThat(snapshot.contents().getFirst().body()).contains("Conteúdo de texto offline");
+        assertThat(journeyStudyService.list(verified).getFirst().offlineAllowed()).isTrue();
+
+        // The same device token cannot be used to export the private package.
+        StudyPrincipal device = new StudyPrincipal(f.enrollment().getStudent().getId(),
+                f.enrollment().getId(), f.classroom().getId(), StudyPrincipal.Role.STUDENT);
+        assertThatThrownBy(() -> journeyStudyService.offlineSnapshot(published.id(), device))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+
+        assertThatThrownBy(() -> journeyStudyService.offlineSnapshot(
+                published.id(), StudyPrincipal.verifiedAccount(UUID.randomUUID())))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+        journeyStudyService.complete(published.id(), first, verified);
+        assertThat(journeyStudyService.offlineSnapshot(published.id(), verified).contents())
+                .extracting(JourneyStudyService.JourneyContentDetailView::id)
+                .containsExactly(first, second);
+
+        journeyService.update(published.id(), new JourneyService.JourneyInput(
+                f.classroom().getId(), published.title(), published.description(), null, null, false));
+        assertThat(journeyStudyService.list(verified).getFirst().offlineAllowed()).isFalse();
+        assertThatThrownBy(() -> journeyStudyService.offlineSnapshot(published.id(), verified))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
+                .satisfies(error -> assertThat(
+                    ((org.springframework.web.server.ResponseStatusException) error).getStatusCode())
+                    .isEqualTo(org.springframework.http.HttpStatus.FORBIDDEN));
+    }
+
+    @Test
     void verifiedAccountStudyApiIsOffByDefault() {
         assertThat(applicationContext.getBeansOfType(
                 br.com.arenadev.identity.account.VerifiedStudentStudyController.class)).isEmpty();
+        assertThat(applicationContext.getBeansOfType(
+                br.com.arenadev.identity.account.VerifiedOfflineJourneyController.class)).isEmpty();
     }
 
     @Test

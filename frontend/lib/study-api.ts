@@ -17,6 +17,7 @@ export type JourneyStudySummary = {
   classroomId?: string;
   classroomName?: string;
   classroomCode?: string | null;
+  offlineAllowed?: boolean;
 };
 export type JourneyContentView = {
   id: string;
