@@ -49,7 +49,7 @@ grep -q 'createPortal' frontend/components/learning/TeacherLearningOverview.tsx 
 # Prevent accidental 0.9.0 artifacts. The v0.11 line reuses this baseline and
 # enforces its own exact version in verify-v0.11-contract.sh; the final release
 # gate still approves main/CI/backup independently.
-node -e 'const v=require("./frontend/package.json").version; if(!/^(?:0\.1(?:0\.0|1\.[01])(?:-(?:rc|beta)\.[0-9]+)?|0\.12\.0(-dev\.[1234])?)$/.test(v)) process.exit(1)' || \
+node -e 'const v=require("./frontend/package.json").version; if(!/^(?:0\.1(?:0\.0|1\.[01])(?:-(?:rc|beta)\.[0-9]+)?|0\.12\.[01](-dev\.[1234])?)$/.test(v)) process.exit(1)' || \
   fail "artefatos devem identificar 0.10.0/0.11.0 ou uma candidata 0.10.0-rc.N/0.11.0-rc.N"
 
 printf 'Contrato mínimo v0.10 verificado: baseline v0.9 + Flyway V49–V56, %s.\n' \

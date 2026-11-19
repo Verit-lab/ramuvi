@@ -30,6 +30,18 @@ V012_REQUIRED = REQUIRED + (
     "v68_representative_restore",
     "public_https_routing_and_secure_session",
 )
+V0121_REQUIRED = V012_REQUIRED + (
+    "offline_journey_safari_android_cold_start_sync_revocation",
+)
+
+def required_for_version(version: str) -> tuple[str, ...]:
+    if version == "0.12.1":
+        return V0121_REQUIRED
+    if version == "0.12.0":
+        return V012_REQUIRED
+    return REQUIRED
+
+
 CI_JOBS = (
     "Backend — Java 21, PostgreSQL and integration tests",
     "Frontend — tests, TypeScript and production build",
@@ -54,7 +66,7 @@ def decide(document: dict, candidate: str, expected_version: str = "0.11.1") -> 
     gates = document.get("gates")
     if not isinstance(gates, list):
         return problems + ["Attestation gates must be an array"]
-    required = V012_REQUIRED if expected_version == "0.12.0" else REQUIRED
+    required = required_for_version(expected_version)
     lookup = {g.get("id"): g for g in gates if isinstance(g, dict)}
     if len(lookup) != len(gates) or set(lookup) != set(required):
         problems.append("Attestation requires exactly the documented operational gates")
@@ -104,7 +116,7 @@ def main() -> int:
     parser.add_argument("--candidate", help="Full 40-character exact candidate SHA")
     parser.add_argument("--ci-run-id", help="Required to claim GO")
     parser.add_argument("--repo", default="Verit-lab/ramuvi")
-    parser.add_argument("--expected-version", choices=("0.11.1", "0.12.0"), default="0.11.1")
+    parser.add_argument("--expected-version", choices=("0.11.1", "0.12.0", "0.12.1"), default="0.11.1")
     parser.add_argument("--check-template", action="store_true",
                         help="CI check: template must be deliberately incomplete")
     args = parser.parse_args()
@@ -116,9 +128,10 @@ def main() -> int:
     if args.check_template:
         gates = doc.get("gates") or []
         ids = [g.get("id") for g in gates if isinstance(g, dict)]
-        required = V012_REQUIRED if args.expected_version == "0.12.0" else REQUIRED
+        required = required_for_version(args.expected_version)
         if (len(ids) != len(required) or set(ids) != set(required)
-                or (args.expected_version == "0.12.0" and doc.get("version") != "0.12.0")
+                or (args.expected_version in ("0.12.0", "0.12.1")
+                    and doc.get("version") != args.expected_version)
                 or doc.get("decision") != "NO-GO"
                 or any(g.get("status") != "PENDING" for g in gates)
                 or doc.get("approvedBy")

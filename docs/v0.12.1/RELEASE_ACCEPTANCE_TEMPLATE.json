@@ -1,0 +1,94 @@
+{
+  "version": "0.12.1",
+  "candidateSha": "",
+  "decision": "NO-GO",
+  "approvedBy": "",
+  "approvedAt": "",
+  "notes": "Template da Ramuvi v0.12.1. NO-GO até todos os 12 gates comprovados no SHA integrado, CI oficial verde, Safari/Android físico offline com cold launch, sincronização e revogação, recuperação representativa e aceite do operador.",
+  "gates": [
+    {
+      "id": "ios_safari_physical",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "android_pwa_upgrade",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "voiceover_keyboard_zoom",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "network_degraded_two_projectors",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "teacher_pedagogical_pilot",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "backup_restore_rollback",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "security_privacy_authorization",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "release_owner_go_nogo",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "student_oidc_disabled_or_verified_providers",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "v68_representative_restore",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "public_https_routing_and_secure_session",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "offline_journey_safari_android_cold_start_sync_revocation",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    }
+  ]
+}

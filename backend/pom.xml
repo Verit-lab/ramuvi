@@ -13,7 +13,7 @@
 
     <groupId>br.com.arenadev</groupId>
     <artifactId>ramuvi-api</artifactId>
-    <version>0.12.0</version>
+    <version>0.12.1</version>
     <name>Ramuvi API</name>
     <description>Backend da Ramuvi</description>
 

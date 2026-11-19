@@ -10,10 +10,17 @@ fail() { printf 'ERRO: %s\n' "$*" >&2; exit 1; }
 "$SCRIPT_DIR/verify-v0.11-contract.sh"
 [[ -f backend/src/main/resources/db/migration/V68__student_account_foundation.sql ]] || \
   fail "a fundação de identidade requer V68"
-next=(backend/src/main/resources/db/migration/V69__*.sql)
-[[ ! -e "${next[0]}" ]] || fail "V69 requer um gate próprio"
-node -e 'if(require("./frontend/package.json").version!=="0.12.0") process.exit(1)' || \
-  fail "v0.12.0 estável exige artefatos 0.12.0 alinhados"
+if [[ "${RAMUVI_V0121_CONTRACT:-0}" == 1 ]]; then
+  [[ -f backend/src/main/resources/db/migration/V69__journey_offline_availability.sql ]] ||
+    fail "v0.12.1 exige migration V69 de disponibilidade offline"
+  node -e 'if(require("./frontend/package.json").version!=="0.12.1") process.exit(1)' ||
+    fail "v0.12.1 exige artefatos 0.12.1 alinhados"
+else
+  next=(backend/src/main/resources/db/migration/V69__*.sql)
+  [[ ! -e "${next[0]}" ]] || fail "V69 requer um gate próprio"
+  node -e 'if(require("./frontend/package.json").version!=="0.12.0") process.exit(1)' ||
+    fail "v0.12.0 estável exige artefatos 0.12.0 alinhados"
+fi
 
 grep -q 'uk_student_account_external_identity' backend/src/main/resources/db/migration/V68__*.sql || \
   fail "não há unicidade do identificador verificado"

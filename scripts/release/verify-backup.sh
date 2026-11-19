@@ -202,6 +202,11 @@ if (( EXPECTED_SCHEMA_VERSION >= 67 )); then
   [[ "$overwrite_snapshot_columns" -eq 4 ]] || \
     fail "restore V67 perdeu as colunas de conteúdo e progresso da Jornada"
 fi
+if (( EXPECTED_SCHEMA_VERSION >= 69 )); then
+  offline_allowed="$(docker exec "$CONTAINER_NAME" psql --tuples-only --no-align     --username "$CHECK_USER" --dbname "$CHECK_DATABASE"     --command "select count(*) from information_schema.columns where table_schema='public' and table_name='journeys' and column_name='offline_allowed'")"
+  [[ "$offline_allowed" -eq 1 ]] || fail "restore V69 perdeu política offline_allowed"
+fi
+
 if (( EXPECTED_SCHEMA_VERSION >= 68 )); then
   for identity_table in student_accounts student_account_identities student_enrollment_invites; do
     identity_exists="$(docker exec "$CONTAINER_NAME" psql --tuples-only --no-align       --username "$CHECK_USER" --dbname "$CHECK_DATABASE"       --command "select to_regclass('public.$identity_table') is not null")"
