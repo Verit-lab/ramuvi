@@ -25,6 +25,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.HashSet;
+import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -126,18 +129,62 @@ public class ScoreEventService {
         if (commands.size() > 500) {
             throw new IllegalArgumentException("O lote excede o limite de 500 lançamentos.");
         }
-        List<ScoreEvent> saved = commands.stream()
-                .map(this::build)
-                .map(scoreEventRepository::save)
-                .toList();
-        saved.stream()
-                .map(ScoreEvent::getSession)
+        if (commands.stream().anyMatch(java.util.Objects::isNull)) {
+            throw new IllegalArgumentException("Lançamento de XP inválido.");
+        }
+
+        // A batch can be retried after a lost HTTP response. Acquire every keyed
+        // lock in stable order, before reading/inserting, to avoid deadlocks when
+        // two concurrent batches contain the same IDs in different order.
+        List<UUID> keys = commands.stream()
+                .map(CreateScoreEvent::requestId)
                 .filter(java.util.Objects::nonNull)
-                .map(ClassSession::getId)
                 .distinct()
-                .forEach(rankingService::publishScoreChange);
-        return saved.stream()
-                .map(event -> ScoreEventView.from(event, false))
+                .sorted(Comparator.naturalOrder())
+                .toList();
+        for (UUID key : keys) {
+            jdbc.queryForList("select pg_advisory_xact_lock(?, ?)", 0x53434f52, key.hashCode());
+        }
+
+        // Read committed keys with a single query after the ordered locks;
+        // avoid one existence lookup per event in a large batch.
+        Map<UUID, ScoreEvent> seen = new HashMap<>();
+        if (!keys.isEmpty()) {
+            for (ScoreEvent existing : scoreEventRepository.findByCreateRequestIdIn(keys)) {
+                seen.put(existing.getCreateRequestId(), existing);
+            }
+        }
+        List<ScoreEvent> result = new ArrayList<>(commands.size());
+        Set<UUID> inserted = new HashSet<>();
+        Set<UUID> sessionsChanged = new HashSet<>();
+        for (CreateScoreEvent command : commands) {
+            UUID key = command.requestId();
+            ScoreEvent existing = key == null ? null : seen.get(key);
+            if (existing != null) {
+                if (!sameCreateCommand(existing, command)) {
+                    throw new ScoreConflictException("Chave de lançamento reutilizada com dados diferentes.");
+                }
+                seen.put(key, existing);
+                result.add(existing);
+                continue;
+            }
+
+            ScoreEvent event = build(command);
+            if (key != null) event.setCreateRequestId(key);
+            ScoreEvent saved = scoreEventRepository.save(event);
+            result.add(saved);
+            inserted.add(saved.getId());
+            if (key != null) seen.put(key, saved);
+            if (saved.getSession() != null) sessionsChanged.add(saved.getSession().getId());
+        }
+        // A unique index remains the final defense for all writers. Publish
+        // ranking changes only after the persistence batch has been flushed.
+        scoreEventRepository.flush();
+        sessionsChanged.forEach(rankingService::publishScoreChange);
+        return result.stream()
+                .map(event -> ScoreEventView.from(event,
+                        !inserted.contains(event.getId())
+                                && scoreEventRepository.existsByReversalOfId(event.getId())))
                 .toList();
     }
 

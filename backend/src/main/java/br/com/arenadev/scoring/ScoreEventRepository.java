@@ -15,6 +15,7 @@ public interface ScoreEventRepository extends JpaRepository<ScoreEvent, UUID> {
     boolean existsByReversalOfId(UUID eventId);
     Optional<ScoreEvent> findByReversalOfId(UUID originalId);
     Optional<ScoreEvent> findByCreateRequestId(UUID requestId);
+    List<ScoreEvent> findByCreateRequestIdIn(List<UUID> requestIds);
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select e from ScoreEvent e where e.id = :id")
     Optional<ScoreEvent> findByIdForUpdate(UUID id);
