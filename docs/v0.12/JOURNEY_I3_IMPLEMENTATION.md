@@ -3,7 +3,7 @@
 **Situação:** desenvolvimento concluído em branch, aguardando gates finais da PR; **não publicado**.
 **Base:** `feat/v0.12-enrollment-claim-i2@9e7b796`, PRs #136 → #137 → #138.
 **Branch:** `feat/v0.12-verified-journey-i3`.
-**Versão:** `0.12.0-dev.4`, Flyway permanece em V68.
+**Versão da implementação original:** `0.12.0-dev.4`; empacotamento estável preparado para `0.12.0`, Flyway permanece em V68. Publicação e implantação dependem de gates próprios.
 **Arquitetura:** [ADR-0071](../adr/ADR-0071-verified-student-journey.md).
 
 ## Objetivo e escopo entregue

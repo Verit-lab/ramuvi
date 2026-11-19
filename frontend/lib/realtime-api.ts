@@ -172,7 +172,7 @@ export function connectSessionSocket(
     try {
       onEvent(JSON.parse(String(message.data)) as SessionRealtimeEvent);
     } catch {
-      // Ignora mensagens que não pertencem ao contrato do Arena Dev.
+      // Ignora mensagens que não pertencem ao contrato da Ramuvi.
     }
   };
   return socket;

@@ -63,7 +63,7 @@ public class GoogleDelegatedOAuthService {
         var c=connections.create(LearningPlatformProvider.GOOGLE_CLASSROOM,"Google Classroom · "+label,u.sub());
         String ref=credentials.store(c.getId(),new IntegrationCredentialStore.CredentialMaterial(token.access_token(),token.refresh_token(),null,OffsetDateTime.now().plusSeconds(Math.max(60,token.expires_in()))));
         connections.attachCredentialReference(c.getId(),ref); connections.activate(c.getId());
-        return new CallbackResult(c.getId(),u.sub(),label,frontendUrl+"/?google=connected");
+        return new CallbackResult(c.getId(),u.sub(),label,frontendUrl+"/teach?google=connected");
     }
 
     private static String enc(String v){ return URLEncoder.encode(v,StandardCharsets.UTF_8); }

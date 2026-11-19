@@ -27,7 +27,7 @@ public class HealthController {
         Integer database = jdbcTemplate.queryForObject("SELECT 1", Integer.class);
         return Map.of(
                 "status", "UP",
-                "application", "arena-dev-api",
+                "application", "ramuvi-api",
                 "check", "readiness",
                 "database", database != null && database == 1 ? "UP" : "DOWN",
                 "buildSha", buildSha,
@@ -39,7 +39,7 @@ public class HealthController {
     public Map<String, Object> liveness() {
         return Map.of(
                 "status", "UP",
-                "application", "arena-dev-api",
+                "application", "ramuvi-api",
                 "check", "liveness",
                 "buildSha", buildSha,
                 "timestamp", OffsetDateTime.now().toString()

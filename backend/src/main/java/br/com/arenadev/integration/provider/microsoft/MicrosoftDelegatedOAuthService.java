@@ -139,7 +139,7 @@ public class MicrosoftDelegatedOAuthService {
                 connection.getId().toString(),
                 tenantId,
                 user,
-                frontendUrl + "/?microsoft=connected"
+                frontendUrl + "/teach?microsoft=connected"
         );
     }
 

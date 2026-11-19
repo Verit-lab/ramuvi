@@ -174,7 +174,7 @@ test("professor entra na Arena e participante reconecta à sessão", async ({
   try {
     const fixture = await createSessionFixture(api, csrfHeaders, "E2E");
 
-    await page.goto("/");
+    await page.goto("/teach");
     await page.getByLabel("Usuário").fill(teacherUsername);
     await page.getByLabel("Senha").fill(teacherPassword);
     const [browserLogin] = await Promise.all([
@@ -199,7 +199,7 @@ test("professor entra na Arena e participante reconecta à sessão", async ({
     await page.getByRole("button", { name: "Continuar Arena" }).click();
     await expect(page.locator("aside.arena-cockpit-nav")).toBeVisible();
     await expect(
-      page.locator("aside.arena-cockpit-nav").getByText("ARENA DEV", { exact: true }),
+      page.locator("aside.arena-cockpit-nav").getByText("RAMUVI", { exact: true }),
     ).toBeVisible();
     await expect(
       page.getByRole("navigation", { name: "Turma atual" })
@@ -848,7 +848,7 @@ test("Verificar aprendizagem preserva reconnect, revela correção e gera Eviden
     const distractorC = `RIGHT JOIN ${fixture.suffix.slice(-5)}`;
     const distractorD = `CROSS JOIN ${fixture.suffix.slice(-5)}`;
 
-    await page.goto("/");
+    await page.goto("/teach");
     await page.getByLabel("Usuário").fill(teacherUsername);
     await page.getByLabel("Senha").fill(teacherPassword);
     const [browserLogin] = await Promise.all([
@@ -1127,7 +1127,7 @@ test("Peer Instruction protege primeira resposta e compara nova decisão após d
     const distractorC = `RIGHT JOIN ${fixture.suffix.slice(-5)}`;
     const distractorD = `CROSS JOIN ${fixture.suffix.slice(-5)}`;
 
-    await page.goto("/");
+    await page.goto("/teach");
     await page.getByLabel("Usuário").fill(teacherUsername);
     await page.getByLabel("Senha").fill(teacherPassword);
     const [browserLogin] = await Promise.all([

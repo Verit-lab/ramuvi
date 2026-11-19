@@ -348,7 +348,7 @@ export function buildQuestionPrompt({
     ],
   };
 
-  return `Crie um conjunto de questões para uma atividade educacional que será importada no Arena Dev.
+  return `Crie um conjunto de questões para uma atividade educacional que será importada na Ramuvi.
 
 Tema: ${theme.trim()}
 Nível predominante: ${QUESTION_DIFFICULTY_LABEL[difficulty]}

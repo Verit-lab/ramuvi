@@ -1,8 +1,8 @@
-# Arena Dev — Design System
+# Ramuvi — Design System
 
 ## Objetivo
 
-O Design System é a fonte única para decisões visuais e de interação do Arena Dev.
+O Design System é a fonte única para decisões visuais e de interação da Ramuvi (Learn, Teach, landing pública e projetor).
 
 Princípios:
 

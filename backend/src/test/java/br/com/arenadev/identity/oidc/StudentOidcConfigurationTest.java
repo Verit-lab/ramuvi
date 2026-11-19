@@ -1,11 +1,29 @@
 package br.com.arenadev.identity.oidc;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.env.YamlPropertySourceLoader;
+import org.springframework.core.io.ClassPathResource;
+
+import java.io.IOException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class StudentOidcConfigurationTest {
+    @Test
+    void productionSessionCookieSupportsProviderCallbackWithoutDroppingState() throws IOException {
+        var sources = new YamlPropertySourceLoader().load(
+                "production", new ClassPathResource("application-prod.yml"));
+        assertThat(sources).isNotEmpty();
+        var production = sources.get(0);
+        assertThat(production.getProperty("server.servlet.session.cookie.same-site"))
+                .isEqualTo("lax");
+        assertThat(production.getProperty("server.servlet.session.cookie.secure"))
+                .isEqualTo(true);
+        assertThat(production.getProperty("server.servlet.session.cookie.http-only"))
+                .isEqualTo(true);
+    }
+
     @Test
     void onlyHttpsOrLocalHttpOriginsCanBeUsedForCallbacks() {
         assertThat(StudentOidcConfiguration.requirePublicOrigin("https://ramuvi.example.org/", true))

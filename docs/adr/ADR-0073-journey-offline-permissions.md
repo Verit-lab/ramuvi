@@ -1,4 +1,4 @@
-# ADR-0072 — Download seletivo de Jornadas e política de cópia
+# ADR-0073 — Download seletivo de Jornadas e política de cópia
 
 - **Status:** Proposto, incremento I1 da v0.12.1; não aprovado como release.
 - **Data:** 17/11/2026.

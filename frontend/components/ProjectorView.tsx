@@ -454,7 +454,7 @@ export default function ProjectorView() {
       <main className={styles.accessPage}>
         <section className={styles.accessCard}>
           <div className={styles.brandMark}>A</div>
-          <span className={styles.eyebrow}>ARENA DEV · MODO PROJETOR</span>
+          <span className={styles.eyebrow}>RAMUVI · MODO PROJETOR</span>
           <h1>Abra a sessão no projetor</h1>
           <p>
             Informe o mesmo código temporário exibido pelo professor.
@@ -494,9 +494,9 @@ export default function ProjectorView() {
     <main className={`${styles.projector} ${showMaterial ? styles.materialProjector : ""}`}>
       <header className={styles.header}>
         <div className={styles.brand}>
-          <div className={styles.brandMark}>A</div>
+          <div className={styles.brandMark} aria-hidden="true">R</div>
           <div>
-            <strong>ARENA DEV</strong>
+            <strong>RAMUVI</strong>
             <span>Modo Projetor</span>
           </div>
         </div>

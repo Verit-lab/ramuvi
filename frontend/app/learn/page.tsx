@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import StudyShell from "@/components/study/StudyShell";
+import StudentAccountAccess from "@/components/student/StudentAccountAccess";
+import { fetchStudentOidcSession, StudentAccountSessionUnavailable, type StudentOidcSession } from "@/lib/student-oidc-api";
 import { fetchAllStudyJourneys, fetchAllStudyLiveSessions, type LiveSessionSummary, type MultiClassroomJourneySummary } from "@/lib/study-api";
 import styles from "@/components/study/study.module.css";
 
@@ -17,7 +21,7 @@ function learnerDescription(description: string | null | undefined) {
 }
 
 
-export default function LearnHomePage() {
+function StudyDashboard() {
   const [journeys, setJourneys] = useState<MultiClassroomJourneySummary[]>([]);
   const [liveSessions, setLiveSessions] = useState<LiveSessionSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,4 +80,63 @@ export default function LearnHomePage() {
 
     {!loading && !error && others.filter(j=>j.progress.percent<100).length > 0 && <section className={styles.section}><div className={styles.sectionHead}><h2>Em andamento</h2><Link href="/learn/journeys" className={styles.sectionLink}>Ver todas</Link></div><div className={styles.list}>{others.filter(j=>j.progress.percent<100).slice(0,3).map((journey) => <Link key={journey.id} href={`/learn/journeys/${journey.id}`} className={styles.card}><div><h3>{journey.title}</h3><p>{journey.progress.percent === 100 ? "Jornada concluída" : journey.currentContentTitle ? `${journey.started ? "Continuar" : "Começar"} em ${journey.currentContentTitle}` : journey.description || "Jornada de estudo"}</p></div><span className={styles.percent}>{journey.progress.percent}%</span></Link>)}</div></section>}
   </>;
+}
+
+
+/** /learn is the only student account entry; the study dashboard stays at the same URL. */
+function LearnEntry() {
+  const searchParams = useSearchParams();
+  const [status, setStatus] = useState<"checking" | "guest" | "authenticated">("checking");
+  const [session, setSession] = useState<StudentOidcSession | null>(null);
+  const [sessionUnavailable, setSessionUnavailable] = useState(false);
+  const [sessionError, setSessionError] = useState("");
+  const [showAccountAfterClaim, setShowAccountAfterClaim] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    void fetchStudentOidcSession()
+      .then((current) => {
+        if (!active) return;
+        setSession(current);
+        setStatus(current ? "authenticated" : "guest");
+      })
+      .catch((error: unknown) => {
+        if (!active) return;
+        setSessionUnavailable(error instanceof StudentAccountSessionUnavailable);
+        if (!(error instanceof StudentAccountSessionUnavailable)) setSessionError("Não foi possível verificar a sessão. Confira sua conexão e tente novamente.");
+        setStatus("guest"); // Never silently fall back to a remembered device token.
+      });
+    return () => { active = false; };
+  }, []);
+
+  if (status === "checking") {
+    return <main role="status" aria-live="polite" className={styles.entryLoading}>Verificando seu acesso...</main>;
+  }
+
+  const accountRequested = searchParams.get("account") === "1" || searchParams.get("connected") === "1";
+  if (status === "guest" || accountRequested || !session?.studentId || showAccountAfterClaim) {
+    return <StudentAccountAccess
+      session={session}
+      sessionUnavailable={sessionUnavailable}
+      sessionError={sessionError}
+      oidcError={searchParams.get("error") === "oidc"}
+      onBackToStudies={() => setShowAccountAfterClaim(false)}
+      onSessionChange={(updated) => {
+        setSession(updated);
+        setStatus(updated ? "authenticated" : "guest");
+        setShowAccountAfterClaim(true);
+      }}
+      onLogout={() => {
+        setSession(null);
+        setSessionUnavailable(true);
+        setStatus("guest");
+      }}
+    />;
+  }
+
+  return <StudyShell><StudyDashboard /></StudyShell>;
+}
+
+export default function LearnHomePage() {
+  return <Suspense fallback={<main role="status">Verificando seu acesso...</main>}><LearnEntry /></Suspense>;
 }

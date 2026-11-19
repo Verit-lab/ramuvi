@@ -559,9 +559,9 @@ export default function TimerPanel({ sessionId, state, onStateChange, notify }: 
         >
           <header className="timer-focus-header">
             <div>
-              <span className="brand-mark">A</span>
+              <span className="brand-mark" aria-hidden="true">R</span>
               <div>
-                <strong>ARENA DEV</strong>
+                <strong>RAMUVI</strong>
                 <small>Tempo da atividade</small>
               </div>
             </div>

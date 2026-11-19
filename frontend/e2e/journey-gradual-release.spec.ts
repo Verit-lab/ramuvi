@@ -102,7 +102,7 @@ test("v0.11 / 11.6 — professor libera capítulos inteiros sem expor conteúdo 
     await ok(await page.request.post(browserApi + "/api/auth/login", {
       data: { username, password }, headers: { "X-XSRF-TOKEN": browserToken },
     }), "Login navegador");
-    await page.goto("/?tela=turma&turma=" + classroomId + "&aba=jornadas");
+    await page.goto("/teach?tela=turma&turma=" + classroomId + "&aba=jornadas");
     const catalog = page.getByRole("complementary", { name: "Jornadas da turma" });
     await catalog.getByRole("button", { name: new RegExp("Jornada gradual " + suffix) }).click();
     await expect(page.getByText("Liberação gradual", { exact: true })).toBeVisible();

@@ -25,6 +25,11 @@ REQUIRED = (
     "security_privacy_authorization",
     "release_owner_go_nogo",
 )
+V012_REQUIRED = REQUIRED + (
+    "student_oidc_disabled_or_verified_providers",
+    "v68_representative_restore",
+    "public_https_routing_and_secure_session",
+)
 CI_JOBS = (
     "Backend — Java 21, PostgreSQL and integration tests",
     "Frontend — tests, TypeScript and production build",
@@ -32,12 +37,12 @@ CI_JOBS = (
 )
 
 
-def decide(document: dict, candidate: str) -> list[str]:
+def decide(document: dict, candidate: str, expected_version: str = "0.11.1") -> list[str]:
     problems: list[str] = []
     if not re.fullmatch(r"[0-9a-f]{40}", candidate):
         return ["Candidate SHA must be full 40-character Git commit SHA"]
-    if document.get("version") != "0.11.1":
-        problems.append("Release attestation version must be 0.11.1")
+    if document.get("version") != expected_version:
+        problems.append(f"Release attestation version must be {expected_version}")
     if document.get("candidateSha") != candidate:
         problems.append("Attestation candidateSha differs from the tested SHA")
     if document.get("decision") != "GO":
@@ -49,10 +54,11 @@ def decide(document: dict, candidate: str) -> list[str]:
     gates = document.get("gates")
     if not isinstance(gates, list):
         return problems + ["Attestation gates must be an array"]
+    required = V012_REQUIRED if expected_version == "0.12.0" else REQUIRED
     lookup = {g.get("id"): g for g in gates if isinstance(g, dict)}
-    if len(lookup) != len(gates) or set(lookup) != set(REQUIRED):
+    if len(lookup) != len(gates) or set(lookup) != set(required):
         problems.append("Attestation requires exactly the documented operational gates")
-    for gate in REQUIRED:
+    for gate in required:
         evidence = lookup.get(gate) or {}
         if evidence.get("status") != "PASS":
             problems.append(f"{gate}: not marked PASS")
@@ -98,6 +104,7 @@ def main() -> int:
     parser.add_argument("--candidate", help="Full 40-character exact candidate SHA")
     parser.add_argument("--ci-run-id", help="Required to claim GO")
     parser.add_argument("--repo", default="Verit-lab/ramuvi")
+    parser.add_argument("--expected-version", choices=("0.11.1", "0.12.0"), default="0.11.1")
     parser.add_argument("--check-template", action="store_true",
                         help="CI check: template must be deliberately incomplete")
     args = parser.parse_args()
@@ -109,7 +116,9 @@ def main() -> int:
     if args.check_template:
         gates = doc.get("gates") or []
         ids = [g.get("id") for g in gates if isinstance(g, dict)]
-        if (len(ids) != len(REQUIRED) or set(ids) != set(REQUIRED)
+        required = V012_REQUIRED if args.expected_version == "0.12.0" else REQUIRED
+        if (len(ids) != len(required) or set(ids) != set(required)
+                or (args.expected_version == "0.12.0" and doc.get("version") != "0.12.0")
                 or doc.get("decision") != "NO-GO"
                 or any(g.get("status") != "PENDING" for g in gates)
                 or doc.get("approvedBy")
@@ -118,13 +127,13 @@ def main() -> int:
             return 2
         print("TEMPLATE VALID: mandatory operational gates start NO-GO")
         return 0
-    problems = decide(doc, args.candidate or "")
+    problems = decide(doc, args.candidate or "", expected_version=args.expected_version)
     if not args.ci_run_id:
         problems.append("Missing CI run ID tied to exact candidate SHA")
     elif not problems:
         problems.extend(gh_verify(args.repo, args.candidate, args.ci_run_id))
     if problems:
-        print("NO-GO for v0.11.1 — release not authorized:")
+        print(f"NO-GO for v{args.expected_version} — release not authorized:")
         for issue in problems:
             print(f"  - {issue}")
         return 2

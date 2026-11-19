@@ -44,7 +44,7 @@ command -v node >/dev/null 2>&1 || fail "Node.js não encontrado"
 
 backend_version="$({
   awk '
-    /<artifactId>arena-dev-api<\/artifactId>/ { artifact = 1; next }
+    /<artifactId>ramuvi-api<\/artifactId>/ { artifact = 1; next }
     artifact && /<version>/ {
       line = $0
       sub(/^.*<version>/, "", line)

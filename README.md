@@ -1,8 +1,22 @@
 # Ramuvi
 
-**Arena Dev** é uma plataforma proprietária e self-hosted para condução, participação e gamificação de dinâmicas de sala, com foco em baixa fricção para o professor.
+**Ramuvi** é uma plataforma educacional proprietária e self-hosted que reúne jornadas de aprendizagem, atividades interativas e experiências ao vivo, conectando professores e alunos. Até a v0.12.0 o produto se chamava **Arena Dev**; esse nome permanece apenas em registros históricos e identificadores internos/persistidos (ver [identidade e rotas](docs/v0.12.1/RAMUVI_BRAND_AND_ROUTES.md)).
 
-## Estado vigente — 16/11/2026
+| Rota | Ambiente | Finalidade |
+| --- | --- | --- |
+| `/` | Ramuvi | Landing page pública |
+| `/learn` | Ramuvi Learn | Ambiente do aluno (conta, jornadas, progresso, conquistas, ao vivo) |
+| `/teach` | Ramuvi Teach | Ambiente do professor (turmas, biblioteca, atividades, jornadas, Arena ao vivo) |
+| `/join` | Ramuvi Learn | Participação ao vivo por código/QR, sem conta permanente |
+| `/projector` | Ramuvi Teach | Tela pública da aula |
+
+## Estado vigente — 17/11/2026
+
+**Ramuvi v0.12.0 — preparação de release:** I0/I1/I2/I3a integradas à [main@09819c5](https://github.com/Verit-lab/ramuvi/commit/09819c5b5c5c35701441991a51fbbe146133e78a), com [CI 3/3 aprovada](https://github.com/Verit-lab/ramuvi/actions/runs/44171449577), 113 testes Chromium e 19 WebKit. Versão estável 0.12.0 preparada em branch de release, ainda **sem tag, GitHub Release ou deploy** até evidenciar backup representativo e gate operacional do novo SHA.
+
+**Publicação:** [notas candidatas](docs/RELEASE_0_12.md) · [runbook VPS/HTTPS](docs/v0.12/PRODUCTION_RELEASE.md) · [estado técnico](docs/STATUS_ATUAL.md). A origem pública https://ramuvi.io já possui TLS válido; o login OIDC permanece desligado até configuração e validação reais dos provedores.
+
+## Histórico — v0.11.1 em 16/11/2026
 
 **Ramuvi v0.11.1:** release de estabilização em homologação, ainda sem tag estável ou implantação autorizada. O código candidato é `fix/v0.11.1-stabilization`; ver [PR #135](https://github.com/Verit-lab/ramuvi/pull/135), [plano](docs/v0.11.1/IMPLEMENTATION_PLAN.md), [notas candidatas](docs/v0.11.1/RELEASE_NOTES_DRAFT.md) e [status técnico atual](docs/STATUS_ATUAL.md).
 
@@ -46,7 +60,7 @@ Entregas    = fluxo assíncrono de submissão, correção e feedback
 Integrações = ponte provider-independent com plataformas educacionais
 ```
 
-Arena Dev não pretende ser um LMS completo. O produto concentra a condução da aula, participação dos estudantes, atividades, entregas, avaliação supervisionada e gamificação.
+A Ramuvi não pretende ser um LMS completo. O produto concentra a condução da aula, participação dos estudantes, atividades, entregas, avaliação supervisionada e gamificação.
 
 ## Capacidades principais
 
@@ -132,7 +146,7 @@ Provider Adapter
         ↓
 Integration Core
         ↓
-Arena Dev Domain
+Ramuvi Domain
 ```
 
 Regra arquitetural: IDs, tokens e detalhes específicos de Microsoft/Google não devem contaminar `ActivitySubmission`, `Assessment`, `ScoreEvent` ou os demais agregados centrais.
@@ -260,7 +274,7 @@ docker compose up -d --build          # perfil local: frontend em 127.0.0.1
 docker compose ps
 ```
 
-Frontend: `http://localhost:3000`
+Frontend: `http://localhost:3000` (landing), `http://localhost:3000/teach` (professor) e `http://localhost:3000/learn` (aluno)
 
 Backend: `http://localhost:8080`
 

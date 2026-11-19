@@ -68,10 +68,10 @@ test("legacy cached join is deleted on current activation; only neutral offline 
   assert.equal(w.storage.has("arena-dev-shell-v0.8-join-fix-1"), false);
   assert.equal(w.storage.has("arena-dev-static-v0.8-join-fix-1"), false);
   assert.equal(w.storage.has("other-project-cache"), true);
-  const newCache = [...w.storage.keys()].find((name) => name.startsWith("arena-dev-shell-v0.11-"));
+  const newCache = [...w.storage.keys()].find((name) => name.startsWith("ramuvi-shell-v0.12-"));
   assert.ok(newCache);
-  // 11.7: the new shell icons are precached with the current version.
-  assert.equal(w.storage.get(newCache)?.has("/icons/arena-maskable-512.png"), true);
+  // v0.12: the Ramuvi shell icons are precached with the current version.
+  assert.equal(w.storage.get(newCache)?.has("/icons/ramuvi-maskable-512.png"), true);
   assert.equal(w.storage.get(newCache)?.has("/join"), false);
   assert.equal(w.storage.get(newCache)?.has("/offline.html"), true);
   w.setOffline(true);
