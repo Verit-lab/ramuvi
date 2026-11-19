@@ -4,6 +4,14 @@ import { apiFetch } from "./auth-api";
 // silently reusing a different student's remembered device claim.
 // This is a UI boundary, NOT proof of identity or an authorization credential.
 const observedAccountKey = "ramuvi:student-account-observed";
+// Distinguish intentional logout from a revoked/expired account without removing
+// the verified-identity boundary that blocks implicit device-token fallback.
+const signedOutAccountKey = "ramuvi:student-account-signed-out";
+
+export function studentAccountWasSignedOut(): boolean {
+  try { return window.localStorage.getItem(signedOutAccountKey) === "1"; }
+  catch { return false; }
+}
 
 function accountWasObserved(): boolean {
   try { return window.localStorage.getItem(observedAccountKey) === "1"; }
@@ -11,13 +19,17 @@ function accountWasObserved(): boolean {
 }
 
 function markAccountObserved(): void {
-  try { window.localStorage.setItem(observedAccountKey, "1"); }
-  catch { /* storage may be restricted; backend authorization remains authoritative */ }
+  try {
+    window.localStorage.setItem(observedAccountKey, "1");
+    window.localStorage.removeItem(signedOutAccountKey);
+  } catch { /* storage may be restricted; backend authorization remains authoritative */ }
 }
 
 export function leaveStudentAccountMode(): void {
-  try { window.localStorage.removeItem(observedAccountKey); }
-  catch { /* browser storage may be restricted */ }
+  try {
+    window.localStorage.removeItem(observedAccountKey);
+    window.localStorage.removeItem(signedOutAccountKey);
+  } catch { /* browser storage may be restricted */ }
 }
 
 export class StudentAccountSessionUnavailable extends Error {
@@ -103,9 +115,11 @@ export async function claimStudentEnrollment(token: string): Promise<ClaimedEnro
   if (!response.ok) {
     throw new Error(response.status === 404
       ? "O vínculo por convite ainda não foi habilitado."
-      : response.status === 403
+      : response.status === 401 || response.status === 403
         ? "Sua sessão expirou ou não possui permissão. Entre novamente."
-        : "Convite inválido, expirado ou associado a outra conta. Solicite um novo ao professor.");
+        : response.status === 429
+          ? "Muitas tentativas de vínculo. Aguarde antes de tentar novamente."
+          : "Convite inválido, expirado, revogado ou já utilizado. Solicite um novo ao professor.");
   }
   return (await response.json()) as ClaimedEnrollment;
 }
@@ -113,6 +127,8 @@ export async function claimStudentEnrollment(token: string): Promise<ClaimedEnro
 export async function logoutStudentOidc(): Promise<void> {
   const response = await apiFetch("/api/student-account/logout", { method: "POST" });
   if (!response.ok) throw new Error("Não foi possível sair desta conta.");
-  // Logout must not silently revive another student's remembered device claim.
-  // Keep the non-secret boundary marker until the learner explicitly selects code mode.
+  // Preserve the verified identity boundary across reloads, while distinguishing a
+  // deliberate sign-out from an unexpected session revocation in the UI.
+  try { window.localStorage.setItem(signedOutAccountKey, "1"); }
+  catch { /* localStorage may be unavailable; the backend already ended the session */ }
 }

@@ -2,6 +2,10 @@ import { expect, test } from "./fixtures";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+// These audits validate the rendered UI with mocked APIs; a previously installed
+// PWA worker must not bypass Playwright routes during a theme reload.
+test.use({ serviceWorkers: "block" });
+
 const axeSource = readFileSync(resolve(process.cwd(), "node_modules/axe-core/axe.min.js"),"utf8");
 
 type AxeFinding = { id: string; impact: string; nodes: Array<{ target: string[]; failureSummary: string }> };
@@ -68,6 +72,8 @@ test("documentos legais são acessíveis sem login e possuem navegação e aviso
 });
 
 test("login não apresenta achados críticos no axe-core WCAG A/AA", async ({ page }) => {
+  // A visual accessibility audit does not require a live teacher backend.
+  await page.route("**/api/auth/session", (route) => route.fulfill({ status: 401 }));
   const baseURL = process.env.E2E_FRONTEND_URL ?? "http://localhost:3000";
   await page.goto(`${baseURL}/teach`);
   await page.getByLabel("Usuário").fill(process.env.E2E_TEACHER_USERNAME ?? "professor");

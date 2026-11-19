@@ -10,14 +10,29 @@ export default function LivePage() {
   const [sessions, setSessions] = useState<LiveSessionSummary[]>([]);
   const [selectedCode, setSelectedCode] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [retry, setRetry] = useState(0);
   const [hasRememberedClassroom, setHasRememberedClassroom] = useState(false);
 
   function refresh() {
     setLoading(true);
-    void fetchAllStudyLiveSessions().then(setSessions).finally(() => setLoading(false));
+    setLoadError(false);
+    setRetry((value) => value + 1);
   }
 
-  useEffect(() => { setHasRememberedClassroom(studyDeviceClaims().length > 0); refresh(); }, []);
+  useEffect(() => {
+    let active = true;
+    void fetchAllStudyLiveSessions()
+      .then((items) => {
+        if (active) {
+          setSessions(items);
+          setHasRememberedClassroom(studyDeviceClaims().length > 0);
+        }
+      })
+      .catch(() => { if (active) setLoadError(true); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [retry]);
 
   if (selectedCode) return <>
     <button type="button" className={styles.liveBack} onClick={() => { setSelectedCode(""); refresh(); }}>← Voltar para aulas ao vivo</button>
@@ -29,7 +44,13 @@ export default function LivePage() {
     <h1 className={styles.title}>Entrar ao vivo</h1>
     <p className={styles.lead}>Participe das aulas e atividades conduzidas pelo professor. Sessões das suas turmas aparecem aqui automaticamente.</p>
 
-    {!loading && sessions.length > 0 && <section className={styles.liveNow} aria-labelledby="live-now-title">
+    {loading && <p role="status" className={styles.liveLoadStatus}>Consultando aulas ao vivo...</p>}
+    {!loading && loadError && <div role="alert" className={styles.liveLoadError}>
+      <span>Não foi possível consultar as aulas ao vivo. Verifique sua conexão.</span>
+      <button type="button" onClick={refresh}>Tentar novamente</button>
+    </div>}
+
+    {!loading && !loadError && sessions.length > 0 && <section className={styles.liveNow} aria-labelledby="live-now-title">
       <div className={styles.liveSectionHead}><div><span>ACONTECENDO AGORA</span><h2 id="live-now-title">{sessions.length === 1 ? "Sua aula está ao vivo" : "Aulas disponíveis agora"}</h2></div><button type="button" onClick={refresh}>Atualizar</button></div>
       <div className={styles.liveSessionList}>{sessions.map((session) =>
         <article className={styles.liveSessionCard} key={session.sessionId}>
@@ -39,7 +60,7 @@ export default function LivePage() {
       )}</div>
     </section>}
 
-    {!loading && hasRememberedClassroom && sessions.length === 0 && (
+    {!loading && !loadError && hasRememberedClassroom && sessions.length === 0 && (
       <section className={styles.liveRemembered} aria-label="Turmas lembradas neste dispositivo">
         <strong>Nenhuma aula ao vivo encontrada neste momento.</strong>
         <p>Se o vínculo salvo ainda estiver válido, você poderá continuar as Jornadas. Caso tenha expirado, entre novamente com um código.</p>
