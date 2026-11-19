@@ -14,6 +14,9 @@ import {
   type StudentOidcProvider,
   type StudentOidcSession,
 } from "@/lib/student-oidc-api";
+import RamuviMark from "@/components/brand/RamuviMark";
+import LegalLinks from "@/components/legal/LegalLinks";
+import { BRAND, ENTRY_ROUTES } from "@/lib/brand";
 import styles from "./student-account.module.css";
 import { studyDeviceClaims } from "@/lib/study-api";
 
@@ -99,9 +102,11 @@ export default function StudentAccountAccess({ session, sessionUnavailable, sess
 
   return (
     <main className={styles.shell}>
+      {!session && <Link href={ENTRY_ROUTES.landing} prefetch={false} className={styles.back}>
+        <span aria-hidden="true">←</span> Voltar para a {BRAND.name}
+      </Link>}
       <section className={styles.card} aria-labelledby="student-login-title">
-        <div className={styles.brand}>ramuvi</div>
-        <p className={styles.eyebrow}>Ramuvi Learn · Área do aluno</p>
+        <p className={styles.brand}><RamuviMark size={28} /><span>{BRAND.learn}</span></p>
         <h1 id="student-login-title">{session ? "Minha conta" : "Acesse sua conta"}</h1>
         <p className={styles.description}>
           Entre com uma conta verificada. Seu acesso às turmas será associado por convite do professor.
@@ -182,12 +187,11 @@ export default function StudentAccountAccess({ session, sessionUnavailable, sess
         )}
 
         <div className={styles.footer}>
-          <Link href="/join">Entrar em uma aula com código</Link>
+          <Link href={ENTRY_ROUTES.liveJoin}>Entrar em uma aula com código</Link>
           {session?.studentId ? <Link href="/learn" onClick={onBackToStudies}>Voltar aos estudos</Link> : hasDeviceClaim && !sessionUnavailable ? <Link href="/learn/journeys">Acessar Jornadas com código</Link> : null}
-          <Link href="/termos">Termos de Uso</Link>
-          <Link href="/privacidade">Política de Privacidade</Link>
         </div>
       </section>
+      <LegalLinks className={styles.legal} />
     </main>
   );
 }
