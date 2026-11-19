@@ -496,30 +496,25 @@ class JourneyCoreIT {
     }
 
     @Test
-    void journeyCodeCanBootstrapFirstStudyAccessWithoutPriorLiveSession() {
+    void journeyCodePreviewNeverIssuesAStudyCredential() {
+        // ADR-0075: the shared J- code plus typed identity no longer bootstraps access.
         Fixture fixture = fixture("Primeiro acesso", "JRNY-BOOT");
         JourneyService.JourneyView journey = createPublishedJourney(fixture, List.of(
                 stage("Conteúdo inicial", null, JourneyUnlockRule.IMMEDIATE, JourneyCompletionRule.MANUAL)
         ));
         var code = redemptionService.enable(journey.id());
+        long claimsBefore = deviceClaimRepository.count();
 
         var preview = redemptionService.preview(code.code());
         assertThat(preview.journeyId()).isEqualTo(journey.id());
         assertThat(preview.classroomId()).isEqualTo(fixture.classroom().getId());
-
-        var result = redemptionService.redeemWithIdentity(
-                code.code(),
-                fixture.enrollment().getStudent().getRegistration()
-        );
-
-        assertThat(result.classroomId()).isEqualTo(fixture.classroom().getId());
-        assertThat(result.deviceToken()).isNotBlank();
-        assertThat(result.redemption().journeyId()).isEqualTo(journey.id());
-        assertThat(result.redemption().alreadyAdded()).isFalse();
+        assertThat(java.util.Arrays.stream(JourneyRedemptionService.class.getMethods())
+                .map(java.lang.reflect.Method::getName))
+                .doesNotContain("redeemWithIdentity");
+        assertThat(deviceClaimRepository.count()).isEqualTo(claimsBefore);
         assertThat(studentJourneyAccessRepository.findByStudentIdAndJourneyId(
                 fixture.enrollment().getStudent().getId(), journey.id()
-        )).isPresent();
-        assertThat(deviceClaimRepository.count()).isEqualTo(1);
+        )).isEmpty();
     }
 
     @Test

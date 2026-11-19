@@ -22,7 +22,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /** v0.12: the teacher registers by name or e-mail and the student completes the registration. */
-@SpringBootTest
+// Profile/e-mail on X-Study-Token now requires a study-scoped claim (ADR-0075):
+// this suite exercises the explicit operator opt-in for live remembered devices.
+@SpringBootTest(properties = "app.study.live-device-claim-study-enabled=true")
 class StudentEmailIT {
     @DynamicPropertySource
     static void databaseProperties(DynamicPropertyRegistry registry) {

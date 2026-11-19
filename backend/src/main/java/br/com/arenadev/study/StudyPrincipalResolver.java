@@ -15,9 +15,21 @@ public class StudyPrincipalResolver {
         this.deviceClaims = deviceClaims;
     }
 
+    /** Study endpoints (Journeys, profile, achievements): requires a study-scoped claim (ADR-0075). */
     public StudyPrincipal resolve(String token) {
+        return resolve(token, true);
+    }
+
+    /** Live-session discovery only: a LIVE "remember this device" claim is enough. */
+    public StudyPrincipal resolveForLiveDiscovery(String token) {
+        return resolve(token, false);
+    }
+
+    private StudyPrincipal resolve(String token, boolean study) {
         try {
-            EnrollmentDeviceClaim claim = deviceClaims.requireUsable(token);
+            EnrollmentDeviceClaim claim = study
+                    ? deviceClaims.requireUsableForStudy(token)
+                    : deviceClaims.requireUsable(token);
             Enrollment enrollment = claim.getEnrollment();
             deviceClaims.markUsed(claim);
             return new StudyPrincipal(

@@ -3,12 +3,9 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
-  bootstrapJourneyRedemption,
   fetchStudyJourneyCatalog,
-  previewJourneyCode,
   redeemJourneyCode,
   StudyApiError,
-  type JourneyRedemptionPreview,
   type MultiClassroomJourneySummary,
 } from "@/lib/study-api";
 import styles from "@/components/study/study.module.css";
@@ -26,8 +23,8 @@ export default function JourneysPage() {
   const [redeemCode, setRedeemCode] = useState("");
   const [redeemMessage, setRedeemMessage] = useState("");
   const [redeeming, setRedeeming] = useState(false);
-  const [preview, setPreview] = useState<JourneyRedemptionPreview | null>(null);
-  const [identity, setIdentity] = useState("");
+  // ADR-0075: a Journey code plus a typed name/registration never identifies a student.
+  const [needsAccount, setNeedsAccount] = useState(false);
 
   async function refreshJourneys() {
     try {
@@ -86,8 +83,7 @@ export default function JourneysPage() {
   ).values());
 
   function resetRedemption() {
-    setPreview(null);
-    setIdentity("");
+    setNeedsAccount(false);
     setRedeemMessage("");
   }
 
@@ -96,47 +92,24 @@ export default function JourneysPage() {
     if (!code) return;
     setRedeeming(true);
     setRedeemMessage("");
+    setNeedsAccount(false);
     try {
       const result = await redeemJourneyCode(code);
       setRedeemMessage(result.alreadyAdded
         ? "Esta Jornada já faz parte do seu espaço de estudo."
         : result.title + " foi adicionada às suas Jornadas.");
       setRedeemCode("");
-      setPreview(null);
       await refreshJourneys();
     } catch (error) {
       if (error instanceof StudyApiError && error.status === 401) {
-        try {
-          const validated = await previewJourneyCode(code);
-          setPreview(validated);
-          setRedeemMessage("");
-        } catch (previewError) {
-          setRedeemMessage(previewError instanceof Error ? previewError.message : "Não foi possível validar o código da Jornada.");
-        }
+        // No study credential on this device: never fall back to a name/registration form.
+        setNeedsAccount(true);
+        setRedeemMessage("");
+      } else if (error instanceof StudyApiError && error.status === 429) {
+        setRedeemMessage("Muitas tentativas com códigos. Aguarde um minuto e tente novamente.");
       } else {
         setRedeemMessage(error instanceof Error ? error.message : "Não foi possível adicionar a Jornada.");
       }
-    } finally {
-      setRedeeming(false);
-    }
-  }
-
-  async function bootstrap(event: React.FormEvent) {
-    event.preventDefault();
-    if (!identity.trim() || !redeemCode.trim()) return;
-    setRedeeming(true);
-    setRedeemMessage("");
-    try {
-      const result = await bootstrapJourneyRedemption(redeemCode, identity);
-      setRedeemMessage(result.redemption.alreadyAdded
-        ? "Esta Jornada já faz parte do seu espaço de estudo."
-        : result.redemption.title + " foi adicionada às suas Jornadas.");
-      setRedeemCode("");
-      setPreview(null);
-      setIdentity("");
-      await refreshJourneys();
-    } catch (error) {
-      setRedeemMessage(error instanceof Error ? error.message : "Não foi possível identificar o aluno.");
     } finally {
       setRedeeming(false);
     }
@@ -153,14 +126,14 @@ export default function JourneysPage() {
       }} aria-expanded={redeemOpen} aria-controls="journey-redeem-form">{redeemOpen ? "Fechar formulário" : "+ Adicionar com código"}</button>}
     </div>
 
-    {studyMode === "ACCOUNT" && <p role="status">Acesso pela sua conta verificada. Para participar de outra turma, use o convite individual informado pelo professor em <Link href="/learn?account=1">Minha conta</Link>.</p>}
-    {studyMode === "DEVICE" && redeemOpen && !preview && <form id="journey-redeem-form" className={styles.redeemPanel} onSubmit={(event) => {
+    {studyMode === "ACCOUNT" && <p role="status">Acesso pela sua conta verificada. Para participar de outra turma, abra o link de ingresso da turma ou use o convite individual em <Link href="/learn?account=1">Minha conta</Link>.</p>}
+    {studyMode === "DEVICE" && redeemOpen && !needsAccount && <form id="journey-redeem-form" className={styles.redeemPanel} onSubmit={(event) => {
       event.preventDefault();
       void redeem();
     }}>
       <div>
         <strong>Adicionar Jornada</strong>
-        <span>Digite o código J-... compartilhado pelo professor. No primeiro acesso, identificaremos você na turma.</span>
+        <span>Digite o código J-... compartilhado pelo professor. O código só funciona em um perfil de estudo já autorizado neste dispositivo.</span>
       </div>
       <div className={styles.redeemControls}>
         <input
@@ -176,33 +149,18 @@ export default function JourneysPage() {
           {redeeming ? "Validando…" : "Continuar"}
         </button>
       </div>
-      {redeemMessage && <p>{redeemMessage}</p>}
+      {redeemMessage && <p role="status">{redeemMessage}</p>}
     </form>}
 
-    {studyMode === "DEVICE" && redeemOpen && preview && <form id="journey-redeem-form" className={styles.redeemPanel} onSubmit={(event) => void bootstrap(event)}>
+    {studyMode === "DEVICE" && redeemOpen && needsAccount && <div id="journey-redeem-form" className={styles.redeemPanel} role="alert">
       <div>
-        <strong>{preview.title}</strong>
-        <span>{preview.classroomName} · informe sua matrícula ou nome completo para vincular esta Jornada ao seu perfil.</span>
+        <strong>Entre com sua conta para estudar</strong>
+        <span>Por segurança, Jornadas não são mais liberadas informando nome, matrícula ou e-mail com um código.
+          Acesse <Link href="/learn?account=1">Minha conta</Link>, entre com Google e use o link de ingresso da turma
+          ou o convite individual enviado pelo professor. Depois disso, as Jornadas publicadas da turma aparecem sem outro código.</span>
       </div>
-      <div className={styles.redeemControls}>
-        <input
-          aria-label="Matrícula, e-mail ou nome"
-          placeholder="Matrícula, e-mail ou nome completo"
-          value={identity}
-          onChange={(event) => setIdentity(event.target.value)}
-          autoFocus
-        />
-        <button type="submit" disabled={redeeming || !identity.trim()}>
-          {redeeming ? "Entrando…" : "Adicionar ao meu perfil"}
-        </button>
-      </div>
-      <button type="button" className={styles.liveBack} onClick={() => {
-        setPreview(null);
-        setIdentity("");
-        setRedeemMessage("");
-      }}>← trocar código</button>
-      {redeemMessage && <p>{redeemMessage}</p>}
-    </form>}
+      <button type="button" className={styles.liveBack} onClick={resetRedemption}>← tentar outro código</button>
+    </div>}
 
     {journeys.length > 0 && <div className={styles.libraryFilters} role="group" aria-label="Filtros de Jornadas">
       <label className={styles.libraryFilterField}>

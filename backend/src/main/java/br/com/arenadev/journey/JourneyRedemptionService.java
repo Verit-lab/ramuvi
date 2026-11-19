@@ -1,10 +1,7 @@
 package br.com.arenadev.journey;
 
-import br.com.arenadev.classroom.Enrollment;
-import br.com.arenadev.classroom.EnrollmentRepository;
 import br.com.arenadev.classroom.Student;
 import br.com.arenadev.classroom.StudentRepository;
-import br.com.arenadev.identity.DeviceClaimService;
 import br.com.arenadev.study.StudentJourneyAccess;
 import br.com.arenadev.study.StudentJourneyAccessRepository;
 import br.com.arenadev.study.StudyPrincipal;
@@ -14,12 +11,16 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.security.SecureRandom;
-import java.text.Normalizer;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
+/**
+ * Journey codes ("J-XXXXXX") are a shared distribution hint, NEVER an identity proof.
+ * The former public bootstrap (code + typed name/registration/email -> 180-day
+ * device claim) was removed in v0.12.1 P0 (ADR-0075): it allowed anyone holding the
+ * shared code to impersonate a classmate. Redemption now always requires an
+ * existing study principal; new students enter through /learn (OIDC + link/invite).
+ */
 @Service
 public class JourneyRedemptionService {
     private static final char[] ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".toCharArray();
@@ -29,23 +30,17 @@ public class JourneyRedemptionService {
     private final JourneyRedemptionCodeRepository codes;
     private final StudentJourneyAccessRepository accesses;
     private final StudentRepository students;
-    private final EnrollmentRepository enrollments;
-    private final DeviceClaimService deviceClaims;
 
     public JourneyRedemptionService(
             JourneyRepository journeys,
             JourneyRedemptionCodeRepository codes,
             StudentJourneyAccessRepository accesses,
-            StudentRepository students,
-            EnrollmentRepository enrollments,
-            DeviceClaimService deviceClaims
+            StudentRepository students
     ) {
         this.journeys = journeys;
         this.codes = codes;
         this.accesses = accesses;
         this.students = students;
-        this.enrollments = enrollments;
-        this.deviceClaims = deviceClaims;
     }
 
     @Transactional
@@ -92,25 +87,6 @@ public class JourneyRedemptionService {
     }
 
     @Transactional
-    public BootstrapRedemptionView redeemWithIdentity(String rawCode, String identity) {
-        JourneyRedemptionCode redemption = requireActiveRedemption(rawCode);
-        Journey journey = redemption.getJourney();
-        requirePublished(journey.getId());
-        requireRedeemable(journey);
-
-        Enrollment enrollment = resolveEnrollment(journey, identity);
-        DeviceClaimService.IssuedDeviceClaim claim = deviceClaims.issue(enrollment);
-        RedemptionView redeemed = redeemForStudent(journey, enrollment.getStudent());
-
-        return new BootstrapRedemptionView(
-                journey.getClassroom().getId(),
-                claim.token(),
-                claim.expiresAt(),
-                redeemed
-        );
-    }
-
-    @Transactional
     public RedemptionView redeem(String rawCode, StudyPrincipal principal) {
         JourneyRedemptionCode redemption = requireActiveRedemption(rawCode);
         Journey journey = redemption.getJourney();
@@ -126,52 +102,6 @@ public class JourneyRedemptionService {
         accesses.findByStudentIdAndJourneyId(student.getId(), journey.getId())
                 .orElseGet(() -> accesses.save(new StudentJourneyAccess(student, journey)));
         return new RedemptionView(journey.getId(), journey.getTitle(), journey.getDescription(), existed);
-    }
-
-    private Enrollment resolveEnrollment(Journey journey, String identity) {
-        if (identity == null || identity.isBlank()) {
-            throw new IllegalArgumentException("Informe sua matrícula, e-mail ou nome completo.");
-        }
-
-        List<Enrollment> candidates = enrollments
-                .findByClassroomIdAndActiveTrueOrderByStudentNameAsc(journey.getClassroom().getId());
-
-        List<Enrollment> registrationMatches = candidates.stream()
-                .filter(item -> item.getStudent().getRegistration() != null)
-                .filter(item -> item.getStudent().getRegistration().trim().equalsIgnoreCase(identity.trim()))
-                .toList();
-        if (registrationMatches.size() == 1) return registrationMatches.getFirst();
-        if (registrationMatches.size() > 1) {
-            throw new IllegalArgumentException("Identificação ambígua. Use sua matrícula para continuar.");
-        }
-
-        List<Enrollment> emailMatches = candidates.stream()
-                .filter(item -> item.getStudent().getEmail() != null)
-                .filter(item -> item.getStudent().getEmail().equalsIgnoreCase(identity.trim()))
-                .toList();
-        if (emailMatches.size() == 1) return emailMatches.getFirst();
-
-        String wanted = normalizeIdentity(identity);
-        List<Enrollment> matches = new ArrayList<>();
-        for (Enrollment enrollment : candidates) {
-            Student student = enrollment.getStudent();
-            if (normalizeIdentity(student.getName()).equals(wanted)
-                    || normalizeIdentity(student.getNickname()).equals(wanted)
-                    || normalizeIdentity(enrollment.getPreferredName()).equals(wanted)) {
-                matches.add(enrollment);
-            }
-        }
-
-        if (matches.isEmpty()) {
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND,
-                    "Aluno não encontrado na turma desta Jornada. Confira a matrícula, o e-mail ou o nome completo."
-            );
-        }
-        if (matches.size() > 1) {
-            throw new IllegalArgumentException("Identificação ambígua. Use sua matrícula para continuar.");
-        }
-        return matches.getFirst();
     }
 
     private JourneyRedemptionCode requireActiveRedemption(String rawCode) {
@@ -217,14 +147,6 @@ public class JourneyRedemptionService {
         return value == null ? "" : value.trim().toUpperCase(Locale.ROOT);
     }
 
-    private static String normalizeIdentity(String value) {
-        return Normalizer.normalize(value == null ? "" : value, Normalizer.Form.NFD)
-                .replaceAll("\\p{M}+", "")
-                .toLowerCase(Locale.ROOT)
-                .trim()
-                .replaceAll("\\s+", " ");
-    }
-
     private CodeView view(JourneyRedemptionCode code) {
         return new CodeView(
                 code.getCode(),
@@ -236,10 +158,4 @@ public class JourneyRedemptionService {
     public record CodeView(String code, boolean active, int redeemedCount) {}
     public record RedemptionView(UUID journeyId, String title, String description, boolean alreadyAdded) {}
     public record RedemptionPreviewView(UUID journeyId, String title, UUID classroomId, String classroomName) {}
-    public record BootstrapRedemptionView(
-            UUID classroomId,
-            String deviceToken,
-            java.time.Instant deviceExpiresAt,
-            RedemptionView redemption
-    ) {}
 }

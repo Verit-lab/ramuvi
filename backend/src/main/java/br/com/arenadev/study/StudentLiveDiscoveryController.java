@@ -22,6 +22,6 @@ public class StudentLiveDiscoveryController {
     public List<StudentLiveDiscoveryService.LiveSessionSummary> list(
             @RequestHeader("X-Study-Token") String token
     ) {
-        return live.list(principals.resolve(token));
+        return live.list(principals.resolveForLiveDiscovery(token));
     }
 }

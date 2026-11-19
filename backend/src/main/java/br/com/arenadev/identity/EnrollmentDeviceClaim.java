@@ -3,6 +3,8 @@ package br.com.arenadev.identity;
 import br.com.arenadev.classroom.Enrollment;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -18,7 +20,10 @@ import java.util.UUID;
 @Entity
 @Table(name = "enrollment_device_claims")
 public class EnrollmentDeviceClaim {
-    private static final Duration CLAIM_TTL = Duration.ofDays(180);
+    /** Live-session re-entry ("remember this device"), unchanged from ADR-0005. */
+    public static final Duration LIVE_TTL = Duration.ofDays(180);
+    /** Operator opt-in study access from a live join: short and never extended beyond this window. */
+    public static final Duration LIVE_STUDY_TTL = Duration.ofDays(30);
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -43,15 +48,28 @@ public class EnrollmentDeviceClaim {
     @Column(name = "revoked_at")
     private Instant revokedAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "scope", nullable = false, length = 16)
+    private DeviceClaimScope scope = DeviceClaimScope.LIVE;
+
     protected EnrollmentDeviceClaim() {
     }
 
-    public EnrollmentDeviceClaim(Enrollment enrollment, String tokenHash, Instant now) {
+    public EnrollmentDeviceClaim(Enrollment enrollment, String tokenHash, Instant now, DeviceClaimScope scope) {
+        if (scope == null || scope == DeviceClaimScope.LEGACY) {
+            // LEGACY only exists for rows created before V71; never issue new ones.
+            throw new IllegalArgumentException("Escopo de dispositivo inválido.");
+        }
         this.enrollment = enrollment;
         this.tokenHash = tokenHash;
         this.createdAt = now;
         this.lastUsedAt = now;
-        this.expiresAt = now.plus(CLAIM_TTL);
+        this.scope = scope;
+        this.expiresAt = now.plus(ttl(scope));
+    }
+
+    private static Duration ttl(DeviceClaimScope scope) {
+        return scope == DeviceClaimScope.LIVE_STUDY ? LIVE_STUDY_TTL : LIVE_TTL;
     }
 
     public UUID getId() {
@@ -86,9 +104,17 @@ public class EnrollmentDeviceClaim {
         return revokedAt == null && expiresAt.isAfter(now);
     }
 
+    public DeviceClaimScope getScope() {
+        return scope;
+    }
+
     public void touch(Instant now) {
         this.lastUsedAt = now;
-        this.expiresAt = now.plus(CLAIM_TTL);
+        // Only LIVE claims slide. LEGACY claims (possibly issued from a typed name)
+        // keep their current expiry and LIVE_STUDY never exceeds its short window.
+        if (scope == DeviceClaimScope.LIVE) {
+            this.expiresAt = now.plus(LIVE_TTL);
+        }
     }
 
     public void revoke(Instant now) {

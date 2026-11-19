@@ -99,13 +99,6 @@ export function fetchStudyLiveSessions(token: string) {
 }
 export type JourneyRedemptionResult = { journeyId: string; title: string; description: string | null; alreadyAdded: boolean };
 export type JourneyRedemptionPreview = { journeyId: string; title: string; classroomId: string; classroomName: string };
-export type JourneyBootstrapRedemption = {
-  classroomId: string;
-  deviceToken: string;
-  deviceExpiresAt: string;
-  redemption: JourneyRedemptionResult;
-};
-
 export function previewJourneyCode(code: string) {
   return apiRequest<JourneyRedemptionPreview>(`/api/learn/journeys/redeem/${encodeURIComponent(code.trim().toUpperCase())}`, undefined, {
     credentials: "omit",
@@ -114,22 +107,9 @@ export function previewJourneyCode(code: string) {
   });
 }
 
-export async function bootstrapJourneyRedemption(code: string, identity: string): Promise<JourneyBootstrapRedemption> {
-  const result = await apiRequest<JourneyBootstrapRedemption>("/api/learn/journeys/redeem/bootstrap", {
-    method: "POST",
-    body: JSON.stringify({ code: code.trim().toUpperCase(), identity: identity.trim() }),
-  }, {
-    credentials: "omit",
-    errorMessage: (status) => `Não foi possível vincular a Jornada (${status}).`,
-    errorFactory: (message, status) => new StudyApiError(message, status),
-  });
-  window.localStorage.setItem(deviceClaimStorageKey(result.classroomId), result.deviceToken);
-  return result;
-}
-
 export async function redeemJourneyCode(code: string): Promise<JourneyRedemptionResult> {
   const claims = studyDeviceClaims();
-  if (!claims.length) throw new StudyApiError("Entre em uma aula ao vivo primeiro para criar seu perfil neste dispositivo.", 401);
+  if (!claims.length) throw new StudyApiError("Entre com sua conta em /learn para estudar as Jornadas da turma.", 401);
   let lastError: unknown;
   for (const claim of claims) {
     try {
