@@ -30,7 +30,8 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = "app.allowed-origin-patterns=http://localhost:3000,http://192.168.0.10:3000")
 class ProjectorAccessIT {
     @DynamicPropertySource
     static void databaseProperties(DynamicPropertyRegistry registry) {
@@ -130,6 +131,23 @@ class ProjectorAccessIT {
                 HttpResponse.BodyHandlers.ofString()
         );
         assertThat(unsafeBase.statusCode()).isEqualTo(400);
+
+        for (String suspicious : new String[] {
+                "https://phishing.example",
+                "http://192.168.0.10:3001",
+                "http://192.168.0.10:3000.evil.example",
+                "http://user@192.168.0.10:3000",
+                "http://192.168.0.10:3000/other",
+                "http://192.168.0.10:3000/?next=https://evil.example",
+                "https://192.168.0.10:3000"
+        }) {
+            HttpResponse<String> forbidden = client.send(
+                    HttpRequest.newBuilder(URI.create("http://localhost:" + port
+                            + "/api/projector/" + code.code()
+                            + "/qr?baseUrl=" + URLEncoder.encode(suspicious, StandardCharsets.UTF_8)))
+                            .GET().build(), HttpResponse.BodyHandlers.ofString());
+            assertThat(forbidden.statusCode()).as("QR origin %s", suspicious).isEqualTo(400);
+        }
 
         HttpResponse<String> unknownCode = client.send(
                 HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/api/projector/ZZZZZZ/qr?baseUrl="
