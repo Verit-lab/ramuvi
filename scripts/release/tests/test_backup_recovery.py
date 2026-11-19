@@ -177,6 +177,12 @@ class BackupSafetyTests(unittest.TestCase):
         self.assertIn("checksum SHA-256 obrigatório ausente", result.stderr)
         self.assertNotIn("docker run", self.log.read_text())
 
+    def test_periodic_rehearsal_refuses_missing_jar_without_docker(self):
+        result = self.run_script("run-periodic-recovery.sh")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("RAMUVI_RECOVERY_TEST_JAR", result.stderr)
+        self.assertFalse(self.log.exists())
+
     def test_offsite_rejects_missing_destination_before_backup(self):
         result = self.run_script("backup-offsite.sh",
                                  env={**self.env, "BACKUP_AGE_RECIPIENT": "age1publiconly"})
@@ -196,6 +202,35 @@ class BackupSafetyTests(unittest.TestCase):
         self.assertEqual((remote / (archive.name + ".sha256")).read_bytes(),
                          pathlib.Path(str(archive) + ".sha256").read_bytes())
         self.assertNotIn("decrypt", self.log.read_text())
+
+    def test_offsite_rotates_only_after_remote_verified(self):
+        env = {**self.env, "BACKUP_AGE_RECIPIENT": "age1publiconly",
+               "BACKUP_OFFSITE_REMOTE": "test:ramuvi/production",
+               "BACKUP_KEEP_LOCAL": "2"}
+        remote = self.remote / "ramuvi/production"
+        names = []
+        for _ in range(3):
+            result = self.run_script("backup-offsite.sh", env=env)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            names.append(pathlib.Path(result.stdout.strip()).name)
+        self.assertEqual(len(list(self.backups.glob("ramuvi-*.dump.age"))), 2)
+        for name in names:
+            self.assertTrue((remote / name).exists())
+            self.assertTrue((remote / (name + ".sha256")).exists())
+        self.assertEqual(len(list(self.backups.glob("ramuvi-*.dump.age.sha256"))), 2)
+
+    def test_offsite_missing_old_copy_blocks_local_rotation(self):
+        env = {**self.env, "BACKUP_AGE_RECIPIENT": "age1publiconly",
+               "BACKUP_OFFSITE_REMOTE": "test:ramuvi/production",
+               "BACKUP_KEEP_LOCAL": "1"}
+        first = self.run_script("backup-offsite.sh", env=env)
+        self.assertEqual(first.returncode, 0, first.stderr)
+        name = pathlib.Path(first.stdout.strip()).name
+        (self.remote / "ramuvi/production" / name).unlink()
+        second = self.run_script("backup-offsite.sh", env=env)
+        self.assertNotEqual(second.returncode, 0)
+        self.assertIn("cópia antiga não comprovada", second.stderr)
+        self.assertEqual(len(list(self.backups.glob("ramuvi-*.dump.age"))), 2)
 
     def test_offsite_error_preserves_local_encrypted_recovery_point(self):
         env = {**self.env, "BACKUP_AGE_RECIPIENT": "age1publiconly",

@@ -1,0 +1,12 @@
+# OPTIONAL: monthly synthetic recovery, not actual offsite validation.
+[Unit]
+Description=Monthly isolated Ramuvi synthetic recovery rehearsal
+
+[Timer]
+OnCalendar=*-*-01 04:30:00
+Persistent=true
+RandomizedDelaySec=20m
+Unit=ramuvi-recovery-drill.service
+
+[Install]
+WantedBy=timers.target
