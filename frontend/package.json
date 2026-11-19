@@ -14,7 +14,7 @@
     "format:check:all": "prettier --check app components lib styles tests e2e *.ts *.mjs *.json"
   },
   "dependencies": {
-    "next": "16.4.2",
+    "next": "16.4.6",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-markdown": "^10.1.0",
