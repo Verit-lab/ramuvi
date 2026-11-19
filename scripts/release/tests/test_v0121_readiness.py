@@ -41,6 +41,7 @@ class ReleaseV0121ReadinessTests(unittest.TestCase):
 
     def test_missing_physical_evidence_and_sha_block(self):
         doc = self.complete()
-        doc["gates"][-1]["evidenceRef"] = ""
+        next(g for g in doc["gates"]
+             if g["id"] == "offline_journey_safari_android_cold_start_sync_revocation")["evidenceRef"] = ""
         self.assertTrue(checker.decide(doc,SHA,"0.12.1"))
         self.assertTrue(checker.decide(self.complete(),"b"*40,"0.12.1"))

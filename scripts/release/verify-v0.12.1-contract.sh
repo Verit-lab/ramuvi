@@ -7,6 +7,14 @@ cd "$ROOT"
 fail() { printf 'ERRO: %s\n' "$*" >&2; exit 1; }
 
 RAMUVI_V0121_CONTRACT=1 "$SCRIPT_DIR/verify-v0.12-contract.sh"
+grep -q 'self_enrollment_enabled boolean not null default false' backend/src/main/resources/db/migration/V70__classroom_self_enrollment.sql ||
+  fail 'V70 deve manter ingresso compartilhado desativado para turmas existentes'
+grep -q 'APP_STUDENT_IDENTITY_AUTO_EMAIL_LINK_ENABLED:false' backend/src/main/resources/application.yml ||
+  fail 'Vinculação automática por e-mail deve iniciar OFF'
+grep -q 'getEmailVerified()' backend/src/main/java/br/com/arenadev/identity/oidc/StudentOidcUserService.java ||
+  fail 'Vínculo Google deve exigir email_verified'
+grep -q 'joinClassroomByVerifiedOidc' backend/src/main/java/br/com/arenadev/identity/account/StudentAccountService.java ||
+  fail 'Ingresso por código deve usar conta autenticada'
 grep -q 'offline_allowed boolean NOT NULL DEFAULT false' backend/src/main/resources/db/migration/V69__journey_offline_availability.sql ||
   fail 'Jornadas existentes devem manter offline OFF'
 grep -q 'ALTER COLUMN offline_allowed SET DEFAULT true' backend/src/main/resources/db/migration/V69__journey_offline_availability.sql ||
@@ -25,4 +33,4 @@ python3 scripts/release/v011-readiness.py \
   --attestation docs/v0.12.1/RELEASE_ACCEPTANCE_TEMPLATE.json \
   --expected-version 0.12.1 --check-template >/dev/null ||
   fail 'Aceite v0.12.1 deve iniciar NO-GO incluindo homologação offline'
-printf 'Contrato v0.12.1: V69, identidade verificada, offline OFF e gate operacional pendente.\n'
+printf 'Contrato v0.12.1: V69-V70, identidade verificada, offline/ingresso aberto OFF e gate operacional pendente.\n'

@@ -39,6 +39,7 @@ app:
   student-identity:
     invitation-issuance-enabled: ${APP_STUDENT_IDENTITY_INVITATION_ISSUANCE_ENABLED:false}
     enrollment-claim-enabled: ${APP_STUDENT_IDENTITY_ENROLLMENT_CLAIM_ENABLED:false}
+    auto-email-link-enabled: ${APP_STUDENT_IDENTITY_AUTO_EMAIL_LINK_ENABLED:false}
     study-session-enabled: ${APP_STUDENT_IDENTITY_STUDY_SESSION_ENABLED:false}
     offline-download-enabled: ${APP_STUDENT_IDENTITY_OFFLINE_DOWNLOAD_ENABLED:false}
     oidc:

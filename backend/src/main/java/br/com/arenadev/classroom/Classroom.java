@@ -35,6 +35,9 @@ public class Classroom {
     @Column(name = "student_study_access_enabled", nullable = false)
     private boolean studentStudyAccessEnabled = false;
 
+    @Column(name = "self_enrollment_enabled", nullable = false)
+    private boolean selfEnrollmentEnabled = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
@@ -77,6 +80,9 @@ public class Classroom {
     public void setStudentStudyAccessEnabled(boolean studentStudyAccessEnabled) {
         this.studentStudyAccessEnabled = studentStudyAccessEnabled;
     }
+    public boolean isSelfEnrollmentEnabled() { return selfEnrollmentEnabled; }
+    public void setSelfEnrollmentEnabled(boolean enabled) { selfEnrollmentEnabled = enabled; }
+
 
     public Instant getCreatedAt() {
         return createdAt;

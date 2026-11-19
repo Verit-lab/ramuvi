@@ -124,6 +124,30 @@ export async function claimStudentEnrollment(token: string): Promise<ClaimedEnro
   return (await response.json()) as ClaimedEnrollment;
 }
 
+/** A short classroom code is never an authentication credential: OIDC is mandatory. */
+export async function joinStudentClassroom(code: string): Promise<ClaimedEnrollment> {
+  const normalized = code.trim().toUpperCase();
+  if (!/^[A-Z0-9_-]{8,40}$/.test(normalized)) {
+    throw new Error("Informe o código da turma (8 a 40 caracteres).");
+  }
+  const response = await apiFetch("/api/student-account/classrooms/join", {
+    method: "POST",
+    body: JSON.stringify({ code: normalized }),
+  });
+  if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      throw new Error("Faça login novamente com uma conta verificada.");
+    }
+    if (response.status === 429) {
+      throw new Error("Muitas tentativas. Aguarde antes de tentar novamente.");
+    }
+    throw new Error(
+      "Não foi possível ingressar. Confirme o código e a liberação da turma. Se já possui cadastro, peça ao professor para conferir seu e-mail.",
+    );
+  }
+  return (await response.json()) as ClaimedEnrollment;
+}
+
 export async function logoutStudentOidc(): Promise<void> {
   const response = await apiFetch("/api/student-account/logout", { method: "POST" });
   if (!response.ok) throw new Error("Não foi possível sair desta conta.");

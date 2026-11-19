@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -8,6 +8,7 @@ import {
   fetchStudentOidcSession,
   fetchStudentClassrooms,
   claimStudentEnrollment,
+  joinStudentClassroom,
   type StudentActiveClassroom,
   logoutStudentOidc,
   leaveStudentAccountMode,
@@ -44,6 +45,9 @@ export default function StudentAccountAccess({ session, sessionUnavailable, sign
   const [inviteCode, setInviteCode] = useState("");
   const [claimBusy, setClaimBusy] = useState(false);
   const [claimSuccess, setClaimSuccess] = useState("");
+  const [classCode, setClassCode] = useState("");
+  const [joining, setJoining] = useState(false);
+  const autoJoinAttempted = useRef<string | null>(null);
 
   useEffect(() => {
     void fetchStudentOidcProviders()
@@ -61,6 +65,52 @@ export default function StudentAccountAccess({ session, sessionUnavailable, sign
       .finally(() => { if (active) setClassroomsLoading(false); });
     return () => { active = false; };
   }, [session]);
+
+  // A teacher link survives the Google OAuth redirect without becoming a bearer
+  // authentication token. The backend still requires OIDC + CSRF and opt-in.
+  useEffect(() => {
+    try {
+      const incoming = new URLSearchParams(window.location.search).get("classCode");
+      if (incoming && /^[A-Za-z0-9_-]{8,40}$/.test(incoming)) {
+        window.sessionStorage.setItem("ramuvi:pending-class-code", incoming.toUpperCase());
+      }
+      const pending = window.sessionStorage.getItem("ramuvi:pending-class-code");
+      if (pending) setClassCode(pending);
+    } catch { /* fallback: manual code entry */ }
+  }, []);
+
+  useEffect(() => {
+    if (!session) return;
+    try {
+      const pending = window.sessionStorage.getItem("ramuvi:pending-class-code");
+      if (!pending || autoJoinAttempted.current === pending) return;
+      autoJoinAttempted.current = pending;
+      window.sessionStorage.removeItem("ramuvi:pending-class-code");
+      void joinWithCode(pending);
+    } catch { /* manual code entry remains available */ }
+  }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function joinWithCode(rawCode: string) {
+    if (joining) return;
+    setJoining(true);
+    setError(null);
+    setClaimSuccess("");
+    try {
+      const joined = await joinStudentClassroom(rawCode);
+      setClassCode("");
+      setClaimSuccess(`Você entrou na turma ${joined.classroomName}. As Jornadas publicadas já estão disponíveis.`);
+      const [current, memberships] = await Promise.all([
+        fetchStudentOidcSession(), fetchStudentClassrooms(),
+      ]);
+      onSessionChange(current);
+      setClassrooms(memberships);
+      window.history.replaceState({}, "", "/learn?account=1");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Não foi possível ingressar na turma.");
+    } finally {
+      setJoining(false);
+    }
+  }
 
   async function claimInvite(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -110,7 +160,7 @@ export default function StudentAccountAccess({ session, sessionUnavailable, sign
         <p className={styles.brand}><RamuviMark size={28} /><span>{BRAND.learn}</span></p>
         <h1 id="student-login-title">{session ? "Minha conta" : "Acesse sua conta"}</h1>
         <p className={styles.description}>
-          Entre com uma conta verificada. Seu acesso às turmas será associado por convite do professor.
+          Entre com Google. Se seu e-mail já foi cadastrado pelo professor, suas turmas e pontuações serão recuperadas. Caso contrário, use um único código da turma.
         </p>
 
         {oidcError && <p role="alert" className={styles.error}>
@@ -136,11 +186,11 @@ export default function StudentAccountAccess({ session, sessionUnavailable, sign
             <strong>Conta autenticada</strong>
             <p>{session.studentId
               ? "Sua identidade está vinculada a um aluno. Confira as turmas associadas abaixo."
-              : "Sua identidade foi verificada. Para associá-la ao seu cadastro, peça um convite individual ao professor."}</p>
+              : "Conta verificada. Entre com o código compartilhado da turma ou peça ao professor para conferir seu e-mail cadastrado."}</p>
             {session.studentId && <p><Link href="/learn" onClick={onBackToStudies}>Voltar ao meu espaço de estudo</Link></p>}
             {!session.studentId && <ol className={styles.firstAccessSteps} aria-label="Etapas do primeiro acesso">
               <li><strong>Conta conectada.</strong> Sua identidade já foi verificada.</li>
-              <li><strong>Vincule sua turma.</strong> Solicite ao professor um convite individual e cole o código abaixo.</li>
+              <li><strong>Entre na turma.</strong> Se o professor já cadastrou seu e-mail, o vínculo é automático. Caso contrário, use o código da turma.</li>
               <li><strong>Comece a estudar.</strong> Após a vinculação, suas Jornadas disponíveis aparecerão no espaço de estudo.</li>
             </ol>}
             {claimSuccess && <p role="status" className={styles.success}>{claimSuccess} <Link href="/learn" onClick={onBackToStudies}>Ir para meu espaço de estudo</Link></p>}
@@ -159,6 +209,24 @@ export default function StudentAccountAccess({ session, sessionUnavailable, sign
                     ))}
                   </ul>
                 ) : <p>Nenhuma turma ativa foi encontrada para esta conta.</p>}
+                <form onSubmit={(event) => {
+                  event.preventDefault();
+                  void joinWithCode(classCode);
+                }} className={styles.claimForm}>
+                  <label htmlFor="classroom-join-code">Código da turma</label>
+                  <input id="classroom-join-code" className={styles.inviteInput} type="text"
+                    autoComplete="off" autoCapitalize="characters" spellCheck={false}
+                    placeholder="Código compartilhado pelo professor"
+                    value={classCode} onChange={(event) => setClassCode(event.target.value.toUpperCase())}
+                    maxLength={40} required disabled={joining} />
+                  <p className={styles.inviteHelp}>Um único código libera a turma e suas Jornadas publicadas. Não é necessário outro código para estudar.</p>
+                  <button type="submit" className={styles.primary}
+                    disabled={joining || !/^[A-Z0-9_-]{8,40}$/.test(classCode.trim())}>
+                    {joining ? "Ingressando..." : "Entrar na turma"}
+                  </button>
+                </form>
+                <details>
+                  <summary>Tenho um convite individual do professor</summary>
                 <form onSubmit={(event) => { void claimInvite(event); }} className={styles.claimForm}>
                   <label htmlFor="enrollment-invite-code">Código individual do convite</label>
                   <input id="enrollment-invite-code" className={styles.inviteInput} type="text"
@@ -167,12 +235,13 @@ export default function StudentAccountAccess({ session, sessionUnavailable, sign
                     placeholder="Cole o código recebido do professor"
                     value={inviteCode} onChange={(event) => setInviteCode(event.target.value)}
                     maxLength={43} required disabled={claimBusy} />
-                  <p id="enrollment-invite-help" className={styles.inviteHelp}>O convite individual tem 43 caracteres e é diferente do código da aula ao vivo.</p>
+                  <p id="enrollment-invite-help" className={styles.inviteHelp}>Use somente quando o professor pedir. O convite individual é diferente do código da turma.</p>
                   <button type="submit" className={styles.primary}
                     disabled={claimBusy || !/^[A-Za-z0-9_-]{43}$/.test(inviteCode.trim())}>
                     {claimBusy ? "Confirmando..." : "Vincular matrícula"}
                   </button>
                 </form>
+                </details>
               </>
             ) : <p>O vínculo de matrícula ainda não foi habilitado nesta instalação.</p>}
             <button type="button" className={styles.secondary} onClick={leave} disabled={busy}>
