@@ -19,6 +19,7 @@
 | `b1cc83e` | I2 | Membro OIDC entra na aula ativa sem código |
 | `47e17ce` | I3a/I3b backend + release | V73, snapshots, links VIEW/SAVE, Minha Biblioteca, contrato/gates v0.12.2 |
 | `68f0dd3` | I3 frontend | Compartilhar, prévia pública, Minha Biblioteca, QR |
+| `a766072` | I4 | E2E, retomada pós-login de uso único, flags no Compose |
 | (este commit) | I4 | E2E Chrome/WebKit, retomada pós-login de uso único, flags no Compose, relatório |
 
 ## 2. Funcionalidades por incremento
@@ -121,7 +122,7 @@
 | Frontend build | `npm run build` | — | **OK** (rotas `/learn/library`, `/learn/library/[itemId]`, `/learn/library/shared`) |
 | Release scripts | `python3 -m unittest discover -s scripts/release/tests` | 34 | **39, OK**; `verify-v0.12.2-contract.sh` e `check-metadata.sh` aprovados |
 | E2E v0.12.2 (backend real, hub + sharing ON) | `E2E_FRONTEND_URL=http://localhost:3100 npx playwright test e2e/v0122-classroom-library.spec.ts` | — | **16/16** (Chromium + WebKit iPhone 13) |
-| E2E regressão (backend real, flags v0.12.2 OFF) | `npx playwright test --grep-invert v0122` | — | ver §4.2 |
+| E2E regressão (backend real, flags v0.12.2 OFF) | `npx playwright test --grep-invert v0122` | comparada com 0aad407 | 256 aprovados, 37 falhas, 4 pulados — **nenhuma falha atribuível a esta branch** (§4.3) |
 
 ### 4.1 ITs novos (PostgreSQL real)
 - `ClassroomHubHttpIT` (6): RBAC/CSRF; início em uma requisição sem segredos no read model;
@@ -149,7 +150,28 @@
   Markdown não executa, `meta robots noindex`, revogação → indisponível); diálogo de compartilhar por
   teclado em 320 px; fluxos de aluno com endpoints de conta **simulados** (Minha Biblioteca sem
   matrícula, SAVE sem conta pede login, membro entra sem código).
-- **Regressão:** _preenchido em §4.3._
+- Spec final reexecutada no build de produção final contra banco novo: **16/16** (Chromium + WebKit).
+
+### 4.3 Regressão E2E e comparação com a baseline
+
+Ambiente: Next de produção local (`next start`, porta 3100) + backend 0.12.2 com as flags v0.12.2 OFF
++ PostgreSQL 17 efêmero sintético. Resultado da suíte completa (298 testes, Chromium + WebKit iPhone 13):
+**256 aprovados, 37 falhas, 4 pulados** em 20,2 min.
+
+Para separar regressão de falha preexistente, a **baseline real** (frontend e backend compilados de
+`0aad407` via `git archive`, portas 3200/8081, banco novo) executou os mesmos 12 arquivos com falha:
+
+| Conjunto | Resultado |
+| --- | --- |
+| Chromium | 1 falha (`journey-gradual-release`): **também falha na baseline** (401 no resgate; o spec exige o opt-in `LIVE_STUDY`, pendência já registrada na ADR-0075) |
+| WebKit — falhas em ambas | **34** (Arena/Projetor em tempo real, gaveta de navegação, reflow móvel, PWA, WCAG das telas principais e do projetor, histórico, retorno do aluno) |
+| WebKit — só na candidata | `accessibility-wcag-aa.spec.ts:201` (tema claro): **passou 4/4** ao reexecutar → instável. `arena-shell.spec.ts:1278` (overflow de 87 px em "Verificar aprendizagem" a 320 px): falhou 2/2 no banco usado pela suíte inteira e **passou 2/2 com banco novo** → depende de dados acumulados (largura intrínseca do `<select>` de objetivos no WebKit), não do código desta branch |
+| WebKit — só na baseline | `teacher-history.spec.ts:101` (instável na baseline) |
+
+As 34 falhas WebKit compartilhadas são preexistentes nesta forma de execução local (o handoff v0.12.1
+registrou apenas uma seleção de 60 E2E). Elas **não** foram declaradas aprovadas e continuam exigindo o
+E2E oficial em Compose/CI. A fragilidade do `<select>` com muitos objetivos é um risco de UX
+preexistente a registrar fora desta release.
 
 ## 5. Gates
 
@@ -158,6 +180,7 @@
 | Backend verify com PostgreSQL real | **Aprovado localmente** |
 | Frontend typecheck/test/lint/build | **Aprovado localmente** |
 | E2E Chrome/WebKit das rotas novas, 320 px, teclado | **Aprovado localmente** (OIDC simulado nos fluxos de aluno) |
+| Regressão E2E completa | **Sem regressão atribuível** (§4.3); 34 falhas WebKit preexistentes na baseline seguem abertas |
 | Concorrência/corrida, CSRF, IDOR, revogação | **Aprovado em IT** |
 | Upgrade V72→V73 e rollback de binário (sintético) | **Aprovado** (§6) |
 | CI oficial GitHub Actions no SHA final | **Pendente** (ver PR) |
