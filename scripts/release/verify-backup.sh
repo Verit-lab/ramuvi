@@ -202,6 +202,10 @@ if (( EXPECTED_SCHEMA_VERSION >= 67 )); then
   [[ "$overwrite_snapshot_columns" -eq 4 ]] || \
     fail "restore V67 perdeu as colunas de conteúdo e progresso da Jornada"
 fi
+if (( EXPECTED_SCHEMA_VERSION >= 73 )); then
+  library_tables="$(docker exec "$CONTAINER_NAME" psql --tuples-only --no-align --username "$CHECK_USER" --dbname "$CHECK_DATABASE" --command "select count(*) from information_schema.tables where table_schema='public' and table_name in ('learning_resource_snapshots','library_share_links','student_library_items')")"
+  [[ "$library_tables" -eq 3 ]] || fail "restore V73 perdeu snapshots, links ou itens da Minha Biblioteca"
+fi
 if (( EXPECTED_SCHEMA_VERSION >= 72 )); then
   join_tables="$(docker exec "$CONTAINER_NAME" psql --tuples-only --no-align --username "$CHECK_USER" --dbname "$CHECK_DATABASE" --command "select count(*) from information_schema.tables where table_schema='public' and table_name in ('classroom_join_links','classroom_join_requests')")"
   [[ "$join_tables" -eq 2 ]] || fail "restore V72 perdeu links/pedidos de ingresso"

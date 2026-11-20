@@ -13,8 +13,11 @@ fail() { printf 'ERRO: %s\n' "$*" >&2; exit 1; }
 if [[ "${RAMUVI_V0121_CONTRACT:-0}" == 1 ]]; then
   [[ -f backend/src/main/resources/db/migration/V69__journey_offline_availability.sql ]] ||
     fail "v0.12.1 exige migration V69 de disponibilidade offline"
-  node -e 'if(require("./frontend/package.json").version!=="0.12.1") process.exit(1)' ||
-    fail "v0.12.1 exige artefatos 0.12.1 alinhados"
+  # v0.12.2 reuses the v0.12.1 contract on top of its own (verify-v0.12.2-contract.sh).
+  expected_v012="${RAMUVI_V012_EXPECTED_VERSION:-0.12.1}"
+  [[ "$expected_v012" =~ ^0\.12\.[12]$ ]] || fail "versão esperada inválida: $expected_v012"
+  EXPECTED_V012="$expected_v012" node -e 'if(require("./frontend/package.json").version!==process.env.EXPECTED_V012) process.exit(1)' ||
+    fail "v$expected_v012 exige artefatos $expected_v012 alinhados"
 else
   next=(backend/src/main/resources/db/migration/V69__*.sql)
   [[ ! -e "${next[0]}" ]] || fail "V69 requer um gate próprio"

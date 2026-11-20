@@ -61,6 +61,16 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
     }
 
+    @ExceptionHandler(br.com.arenadev.content.share.LibraryAccessException.class)
+    public ResponseEntity<Map<String, Object>> libraryAccess(br.com.arenadev.content.share.LibraryAccessException exception) {
+        Map<String, Object> body = baseBody(exception.status(), exception.getMessage());
+        body.put("code", exception.code().name());
+        return ResponseEntity.status(exception.status())
+                .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                .header("X-Robots-Tag", "noindex, nofollow, noarchive")
+                .body(body);
+    }
+
     @ExceptionHandler(DrawConflictException.class)
     public ResponseEntity<Map<String, Object>> drawConflict(DrawConflictException exception) {
         return response(HttpStatus.CONFLICT, exception.getMessage());

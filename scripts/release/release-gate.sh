@@ -108,7 +108,10 @@ node_line="$(node --version)"
 [[ "$node_line" == v22.* ]] || fail "Node.js 22 é obrigatório; encontrado: $node_line"
 
 "$SCRIPT_DIR/check-metadata.sh"
-if [[ -f backend/src/main/resources/db/migration/V72__classroom_join_links_and_requests.sql ]]; then
+if [[ -f backend/src/main/resources/db/migration/V73__library_snapshots_shares_personal_library.sql ]]; then
+  "$SCRIPT_DIR/verify-v0.12.2-contract.sh"
+  expected_schema_version=73
+elif [[ -f backend/src/main/resources/db/migration/V72__classroom_join_links_and_requests.sql ]]; then
   "$SCRIPT_DIR/verify-v0.12.1-contract.sh"
   expected_schema_version=72
 elif [[ -f backend/src/main/resources/db/migration/V70__classroom_self_enrollment.sql ]]; then
@@ -164,7 +167,10 @@ printf 'Java: %s\n' "$java_line"
 printf 'Node.js: %s\n' "$node_line"
 
 if [[ "$MODE" == "final" ]]; then
-  if [[ "$expected_schema_version" -ge 69 ]]; then
+  if [[ "$expected_schema_version" -ge 73 ]]; then
+    [[ "$RELEASE_VERSION" == "0.12.2" ]] ||
+      fail "o gate final V73 exige versão estável 0.12.2; candidata $RELEASE_VERSION não pode ser publicada"
+  elif [[ "$expected_schema_version" -ge 69 ]]; then
     [[ "$RELEASE_VERSION" == "0.12.1" ]] ||
       fail "o gate final V69 exige versão estável 0.12.1; candidata $RELEASE_VERSION não pode ser publicada"
   elif [[ "$expected_schema_version" -ge 68 ]]; then
@@ -226,7 +232,9 @@ if [[ "$MODE" == "final" ]]; then
     # Fail-closed operational decision, with v0.12-specific OIDC/V68/HTTPS
     # evidence in addition to the v0.11 physical and authorization gates.
     readiness_args=()
-    if [[ "$expected_schema_version" -ge 69 ]]; then
+    if [[ "$expected_schema_version" -ge 73 ]]; then
+      readiness_args+=(--expected-version 0.12.2)
+    elif [[ "$expected_schema_version" -ge 69 ]]; then
       readiness_args+=(--expected-version 0.12.1)
     elif [[ "$expected_schema_version" -ge 68 ]]; then
       readiness_args+=(--expected-version 0.12.0)
@@ -241,7 +249,10 @@ if [[ "$MODE" == "final" ]]; then
   # The pre-upgrade production backup can be at V66/V67; the new release
   # migrates its restored copy to V68 only after a separately evidenced rehearsal.
   source_schema_version="${ARENA_SOURCE_SCHEMA_VERSION:-$expected_schema_version}"
-  if [[ "$expected_schema_version" -ge 72 ]]; then
+  if [[ "$expected_schema_version" -ge 73 ]]; then
+    [[ "$source_schema_version" =~ ^(68|69|70|71|72|73)$ ]] ||
+      fail "backup da v0.12.2 deve ter schema entre V68 e V73"
+  elif [[ "$expected_schema_version" -ge 72 ]]; then
     [[ "$source_schema_version" =~ ^(68|69|70|71|72)$ ]] ||
       fail "backup da v0.12.1 deve ter schema entre V68 e V72"
   elif [[ "$expected_schema_version" -ge 70 ]]; then
