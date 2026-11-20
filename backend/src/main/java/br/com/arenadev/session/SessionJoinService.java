@@ -154,6 +154,30 @@ public class SessionJoinService {
         return new JoinResultView(access, deviceToken, deviceExpiresAt);
     }
 
+    /**
+     * ADR-0076 D4: a verified member (resolved server-side from the OIDC identity and an active
+     * enrollment by the caller) enters THIS session without typing the code. The student stays a
+     * SessionParticipant of the specific session; presence is recorded by this effective join.
+     * The account proves ownership, so a previous device token of the same participant is
+     * replaced (that device loses access) instead of requiring the teacher to release it.
+     */
+    @Transactional
+    public JoinAccessView issueMemberAccess(UUID sessionId, UUID studentId) {
+        SessionJoinCode joinCode = joinCodeRepository.findBySessionIdAndActiveTrue(sessionId)
+                .filter(code -> code.isUsableAt(Instant.now()))
+                .filter(code -> code.getSession().getStatus() == SessionStatus.ACTIVE)
+                .orElseThrow(() -> new ResourceNotFoundException("Aula não encontrada ou indisponível."));
+        participantSync.ensureActiveEnrollments(sessionId);
+        SessionParticipant participant = participantRepository.findBySessionIdForUpdate(sessionId).stream()
+                .filter(item -> item.getStudent().getId().equals(studentId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Aula não encontrada ou indisponível."));
+        if (participant.getAccessTokenHash() != null || participant.isConnected()) {
+            participant.releaseDevice();
+        }
+        return issueParticipantAccess(joinCode, participant);
+    }
+
     @Transactional
     public DeviceRecognitionView recognizeDevice(String rawCode, String deviceToken) {
         SessionJoinCode joinCode = getUsableCode(rawCode);
