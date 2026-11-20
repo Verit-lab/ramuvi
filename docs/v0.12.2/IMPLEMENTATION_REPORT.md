@@ -183,7 +183,7 @@ preexistente a registrar fora desta release.
 | Regressão E2E completa | **Sem regressão atribuível** (§4.3); 34 falhas WebKit preexistentes na baseline seguem abertas |
 | Concorrência/corrida, CSRF, IDOR, revogação | **Aprovado em IT** |
 | Upgrade V72→V73 e rollback de binário (sintético) | **Aprovado** (§6) |
-| CI oficial GitHub Actions no SHA final | **Pendente** (ver PR) |
+| CI oficial GitHub Actions no SHA final | **Pendente**: `.github/workflows/ci.yml` só dispara em PR/push para `main`; a PR #156 (base `feat/secure-student-onboarding-v0121`) não executa CI. Requer rebase/PR para `main` depois da #154, mais a regularização de billing do handoff v0.12.1 |
 | Google/Microsoft OIDC real em HTTPS na VPS | **Pendente — gate operacional**; nada foi assumido disponível |
 | iOS/Android físicos, VoiceOver/zoom | **Pendente** |
 | Backup/restauração com dump representativo da VPS (V73) | **Pendente** |
