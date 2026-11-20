@@ -30,6 +30,7 @@ public class ClassroomService {
     private final ActivityRepository activityRepository;
     private final ScoreEventRepository scoreEventRepository;
     private final JdbcTemplate jdbcTemplate;
+    private final br.com.arenadev.session.SessionParticipantSync participantSync;
 
     public ClassroomService(
             ClassroomRepository classroomRepository,
@@ -38,7 +39,8 @@ public class ClassroomService {
             ClassSessionRepository classSessionRepository,
             ActivityRepository activityRepository,
             ScoreEventRepository scoreEventRepository,
-            JdbcTemplate jdbcTemplate
+            JdbcTemplate jdbcTemplate,
+            br.com.arenadev.session.SessionParticipantSync participantSync
     ) {
         this.classroomRepository = classroomRepository;
         this.studentRepository = studentRepository;
@@ -47,6 +49,7 @@ public class ClassroomService {
         this.activityRepository = activityRepository;
         this.scoreEventRepository = scoreEventRepository;
         this.jdbcTemplate = jdbcTemplate;
+        this.participantSync = participantSync;
     }
 
     @Transactional(readOnly = true)
@@ -198,6 +201,9 @@ public class ClassroomService {
         Enrollment enrollment = enrollmentRepository.findByClassroomIdAndStudentId(classroomId, studentId)
                 .orElseGet(() -> enrollmentRepository.save(new Enrollment(classroom, student)));
         enrollment.setActive(true);
+        enrollmentRepository.flush();
+        // ADR-0076 D3: late enrollment joins the class in progress as participant, never as present.
+        participantSync.ensureStudentInActiveSession(classroomId, studentId);
         return EnrollmentView.from(enrollment);
     }
 
@@ -214,6 +220,10 @@ public class ClassroomService {
         Enrollment enrollment = enrollmentRepository.findByClassroomIdAndStudentId(classroomId, studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Matrícula do aluno na turma não encontrada."));
         enrollment.setActive(active);
+        if (active) {
+            enrollmentRepository.flush();
+            participantSync.ensureStudentInActiveSession(classroomId, studentId);
+        }
         return EnrollmentView.from(enrollment);
     }
 

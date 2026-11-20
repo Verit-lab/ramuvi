@@ -78,15 +78,52 @@ public class SessionService {
 
     @Transactional
     public SessionView start(UUID classroomId, String title, Set<UUID> presentStudentIds) {
-        Classroom classroom = classroomRepository.findById(classroomId)
-                .orElseThrow(() -> new ResourceNotFoundException("Turma não encontrada."));
+        // Row lock on the classroom serializes concurrent starts: the second request waits,
+        // then sees the first session and gets a typed 409 instead of a unique-index 400.
+        Classroom classroom = lockClassroom(classroomId);
         if (!classroom.isActive()) {
             throw new IllegalArgumentException("Não é possível iniciar sessão para uma turma inativa.");
         }
-        if (sessionRepository.existsByClassroomIdAndStatus(classroomId, SessionStatus.ACTIVE)) {
-            throw new IllegalArgumentException("Já existe uma sessão ativa para esta turma. Encerre-a antes de iniciar outra.");
-        }
+        sessionRepository.findFirstByClassroomIdAndStatus(classroomId, SessionStatus.ACTIVE)
+                .ifPresent(active -> {
+                    throw new ActiveSessionConflictException(
+                            ActiveSessionConflictException.Code.ACTIVE_SESSION_EXISTS,
+                            SessionView.from(active),
+                            "Já existe uma aula ativa nesta turma. Retome-a ou encerre-a antes de iniciar outra.");
+                });
+        return startLocked(classroom, title, presentStudentIds, Map.of());
+    }
 
+    /**
+     * "Encerrar e iniciar outra" (ADR-0076 D3): two auditable transitions in one transaction,
+     * guarded by the session the teacher actually saw. If another tab already changed the
+     * active session, nothing is finished and a typed 409 returns the current one.
+     */
+    @Transactional
+    public SwitchView switchActive(UUID classroomId, UUID expectedActiveSessionId, String title) {
+        Classroom classroom = lockClassroom(classroomId);
+        if (!classroom.isActive()) {
+            throw new IllegalArgumentException("Não é possível iniciar sessão para uma turma inativa.");
+        }
+        ClassSession active = sessionRepository.findFirstByClassroomIdAndStatus(classroomId, SessionStatus.ACTIVE)
+                .orElse(null);
+        if (active == null || !active.getId().equals(expectedActiveSessionId)) {
+            throw new ActiveSessionConflictException(
+                    ActiveSessionConflictException.Code.ACTIVE_SESSION_CHANGED,
+                    active == null ? null : SessionView.from(active),
+                    "A aula ativa desta turma mudou. Atualize a página antes de continuar.");
+        }
+        SessionView finished = finishLocked(getEntityForUpdate(active.getId()));
+        // Hibernate flushes INSERTs before UPDATEs: without this flush the new ACTIVE row
+        // would hit uk_class_sessions_one_active_per_classroom before the old one is FINISHED.
+        sessionRepository.flush();
+        SessionView started = startLocked(classroom, title, Set.of(), Map.of("replacesSessionId", finished.id().toString()));
+        return new SwitchView(finished, started);
+    }
+
+    private SessionView startLocked(Classroom classroom, String title, Set<UUID> presentStudentIds,
+                                    Map<String, Object> extraEventData) {
+        UUID classroomId = classroom.getId();
         List<Enrollment> enrollments = enrollmentRepository
                 .findByClassroomIdAndActiveTrueOrderByStudentNameAsc(classroomId);
         Set<UUID> enrolledIds = enrollments.stream()
@@ -101,6 +138,9 @@ public class SessionService {
         }
 
         String normalizedTitle = title == null || title.isBlank() ? "Aula" : title.trim();
+        if (normalizedTitle.length() > 160) {
+            throw new IllegalArgumentException("O título da aula deve ter no máximo 160 caracteres.");
+        }
         ClassSession session = sessionRepository.save(new ClassSession(classroom, normalizedTitle));
 
         for (Enrollment enrollment : enrollments) {
@@ -113,18 +153,24 @@ public class SessionService {
         }
 
         joinService.ensureCode(session);
+        Map<String, Object> eventData = new java.util.LinkedHashMap<>();
+        eventData.put("classroomName", classroom.getName());
+        eventData.put("presentCount", requestedPresent.size());
+        eventData.put("enrolledCount", enrollments.size());
+        eventData.putAll(extraEventData);
         sessionEventService.record(
                 session,
                 SessionEventType.SESSION_STARTED,
                 SessionEventActor.TEACHER,
                 "Sessão iniciada: " + normalizedTitle,
-                Map.of(
-                        "classroomName", classroom.getName(),
-                        "presentCount", requestedPresent.size(),
-                        "enrolledCount", enrollments.size()
-                )
+                eventData
         );
         return SessionView.from(session);
+    }
+
+    private Classroom lockClassroom(UUID classroomId) {
+        return classroomRepository.findByIdForUpdate(classroomId)
+                .orElseThrow(() -> new ResourceNotFoundException("Turma não encontrada."));
     }
 
     @Transactional(readOnly = true)
@@ -175,7 +221,11 @@ public class SessionService {
 
     @Transactional
     public SessionView finish(UUID sessionId) {
-        ClassSession session = getEntityForUpdate(sessionId);
+        return finishLocked(getEntityForUpdate(sessionId));
+    }
+
+    private SessionView finishLocked(ClassSession session) {
+        UUID sessionId = session.getId();
         ensureActive(session);
         session.finish();
         liveStage.revokeForFinishedSession(sessionId);
@@ -254,6 +304,9 @@ public class SessionService {
                     session.getEndedAt()
             );
         }
+    }
+
+    public record SwitchView(SessionView finished, SessionView started) {
     }
 
     public record ParticipantView(

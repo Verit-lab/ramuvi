@@ -35,6 +35,7 @@ public class SessionJoinService {
     private final DisplayNameService displayNameService;
     private final EnrollmentRepository enrollmentRepository;
     private final DeviceClaimService deviceClaimService;
+    private final SessionParticipantSync participantSync;
     private final SecureRandom secureRandom = new SecureRandom();
 
     public SessionJoinService(
@@ -43,7 +44,8 @@ public class SessionJoinService {
             SessionParticipantRepository participantRepository,
             DisplayNameService displayNameService,
             EnrollmentRepository enrollmentRepository,
-            DeviceClaimService deviceClaimService
+            DeviceClaimService deviceClaimService,
+            SessionParticipantSync participantSync
     ) {
         this.joinCodeRepository = joinCodeRepository;
         this.sessionRepository = sessionRepository;
@@ -51,6 +53,7 @@ public class SessionJoinService {
         this.displayNameService = displayNameService;
         this.enrollmentRepository = enrollmentRepository;
         this.deviceClaimService = deviceClaimService;
+        this.participantSync = participantSync;
     }
 
     @Transactional
@@ -124,6 +127,9 @@ public class SessionJoinService {
             throw new IllegalArgumentException("Informe sua matrícula, e-mail ou nome completo.");
         }
 
+        // Late enrollment: active enrollments created after the start become participants
+        // (present=false) before matching; presence is set only by the effective join below.
+        participantSync.ensureActiveEnrollments(session.getId());
         List<SessionParticipant> participants = participantRepository.findBySessionIdForUpdate(session.getId());
         List<SessionParticipant> matches = findMatches(session, participants, identity.trim());
         // Same answer for "not found" and "ambiguous": distinct replies let anyone

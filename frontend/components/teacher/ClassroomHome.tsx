@@ -5,6 +5,8 @@ import type { ArenaData, Classroom, Student } from "@/lib/types";
 import { classroomArenaCtaState } from "@/lib/classroom-arena-cta";
 import { type ClassroomTab } from "@/lib/teacher-location";
 import { CLASSROOM_ACCENT_SCOPE_CLASS, classroomThemePresentation } from "@/lib/classroom-theme";
+import { ClassroomSessionHub } from "@/components/teacher/ClassroomSessionHub";
+import type { Notify } from "@/components/ui";
 
 const CLASSROOM_TABS: { id: ClassroomTab; label: string; icon: ArenaGlyphName }[] = [
   { id: "home", label: "Início", icon: "home" },
@@ -52,7 +54,7 @@ export function ClassroomWorkspaceTabs({ tab, onTabChange, studentCount, activit
   );
 }
 
-export function ClassroomHome({ classroom, data, students, currentSession, onOpenArena, onManageClassroom, onManageIntegration }: {
+export function ClassroomHome({ classroom, data, students, currentSession, onOpenArena, onManageClassroom, onManageIntegration, hub }: {
   classroom: Classroom;
   data: ArenaData;
   students: Student[];
@@ -60,6 +62,11 @@ export function ClassroomHome({ classroom, data, students, currentSession, onOpe
   onOpenArena: () => void;
   onManageClassroom: () => void;
   onManageIntegration: () => void;
+  /** v0.12.2 central da turma (APP_CLASSROOM_HUB_ENABLED); absent keeps the v0.12.1 panel. */
+  hub?: {
+    refreshClassroomDomain: (classroomId?: string) => Promise<void>;
+    notify: Notify;
+  };
 }) {
   const activityCount = data.activities.filter((activity) => activity.classroomId === classroom.id).length;
   const sessionParticipants = currentSession
@@ -98,7 +105,7 @@ export function ClassroomHome({ classroom, data, students, currentSession, onOpe
           </button>
         </div>
 
-        <div className={`${classroomHomeStyles.sessionPanel} ${arenaCta.live ? classroomHomeStyles.sessionPanelLive : ""} ${arenaCta.disabled ? classroomHomeStyles.sessionPanelDisabled : ""}`} data-testid="classroom-session-panel">
+        {!hub && <div className={`${classroomHomeStyles.sessionPanel} ${arenaCta.live ? classroomHomeStyles.sessionPanelLive : ""} ${arenaCta.disabled ? classroomHomeStyles.sessionPanelDisabled : ""}`} data-testid="classroom-session-panel">
           <div className={classroomHomeStyles.sessionCopy}>
             <span className={classroomHomeStyles.sessionKicker}>
               {arenaCta.live && <i className={classroomHomeStyles.liveDot} aria-hidden />}
@@ -137,10 +144,20 @@ export function ClassroomHome({ classroom, data, students, currentSession, onOpe
               <small>{arenaCta.supportingLabel}</small>
             </span>
           </button>
-        </div>
+        </div>}
       </section>
 
-      <section className={classroomHomeStyles.summaryGrid} aria-label="Resumo da turma" data-testid="classroom-summary">
+      {hub && (
+        <ClassroomSessionHub
+          key={classroom.id}
+          classroomId={classroom.id}
+          onOpenArena={onOpenArena}
+          refreshClassroomDomain={hub.refreshClassroomDomain}
+          notify={hub.notify}
+        />
+      )}
+
+      {!hub && <section className={classroomHomeStyles.summaryGrid} aria-label="Resumo da turma" data-testid="classroom-summary">
         <div className={classroomHomeStyles.summaryCard}>
           <span>ALUNOS MATRICULADOS</span>
           <strong>{students.length}</strong>
@@ -151,7 +168,7 @@ export function ClassroomHome({ classroom, data, students, currentSession, onOpe
           <strong>{activityCount}</strong>
           <small>conteúdos preparados para a turma</small>
         </div>
-      </section>
+      </section>}
 
       <ClassroomIntegrationWorkspace
         classroomId={classroom.id}

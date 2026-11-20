@@ -17,6 +17,8 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, UUID
 
     boolean existsByClassroomId(UUID classroomId);
 
+    Optional<ClassSession> findFirstByClassroomIdAndStatus(UUID classroomId, SessionStatus status);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             select session

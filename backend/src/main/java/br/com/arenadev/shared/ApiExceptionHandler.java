@@ -52,6 +52,15 @@ public class ApiExceptionHandler {
         return response(HttpStatus.CONFLICT, exception.getMessage());
     }
 
+    @ExceptionHandler(br.com.arenadev.session.ActiveSessionConflictException.class)
+    public ResponseEntity<Map<String, Object>> activeSessionConflict(
+            br.com.arenadev.session.ActiveSessionConflictException exception) {
+        Map<String, Object> body = baseBody(HttpStatus.CONFLICT, exception.getMessage());
+        body.put("code", exception.code().name());
+        body.put("activeSession", exception.activeSession());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
     @ExceptionHandler(DrawConflictException.class)
     public ResponseEntity<Map<String, Object>> drawConflict(DrawConflictException exception) {
         return response(HttpStatus.CONFLICT, exception.getMessage());
