@@ -24,8 +24,21 @@ import java.util.UUID;
 public class LibraryShareController {
     private final LibraryShareService shares;
 
-    public LibraryShareController(LibraryShareService shares) {
+    private final br.com.arenadev.realtime.QrCodeService qrCodes;
+
+    public LibraryShareController(LibraryShareService shares, br.com.arenadev.realtime.QrCodeService qrCodes) {
         this.shares = shares;
+        this.qrCodes = qrCodes;
+    }
+
+    /** POST so the token never appears in a URL, access log or Referer. */
+    @PostMapping(value = "/api/library/shares/qr", produces = org.springframework.http.MediaType.IMAGE_PNG_VALUE)
+    public ResponseEntity<byte[]> qr(@Valid @RequestBody QrRequest request) {
+        String token = LibraryShareService.normalizeToken(request.token());
+        if (token == null) throw new IllegalArgumentException("Link de material inválido.");
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .contentType(org.springframework.http.MediaType.IMAGE_PNG)
+                .body(qrCodes.libraryPng(request.baseUrl(), token, request.size() == null ? 320 : request.size()));
     }
 
     @PostMapping("/api/library/resources/{resourceId}/shares")
@@ -45,6 +58,10 @@ public class LibraryShareController {
         shares.revoke(shareId);
         return ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
     }
+
+    public record QrRequest(@jakarta.validation.constraints.NotBlank @Size(max = 200) String baseUrl,
+                            @jakarta.validation.constraints.NotBlank @Size(max = 64) String token,
+                            Integer size) { }
 
     public record CreateRequest(@NotNull LibraryShareService.Permission permission,
                                 @Min(LibraryShareService.MIN_DAYS) @Max(LibraryShareService.MAX_DAYS) int validDays,

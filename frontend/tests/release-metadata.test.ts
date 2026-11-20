@@ -57,7 +57,7 @@ test("release manifests and version derivation stay aligned", () => {
   const version = backendVersion();
 
   assert.equal(pkg.version, version);
-  assert.match(version, /^0\.12\.1$/);
+  assert.match(version, /^0\.12\.2$/);
 
   assert.equal(lock.version, version);
   assert.equal(lock.packages[""]?.version, version);
@@ -174,4 +174,15 @@ test("historical v0.8 semantic-library contract remains protected", () => {
   assert.match(v08Contract, /CanonicalDocument/);
   assert.match(v08Contract, /refresh-resource/);
   assert.match(v08Contract, /LibraryContentViews/);
+});
+
+test("v0.12.2 gate recognizes additive V73 and keeps the four switches OFF", () => {
+  const contract = readFileSync(resolve(root, "scripts/release/verify-v0.12.2-contract.sh"), "utf8");
+  assert.match(gate, /verify-v0\.12\.2-contract\.sh/);
+  assert.match(gate, /expected_schema_version=73/);
+  assert.match(gate, /--expected-version 0\.12\.2/);
+  assert.match(verifier, /restore V73/);
+  for (const flag of ["APP_CLASSROOM_HUB_ENABLED", "APP_LIVE_MEMBER_JOIN_ENABLED", "APP_LIBRARY_SHARING_ENABLED", "APP_LIBRARY_PERSONAL_ENABLED"]) {
+    assert.match(contract, new RegExp(flag));
+  }
 });

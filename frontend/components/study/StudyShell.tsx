@@ -5,12 +5,14 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import styles from "./study.module.css";
 import { useStudentPreferences } from "@/components/student/StudentAccessibilityControls";
+import { fetchStudentCapabilities } from "@/lib/student-capabilities-api";
 
 function HomeIcon() { return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 10.5 12 3l8.5 7.5v9a1.5 1.5 0 0 1-1.5 1.5h-5v-6h-4v6H5a1.5 1.5 0 0 1-1.5-1.5z" /></svg>; }
 function JourneyIcon() { return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h14v4H5zM5 10h14v4H5zM5 15.5h14v4H5z" /></svg>; }
 function LiveIcon(){return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 2-7 12h6l-1 8 7-12h-6z"/></svg>}
 function ProfileIcon(){return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M4.5 20c.8-3.5 3.8-5.5 7.5-5.5s6.7 2 7.5 5.5" /></svg>}
 function SidebarIcon(){return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 4.5h15v15h-15zM9.5 4.5v15" /></svg>}
+function LibraryIcon(){return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h4v15H5zM10.5 4.5h4v15h-4zM16 5.2l3.6-1 3 14.4-3.6 1z"/></svg>}
 function AchievementIcon(){return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.5 5 5.5.8-4 3.9.9 5.5-4.9-2.6-4.9 2.6.9-5.5-4-3.9L9.5 8z"/></svg>}
 
 export default function StudyShell({ children }: { children: ReactNode }) {
@@ -20,6 +22,13 @@ export default function StudyShell({ children }: { children: ReactNode }) {
   const achievementsActive = pathname.startsWith("/learn/achievements");
   const profileActive = pathname.startsWith("/learn/profile");
   const homeActive = pathname === "/learn";
+  const libraryActive = pathname.startsWith("/learn/library");
+  const [personalLibrary, setPersonalLibrary] = useState(false);
+  useEffect(() => {
+    let active = true;
+    void fetchStudentCapabilities().then((capabilities) => { if (active) setPersonalLibrary(capabilities.personalLibrary); });
+    return () => { active = false; };
+  }, []);
   const { scale: textScale, reducedMotion } = useStudentPreferences();
   const [sidebarHidden, setSidebarHidden] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -53,6 +62,7 @@ export default function StudyShell({ children }: { children: ReactNode }) {
         <Link href="/learn/journeys" className={journeysActive ? styles.activeNav : undefined}><JourneyIcon/><span>Jornadas</span></Link>
         <Link href="/learn/live" className={liveActive ? styles.activeNav : undefined}><LiveIcon/><span>Entrar ao vivo</span></Link>
         <Link href="/learn/achievements" className={achievementsActive ? styles.activeNav : undefined}><AchievementIcon/><span>Conquistas</span></Link>
+        {personalLibrary && <Link href="/learn/library" className={libraryActive ? styles.activeNav : undefined}><LibraryIcon/><span>Minha Biblioteca</span></Link>}
       </nav>
       <nav className={`${styles.nav} ${styles.navFoot}`} aria-label="Conta">
         <Link href="/learn?account=1"><ProfileIcon/><span>Minha conta</span></Link>
@@ -72,6 +82,7 @@ export default function StudyShell({ children }: { children: ReactNode }) {
         <Link href="/learn/journeys" aria-current={journeysActive ? "page" : undefined}><JourneyIcon/>Jornadas</Link>
         <Link href="/learn/live" aria-current={liveActive ? "page" : undefined}><LiveIcon/>Entrar ao vivo</Link>
         <Link href="/learn/achievements" aria-current={achievementsActive ? "page" : undefined}><AchievementIcon/>Conquistas</Link>
+        {personalLibrary && <Link href="/learn/library" aria-current={libraryActive ? "page" : undefined}><LibraryIcon/>Minha Biblioteca</Link>}
         <Link href="/learn?account=1"><ProfileIcon/>Minha conta</Link>
         <Link href="/learn/profile" aria-current={profileActive ? "page" : undefined}><ProfileIcon/>Configurações</Link>
       </nav>}

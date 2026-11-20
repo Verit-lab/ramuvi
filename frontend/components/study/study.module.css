@@ -589,3 +589,6 @@
 .memberLiveList strong{overflow-wrap:anywhere}
 .memberLiveList .button{min-height:44px}
 @media(max-width:620px){.memberLiveList li{flex-direction:column;align-items:stretch}.memberLiveList .button{width:100%}}
+/* v0.12.2 I3a — public shared material: study theme without the student navigation */
+.publicShell{display:block}
+.publicShell>.main{width:min(100% - 28px,980px);margin:0 auto;padding:40px 0 88px}

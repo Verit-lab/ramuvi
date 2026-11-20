@@ -28,6 +28,7 @@ import RamuviMark from "@/components/brand/RamuviMark";
 import LegalLinks from "@/components/legal/LegalLinks";
 import { BRAND, ENTRY_ROUTES } from "@/lib/brand";
 import styles from "./student-account.module.css";
+import PersonalLibraryLink from "@/components/library/PersonalLibraryLink";
 import { studyDeviceClaims } from "@/lib/study-api";
 
 type Props = {
@@ -225,6 +226,7 @@ export default function StudentAccountAccess({ session, sessionUnavailable, sign
               ? "Sua identidade está vinculada a um aluno. Confira as turmas associadas abaixo."
               : "Conta verificada. Abra o link de ingresso da turma ou use o convite individual enviado pelo professor."}</p>
             {session.studentId && <p><Link href="/learn" onClick={onBackToStudies}>Voltar ao meu espaço de estudo</Link></p>}
+            <p><PersonalLibraryLink>Abrir Minha Biblioteca (materiais salvos, mesmo sem turma)</PersonalLibraryLink></p>
             {!session.studentId && <ol className={styles.firstAccessSteps} aria-label="Etapas do primeiro acesso">
               <li><strong>Conta conectada.</strong> Sua identidade já foi verificada.</li>
               <li><strong>Entre na turma.</strong> Abra o link de ingresso e confirme a turma. Em alguns casos o professor precisa aprovar.</li>

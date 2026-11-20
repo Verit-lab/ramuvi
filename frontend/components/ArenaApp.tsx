@@ -503,7 +503,7 @@ export default function ArenaApp() {
           {apiError && <div className="api-alert" role="alert" aria-live="assertive"><strong>API indisponível.</strong><span>{apiError}</span><button className="text-button" onClick={() => { void refreshClassroomDomain(); }}>Tentar novamente</button></div>}
 
           {view === "library" && (
-            <LibraryWorkspace classrooms={data.classrooms} notify={notify} />
+            <LibraryWorkspace classrooms={data.classrooms} notify={notify}  sharingEnabled={capabilities.librarySharing} />
           )}
 
           {view === "dashboard" && (

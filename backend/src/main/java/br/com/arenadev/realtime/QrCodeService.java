@@ -50,6 +50,15 @@ public class QrCodeService {
         return png(origin + "/join?code=" + code, size);
     }
 
+    /** ADR-0076 D7: QR of a Library share; the token stays in the URL fragment, never a path/query. */
+    public byte[] libraryPng(String baseUrl, String token, int size) {
+        String origin = normalizedOrigin(baseUrl);
+        if (!allowedOrigins.contains(origin)) {
+            throw new IllegalArgumentException("Origem não autorizada para QR Code.");
+        }
+        return png(origin + br.com.arenadev.content.share.LibraryShareService.SHARE_PATH_PREFIX + token, size);
+    }
+
     public byte[] png(String content, int size) {
         try {
             int resolvedSize = Math.max(180, Math.min(size, 640));

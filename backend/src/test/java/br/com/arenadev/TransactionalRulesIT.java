@@ -88,8 +88,12 @@ class TransactionalRulesIT {
                 "Sessão duplicada",
                 Set.of()
         ))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("Já existe uma sessão ativa para esta turma. Encerre-a antes de iniciar outra.");
+                // v0.12.2 (ADR-0076 D3): typed conflict that names the session actually active.
+                .isInstanceOfSatisfying(br.com.arenadev.session.ActiveSessionConflictException.class, conflict -> {
+                    assertThat(conflict.code())
+                            .isEqualTo(br.com.arenadev.session.ActiveSessionConflictException.Code.ACTIVE_SESSION_EXISTS);
+                    assertThat(conflict.activeSession().id()).isEqualTo(firstSession.id());
+                });
 
         var finished = sessionService.finish(firstSession.id());
         var nextSession = sessionService.start(fixture.classroomId(), "Próxima aula", Set.of());

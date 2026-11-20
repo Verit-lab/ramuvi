@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import StudyShell from "@/components/study/StudyShell";
 import StudentAccountAccess from "@/components/student/StudentAccountAccess";
 import MemberLiveClasses from "@/components/study/MemberLiveClasses";
+import { pendingShareToken } from "@/lib/student-library-api";
 import { fetchStudentOidcSession, StudentAccountSessionUnavailable, studentAccountWasSignedOut, type StudentOidcSession } from "@/lib/student-oidc-api";
 import { fetchAllStudyJourneys, fetchAllStudyLiveSessions, type LiveSessionSummary, type MultiClassroomJourneySummary } from "@/lib/study-api";
 import styles from "@/components/study/study.module.css";
@@ -135,6 +136,11 @@ function LearnEntry() {
     void fetchStudentOidcSession()
       .then((current) => {
         if (!active) return;
+        // A shared Library material that required login: return to it (token stays in this tab).
+        if (current && pendingShareToken()) {
+          window.location.replace("/learn/library/shared");
+          return;
+        }
         setSession(current);
         setSessionUnavailable(false);
         setSignedOut(false);

@@ -166,6 +166,22 @@ class LibraryShareHttpIT extends OidcHttpSupport {
         assertThat(previewed.body()).contains("\"canSave\":true").contains("\"alreadySaved\":false");
     }
 
+    @Test
+    void qrIsRequestedByPostForAnAllowedOriginOnlyByTheTeacher() throws Exception {
+        var teacher = teacher();
+        String token = share(teacher, libraryResource("QR", "texto", LearningResourceFormat.MARKDOWN, null), "VIEW");
+        var qr = send(teacher.client(), "POST", "/api/library/shares/qr",
+                "{\"baseUrl\":\"http://localhost:3000\",\"token\":\"" + token + "\"}", teacher.csrf());
+        assertThat(qr.statusCode()).isEqualTo(200);
+        assertThat(qr.headers().firstValue("Content-Type").orElse("")).startsWith("image/png");
+        assertThat(qr.headers().firstValue("Cache-Control").orElse("")).contains("no-store");
+        assertThat(post(teacher, "/api/library/shares/qr",
+                "{\"baseUrl\":\"https://evil.example\",\"token\":\"" + token + "\"}").statusCode()).isEqualTo(400);
+        var student = student("google", sub(), null, null, "QR");
+        assertThat(post(student, "/api/library/shares/qr",
+                "{\"baseUrl\":\"http://localhost:3000\",\"token\":\"" + token + "\"}").statusCode()).isEqualTo(403);
+    }
+
     // ------------------------------------------------------------- I3b
 
     @Test
