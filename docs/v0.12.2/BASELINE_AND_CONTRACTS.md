@@ -106,7 +106,8 @@ liberação docente.
 | --- | --- |
 | `POST /api/library/resources/{id}/shares` `{permission: VIEW\|SAVE, validDays 1..90, label?}` | `201` com `token` e `path` (`/learn/library/shared#acesso=TOKEN`), `no-store` |
 | `GET /api/library/resources/{id}/shares` | estados e contadores agregados; nunca token/leitores |
-| `POST /api/library/shares/{shareId}/revoke` | `200` |
+| `POST /api/library/shares/{shareId}/revoke` | `204` (idempotente) |
+| `POST /api/library/shares/qr` `{baseUrl, token}` | PNG `no-store`; docente; origem precisa estar autorizada; token só no corpo |
 | `POST /api/library/shares/preview` `{token}` | snapshot autorizado; `401 ACCOUNT_REQUIRED` para `SAVE` sem conta; `404` uniforme para inválido/expirado/revogado |
 | `POST /api/student-account/library/items` `{token, replaceVersion?}` | `SAVED`, `ALREADY_SAVED` ou `UPDATED`; idempotente |
 | `GET /api/student-account/library/items` | itens do titular (metadados) |
@@ -150,4 +151,4 @@ ofereça uma ação inexistente.
 | Link externo (`LINK`) muda no destino | snapshot guarda só a referência e aviso de instabilidade | sem cópia do conteúdo remoto |
 | Direitos autorais/retenção de snapshots | snapshots não são apagados pela turma; exclusão excepcional é operação auditada manual | política formal de retenção é decisão aberta (ADR-0076 §7 item 3) |
 | OIDC real indisponível na VPS | I2/I3b atrás de flags que exigem OIDC; nada é anunciado com OIDC OFF | homologação Google/Microsoft real é gate operacional |
-| Rollback de binário anterior com V73 | migration só cria tabelas novas | imagem V72 falha validação Flyway com V73 aplicada; desligar flags é o fallback principal |
+| Rollback de binário anterior com V73 | migration só cria tabelas novas; ensaio sintético 0.12.1→0.12.2→0.12.1→0.12.2 aprovado (o Flyway do 0.12.1 trata V73 como migration futura e valida; ver IMPLEMENTATION_REPORT §6) | ensaio com dump representativo da VPS ainda pendente; desligar flags continua sendo o fallback principal |

@@ -92,6 +92,21 @@ export function clearPendingShareToken(): void {
   if (typeof window !== "undefined") window.sessionStorage.removeItem(PENDING_KEY);
 }
 
+const RESUME_KEY = "ramuvi:library-share-resume";
+
+/** Marked only when the visitor chooses to sign in from a shared material. */
+export function requestShareResumeAfterLogin(): void {
+  if (typeof window !== "undefined") window.sessionStorage.setItem(RESUME_KEY, "1");
+}
+
+/** One-shot: true at most once after login, and only if a valid token is still pending. */
+export function consumeShareResume(): boolean {
+  if (typeof window === "undefined") return false;
+  const requested = window.sessionStorage.getItem(RESUME_KEY) === "1";
+  window.sessionStorage.removeItem(RESUME_KEY);
+  return requested && pendingShareToken() !== null;
+}
+
 async function errorOf(response: Response): Promise<LibraryAccessError> {
   const body = (await response.json().catch(() => ({}))) as { message?: string; code?: string };
   if (response.status === 401) {

@@ -8,6 +8,7 @@ import {
   captureShareTokenFromLocation,
   clearPendingShareToken,
   previewSharedMaterial,
+  requestShareResumeAfterLogin,
   saveResultMessage,
   saveSharedMaterial,
   type SaveResult,
@@ -80,7 +81,7 @@ export default function SharedMaterialPage() {
     return <main className={styles.main}><div className={styles.error} role="alert" data-testid="shared-material-error" data-kind={error.kind}>
       <strong>{error.kind === "ACCOUNT_REQUIRED" ? "Entre para abrir este material." : "Material indisponível."}</strong>
       <p>{error.message}</p>
-      {error.kind === "ACCOUNT_REQUIRED" && <Link className={styles.button} href="/learn?account=1">Entrar com conta de estudante</Link>}
+      {error.kind === "ACCOUNT_REQUIRED" && <Link className={styles.button} href="/learn?account=1" onClick={requestShareResumeAfterLogin}>Entrar com conta de estudante</Link>}
       {(error.kind === "NETWORK" || error.kind === "RATE_LIMITED") && <button type="button" className={styles.button} onClick={() => { setState({ kind: "loading" }); setAttempt((value) => value + 1); }}>Tentar novamente</button>}
     </div></main>;
   }

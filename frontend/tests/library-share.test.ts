@@ -6,7 +6,9 @@ import {
   LibraryAccessError,
   captureShareTokenFromLocation,
   clearPendingShareToken,
+  consumeShareResume,
   normalizeShareToken,
+  requestShareResumeAfterLogin,
   pendingShareToken,
   previewSharedMaterial,
   saveResultMessage,
@@ -124,4 +126,17 @@ test("UI: Compartilhar é ação própria, sem XP, e a página pública é noind
   const view = read("components/library/LibraryMaterialView.tsx");
   assert.match(view, /SafeMarkdown/);
   assert.doesNotMatch(view, /dangerouslySetInnerHTML/);
+});
+
+test("retorno ao material após login é de uso único e só com token pendente", () => {
+  const { storage } = fakeWindow("");
+  assert.equal(consumeShareResume(), false);
+  storage.set("ramuvi:library-share", TOKEN);
+  assert.equal(consumeShareResume(), false, "sem pedido explícito de login não redireciona");
+  requestShareResumeAfterLogin();
+  assert.equal(consumeShareResume(), true);
+  assert.equal(consumeShareResume(), false, "uso único");
+  storage.delete("ramuvi:library-share");
+  requestShareResumeAfterLogin();
+  assert.equal(consumeShareResume(), false);
 });
