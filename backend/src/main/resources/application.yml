@@ -39,7 +39,12 @@ app:
   student-identity:
     invitation-issuance-enabled: ${APP_STUDENT_IDENTITY_INVITATION_ISSUANCE_ENABLED:false}
     enrollment-claim-enabled: ${APP_STUDENT_IDENTITY_ENROLLMENT_CLAIM_ENABLED:false}
+    # ADR-0074: only consulted when a student accepts a classroom join link; never at login.
+    auto-email-link-enabled: ${APP_STUDENT_IDENTITY_AUTO_EMAIL_LINK_ENABLED:false}
+    # ADR-0074: dedicated classroom join link (token 160 bits, hash, expiry, revocation, review queue).
+    classroom-join-links-enabled: ${APP_STUDENT_IDENTITY_CLASSROOM_JOIN_LINKS_ENABLED:false}
     study-session-enabled: ${APP_STUDENT_IDENTITY_STUDY_SESSION_ENABLED:false}
+    offline-download-enabled: ${APP_STUDENT_IDENTITY_OFFLINE_DOWNLOAD_ENABLED:false}
     oidc:
       enabled: ${APP_STUDENT_OIDC_ENABLED:false}
       public-base-url: ${APP_STUDENT_OIDC_PUBLIC_BASE_URL:http://localhost:3000}
@@ -48,6 +53,14 @@ app:
       microsoft-client-id: ${APP_STUDENT_OIDC_MICROSOFT_CLIENT_ID:}
       microsoft-client-secret: ${APP_STUDENT_OIDC_MICROSOFT_CLIENT_SECRET:}
       microsoft-tenant-id: ${APP_STUDENT_OIDC_MICROSOFT_TENANT_ID:}
+  study:
+    # ADR-0075. Claims emitidos antes da V71 (inclusive pelo bootstrap de Jornada por
+    # nome/matrícula, removido) continuam aceitos para estudo até expirar, sem renovação.
+    # Recomendado: false assim que os alunos usarem conta verificada.
+    legacy-device-claims-study-enabled: ${APP_STUDY_LEGACY_DEVICE_CLAIMS_STUDY_ENABLED:true}
+    # Opt-in de risco (ADR-0005): "lembrar dispositivo" da aula ao vivo também libera
+    # estudo por 30 dias. Padrão OFF: o claim da aula ao vivo serve só para a aula.
+    live-device-claim-study-enabled: ${APP_STUDY_LIVE_DEVICE_CLAIM_STUDY_ENABLED:false}
   frontend-url: ${APP_FRONTEND_URL:http://localhost:3000}
   allowed-origin-patterns: ${APP_ALLOWED_ORIGIN_PATTERNS:http://localhost:3000,http://127.0.0.1:3000}
   teacher:

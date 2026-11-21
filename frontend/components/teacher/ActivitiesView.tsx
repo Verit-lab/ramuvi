@@ -8,7 +8,8 @@ import { type Notify } from "@/components/ui";
 import { copyActivity as copyActivityApi, createActivity as createActivityApi, updateActivity as updateActivityApi, type ActivityUpsertInput } from "@/lib/activity-api";
 import { fetchActivitySteps, replaceActivitySteps } from "@/lib/activity-step-api";
 import { validateActivitySteps } from "@/lib/activity-steps";
-import { createScoreEvents as createScoreEventsApi, type CreateScoreEventInput } from "@/lib/score-api";
+import { createScoreEvents as createScoreEventsApi, ScoreApiError, type CreateScoreEventInput } from "@/lib/score-api";
+import { prepareScoreBatch, type PendingScoreBatch } from "@/lib/score-batch-idempotency";
 import { errorMessage } from "./format";
 import { Avatar, EmptyState, Metric, MiniEmpty, Modal, Panel } from "./ui";
 import type { Activity, ActivityQuestion, ActivityStep, ArenaData, Student } from "@/lib/types";
@@ -56,6 +57,11 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
   const [externalResultActivityId, setExternalResultActivityId] = useState<string | undefined>();
   const [delivered, setDelivered] = useState<string[]>([]);
   const [onTime, setOnTime] = useState<string[]>([]);
+  const [deliveryBusy, setDeliveryBusy] = useState(false);
+  const deliveryInFlightRef = useRef(false);
+  const pendingDeliveryRef = useRef<(PendingScoreBatch & {
+    activityId: string; delivered: string[]; onTime: string[];
+  }) | null>(null);
   const [sourceClassroomId, setSourceClassroomId] = useState("");
   const [sourceActivityId, setSourceActivityId] = useState("");
   const [activityBusy, setActivityBusy] = useState(false);
@@ -323,14 +329,18 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
   }
 
   function openDelivery(activity: Activity) {
+    if (deliveryInFlightRef.current) return;
     setDeliveryActivityId(activity.id);
-    setDelivered([]);
-    setOnTime([]);
+    const pending = pendingDeliveryRef.current;
+    setDelivered(pending?.activityId === activity.id ? pending.delivered : []);
+    setOnTime(pending?.activityId === activity.id ? pending.onTime : []);
     setModal("delivery");
   }
 
   async function registerDelivery() {
-    if (!deliveryActivity || !delivered.length) return;
+    if (!deliveryActivity || !delivered.length || deliveryInFlightRef.current) return;
+    deliveryInFlightRef.current = true;
+    setDeliveryBusy(true);
     try {
       const inputs = delivered.flatMap((studentId) => {
         const rows: CreateScoreEventInput[] = [];
@@ -362,12 +372,40 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
         notify("A atividade não possui XP configurado para registrar.");
         return;
       }
-      const events = await createScoreEventsApi(inputs);
-      patch((current) => ({ ...current, scoreEvents: [...current.scoreEvents, ...events] }));
+      const pending = prepareScoreBatch(inputs, pendingDeliveryRef.current);
+      if (!pendingDeliveryRef.current) {
+        pendingDeliveryRef.current = {
+          ...pending, activityId: deliveryActivity.id,
+          delivered: [...delivered], onTime: [...onTime],
+        };
+      }
+      const events = await createScoreEventsApi(pending.inputs);
+      patch((current) => {
+        const known = new Set(current.scoreEvents.map((event) => event.id));
+        return { ...current, scoreEvents: [
+          ...current.scoreEvents, ...events.filter((event) => !known.has(event.id)),
+        ] };
+      });
+      pendingDeliveryRef.current = null;
       setModal(null);
       notify(`XP persistido para ${delivered.length} aluno(s).`);
     } catch (error) {
-      notify(errorMessage(error), "error");
+      // An expired session, rate limit or lost response may follow a committed
+      // first attempt. Preserve its keys rather than risking a new XP award.
+      const rejected = error instanceof ScoreApiError
+        && [400, 404, 409, 422].includes(error.status);
+      if (rejected) {
+        pendingDeliveryRef.current = null;
+        notify(errorMessage(error), "error");
+      } else {
+        notify(
+          "Resultado do XP incerto. Reenvie exatamente o mesmo lote ou confira o histórico antes de registrar outro.",
+          "error",
+        );
+      }
+    } finally {
+      deliveryInFlightRef.current = false;
+      setDeliveryBusy(false);
     }
   }
 
@@ -637,18 +675,18 @@ export function ActivitiesView({ data, classroomId, classroomName, students, onU
         </div>
       </section>}
 
-      <Modal open={modal === "delivery"} title="Registrar entrega / participação" subtitle={deliveryActivity?.title} size="medium" onClose={() => setModal(null)}>
+      <Modal open={modal === "delivery"} title="Registrar entrega / participação" subtitle={deliveryActivity?.title} size="medium" onClose={() => { if (!deliveryInFlightRef.current) setModal(null); }}>
         {deliveryActivity && <>
           <div className="delivery-summary"><div><span>XP da entrega</span><strong>+{deliveryActivity.points}</strong></div><div><span>Bônus no prazo</span><strong>+{deliveryActivity.onTimeBonus}</strong></div><div><span>Selecionados</span><strong>{delivered.length}</strong></div></div>
           <div className="delivery-list modal-delivery-list">
             {students.map((student) => (
               <div className="delivery-row" key={student.id}>
-                <label><input type="checkbox" checked={delivered.includes(student.id)} onChange={(e) => { setDelivered((current) => e.target.checked ? [...current, student.id] : current.filter((id) => id !== student.id)); if (!e.target.checked) setOnTime((current) => current.filter((id) => id !== student.id)); }} /><Avatar student={student} /><span>{student.name}</span></label>
-                <label className="on-time"><input type="checkbox" disabled={!delivered.includes(student.id)} checked={onTime.includes(student.id)} onChange={(e) => setOnTime((current) => e.target.checked ? [...current, student.id] : current.filter((id) => id !== student.id))} />No prazo</label>
+                <label><input type="checkbox" disabled={deliveryBusy} checked={delivered.includes(student.id)} onChange={(e) => { setDelivered((current) => e.target.checked ? [...current, student.id] : current.filter((id) => id !== student.id)); if (!e.target.checked) setOnTime((current) => current.filter((id) => id !== student.id)); }} /><Avatar student={student} /><span>{student.name}</span></label>
+                <label className="on-time"><input type="checkbox" disabled={deliveryBusy || !delivered.includes(student.id)} checked={onTime.includes(student.id)} onChange={(e) => setOnTime((current) => e.target.checked ? [...current, student.id] : current.filter((id) => id !== student.id))} />No prazo</label>
               </div>
             ))}
           </div>
-          <div className="modal-footer"><button className="button ghost" onClick={() => setModal(null)}>Cancelar</button><button className="button primary" disabled={!delivered.length} onClick={() => { void registerDelivery(); }}>Registrar e aplicar XP</button></div>
+          <div className="modal-footer"><button className="button ghost" disabled={deliveryBusy} onClick={() => setModal(null)}>Cancelar</button><button className="button primary" disabled={!delivered.length || deliveryBusy} onClick={() => { void registerDelivery(); }}>{deliveryBusy ? "Registrando..." : "Registrar e aplicar XP"}</button></div>
         </>}
       </Modal>
 

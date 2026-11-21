@@ -104,3 +104,6 @@ Use [TEMPLATE.md](TEMPLATE.md) para novas decisões.
 ### Decisões propostas para v0.12.1
 
 - [ADR-0072 — Landing pública e entradas Ramuvi Learn / Ramuvi Teach](ADR-0072-landing-publica-e-entradas-learn-teach.md) — **Proposto**; aguarda homologação da PR.
+- [ADR-0073 — Download seletivo e cópia de Jornadas](ADR-0073-journey-offline-permissions.md) — **Implementado em branch; rollout não aceito**.
+- [ADR-0074 — Link de ingresso da turma e vínculo por e-mail com prova de turma](ADR-0074-classroom-join-link-and-scoped-email-linking.md) — **Proposto; implementado em branch, não integrado**. Substitui em parte ADR-0070 e o desenho V70.
+- [ADR-0075 — Remoção do bootstrap legado de Jornada e escopo dos device claims](ADR-0075-legacy-journey-bootstrap-removal-and-device-claim-scope.md) — **Proposto; implementado em branch, não integrado** (P0 de segurança).

@@ -11,7 +11,7 @@ latest_migration="$(find "$PROJECT_ROOT/backend/src/main/resources/db/migration"
     | sed -nE 's/^V([0-9]+)__.*$/\1/p' | sort -n | tail -n 1)"
 [[ "$latest_migration" =~ ^[0-9]+$ ]] || { echo 'Não foi possível detectar versão Flyway' >&2; exit 1; }
 EXPECTED_SCHEMA_VERSION="${ARENA_SCHEMA_VERSION:-$latest_migration}"
-CONTAINER_NAME="arena-dev-restore-check-$(date -u +%Y%m%d%H%M%S)-$$"
+CONTAINER_NAME="ramuvi-restore-check-$(date -u +%Y%m%d%H%M%S)-$$"
 CHECK_USER="arena_restore_check"
 CHECK_DATABASE="arena_restore_check"
 CHECK_PASSWORD="restore-check-only-$$"
@@ -52,6 +52,9 @@ if [[ -f "$checksum_file" ]]; then
     sha256sum --check "$(basename "$checksum_file")"
   )
 else
+  if [[ "${BACKUP_REQUIRE_CHECKSUM:-0}" == 1 ]]; then
+    fail "checksum SHA-256 obrigatório ausente: $checksum_file"
+  fi
   printf 'AVISO: checksum ausente; a integridade criptográfica não foi comprovada.\n' >&2
 fi
 
@@ -60,7 +63,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-docker run   --detach   --rm   --name "$CONTAINER_NAME"   --env "POSTGRES_USER=$CHECK_USER"   --env "POSTGRES_PASSWORD=$CHECK_PASSWORD"   --env "POSTGRES_DB=$CHECK_DATABASE"   "$POSTGRES_IMAGE" >/dev/null
+docker run   --detach   --rm   --network none   --name "$CONTAINER_NAME"   --env "POSTGRES_USER=$CHECK_USER"   --env "POSTGRES_PASSWORD=$CHECK_PASSWORD"   --env "POSTGRES_DB=$CHECK_DATABASE"   "$POSTGRES_IMAGE" >/dev/null
 
 ready=false
 for _ in {1..30}; do
@@ -199,6 +202,24 @@ if (( EXPECTED_SCHEMA_VERSION >= 67 )); then
   [[ "$overwrite_snapshot_columns" -eq 4 ]] || \
     fail "restore V67 perdeu as colunas de conteúdo e progresso da Jornada"
 fi
+if (( EXPECTED_SCHEMA_VERSION >= 72 )); then
+  join_tables="$(docker exec "$CONTAINER_NAME" psql --tuples-only --no-align --username "$CHECK_USER" --dbname "$CHECK_DATABASE" --command "select count(*) from information_schema.tables where table_schema='public' and table_name in ('classroom_join_links','classroom_join_requests')")"
+  [[ "$join_tables" -eq 2 ]] || fail "restore V72 perdeu links/pedidos de ingresso"
+fi
+if (( EXPECTED_SCHEMA_VERSION >= 71 )); then
+  claim_scope="$(docker exec "$CONTAINER_NAME" psql --tuples-only --no-align --username "$CHECK_USER" --dbname "$CHECK_DATABASE" --command "select count(*) from information_schema.columns where table_schema='public' and table_name='enrollment_device_claims' and column_name='scope'")"
+  [[ "$claim_scope" -eq 1 ]] || fail "restore V71 perdeu o escopo dos device claims"
+fi
+if (( EXPECTED_SCHEMA_VERSION >= 70 )); then
+  self_enrollment_column="$(docker exec "$CONTAINER_NAME" psql --tuples-only --no-align     --username "$CHECK_USER" --dbname "$CHECK_DATABASE"     --command "select count(*) from information_schema.columns where table_schema='public' and table_name='classrooms' and column_name='self_enrollment_enabled'")"
+  [[ "$self_enrollment_column" -eq 1 ]] || fail "restore V70 perdeu política self_enrollment_enabled"
+fi
+
+if (( EXPECTED_SCHEMA_VERSION >= 69 )); then
+  offline_allowed="$(docker exec "$CONTAINER_NAME" psql --tuples-only --no-align     --username "$CHECK_USER" --dbname "$CHECK_DATABASE"     --command "select count(*) from information_schema.columns where table_schema='public' and table_name='journeys' and column_name='offline_allowed'")"
+  [[ "$offline_allowed" -eq 1 ]] || fail "restore V69 perdeu política offline_allowed"
+fi
+
 if (( EXPECTED_SCHEMA_VERSION >= 68 )); then
   for identity_table in student_accounts student_account_identities student_enrollment_invites; do
     identity_exists="$(docker exec "$CONTAINER_NAME" psql --tuples-only --no-align       --username "$CHECK_USER" --dbname "$CHECK_DATABASE"       --command "select to_regclass('public.$identity_table') is not null")"

@@ -122,6 +122,13 @@ public class ClassroomService {
                 normalizeThemeIcon(themeIcon, classroom.getThemeIcon())
         );
         classroom.setStudentStudyAccessEnabled(studentStudyAccessEnabled);
+        if (!active) {
+            // ADR-0074: archiving a classroom closes its join link; enrollments are preserved.
+            jdbcTemplate.update("""
+                    update classroom_join_links set revoked_at = now()
+                     where classroom_id = ? and revoked_at is null
+                    """, id);
+        }
         return ClassroomView.from(classroom);
     }
 

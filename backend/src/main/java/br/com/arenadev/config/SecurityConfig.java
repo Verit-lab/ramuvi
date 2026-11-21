@@ -6,6 +6,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -38,9 +39,12 @@ public class SecurityConfig {
     @Bean
     UserDetailsService teacherUserDetailsService(
             PasswordEncoder encoder,
+            Environment environment,
             @Value("${app.teacher.username:professor}") String username,
             @Value("${app.teacher.password:arena-dev-change-me}") String password
     ) {
+        // Fails fast: a production instance must never accept the public default.
+        TeacherCredentialPolicy.validate(environment.getActiveProfiles(), password);
         return new InMemoryUserDetailsManager(
                 User.withUsername(username)
                         .password(encoder.encode(password))

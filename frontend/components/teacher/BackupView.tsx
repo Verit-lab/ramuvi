@@ -19,7 +19,7 @@ export function BackupView({ data, setData, notify, refreshClassroomDomain }: {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `arena-dev-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    anchor.download = `ramuvi-backup-${new Date().toISOString().slice(0, 10)}.json`;
     anchor.click();
     URL.revokeObjectURL(url);
   }

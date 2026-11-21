@@ -32,6 +32,10 @@ public class Journey {
     @Column(name = "copy_protected", nullable = false)
     private boolean copyProtected = false;
 
+    /** New Journeys permit optional local downloads; existing Journeys retain online-only access. */
+    @Column(name = "offline_allowed", nullable = false)
+    private boolean offlineAllowed = true;
+
     /** Null preserves the original completion-based progression for existing Journeys. */
     @Column(name = "released_chapter_count")
     private Integer releasedChapterCount;
@@ -73,6 +77,13 @@ public class Journey {
     }
 
     public boolean isCopyProtected() { return copyProtected; }
+
+    public void changeOfflineAllowed(boolean allowed) {
+        offlineAllowed = allowed;
+        updatedAt = Instant.now();
+    }
+
+    public boolean isOfflineAllowed() { return offlineAllowed; }
 
     public Integer getReleasedChapterCount() { return releasedChapterCount; }
 

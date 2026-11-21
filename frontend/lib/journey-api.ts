@@ -33,6 +33,8 @@ export type Journey = {
   updatedAt: string;
   /** Students cannot copy this Journey's content in the reader. */
   copyProtected: boolean;
+  /** Permission to download materials when authorized online. */
+  offlineAllowed: boolean;
   /** Null means the original sequential-unlock policy; N exposes the first N contents. */
   releasedChapterCount: number | null;
 };
@@ -57,6 +59,7 @@ export type JourneyInput = {
   /** Omit to keep the structure, e.g. when changing a setting of a published Journey. */
   stages?: JourneyStageInput[];
   copyProtected?: boolean;
+  offlineAllowed?: boolean;
 };
 
 

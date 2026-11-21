@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { type Notify } from "@/components/ui";
 import { deleteClassroom as deleteClassroomApi, updateClassroom as updateClassroomApi } from "@/lib/classroom-api";
+import { ClassroomJoinLinkPanel } from "./ClassroomJoinLinkPanel";
 import { errorMessage } from "./format";
 import type { ArenaData, Classroom, ClassroomThemeColor, ClassroomThemeIcon } from "@/lib/types";
 import { CLASSROOM_ACCENT_SCOPE_CLASS, CLASSROOM_THEME_COLORS, CLASSROOM_THEME_ICONS, classroomThemePresentation } from "@/lib/classroom-theme";
@@ -251,6 +252,8 @@ export function ClassroomManagementPage({
               </div>
             </div>
           </section>
+
+          <ClassroomJoinLinkPanel classroomId={classroom.id} classroomActive={classroom.active !== false} notify={notify} />
 
           <section className="classroom-settings-card">
             <div className="classroom-settings-section-heading">

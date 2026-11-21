@@ -567,3 +567,17 @@
 
 /* Root /learn shows the learner access gate before mounting the study shell. */
 .entryLoading{display:grid;min-height:100vh;place-items:center;padding:24px;color:var(--muted,#68787c)}
+
+/* Incremental student reliability states: a failed request is not an empty list. */
+.liveLoadStatus{margin:20px 0 0;color:var(--study-ink-soft);font-size:.84rem}
+.liveLoadError{margin-top:20px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;border:1px solid var(--study-line-strong);border-radius:11px;background:var(--study-panel);color:var(--study-danger-ink);font-size:.84rem}
+.liveLoadError button,.error button{min-height:44px;cursor:pointer;font:inherit;font-weight:750}
+.liveLoadError button{padding:0 14px;border:1px solid var(--study-line-strong);border-radius:8px;background:var(--study-panel-raised);color:var(--study-ink-strong)}
+.errorSecondary{display:inline-flex;align-items:center;min-height:44px;margin-left:12px;color:var(--study-accent-ink);font-weight:700}
+@media(max-width:540px){.liveLoadError button{width:100%}.errorSecondary{margin:10px 0 0}}
+
+/* v0.12.1: download is a sibling action, never nested inside the Journey link. */
+.offlineJourneyRow{display:grid;gap:5px}
+.offlineDownloadLink{display:inline-flex;align-items:center;justify-content:center;min-height:44px;justify-self:start;padding:0 12px;margin:0 0 7px;border:1px solid var(--study-tint-line-2);border-radius:8px;color:var(--study-accent-ink);font-size:.8rem;font-weight:800;text-decoration:none}
+.offlineDownloadLink:hover{background:var(--study-tint)}
+.offlineDownloadLink:focus-visible{outline:3px solid var(--study-accent-ink);outline-offset:3px}

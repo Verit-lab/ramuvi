@@ -1,10 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import PwaRuntime from "@/components/PwaRuntime";
 import { BRAND } from "@/lib/brand";
-import "./globals.css";
-import "../styles/classroom-overview.css";
-import "../styles/timer-panel.css";
-import "../styles/mobile-reflow.css";
+// Public routes load only tokens and the accessibility foundation.
+import "../styles/public-base.css";
 
 export const metadata: Metadata = {
   // Routes set their own title; the template keeps "· Ramuvi" on all of them.

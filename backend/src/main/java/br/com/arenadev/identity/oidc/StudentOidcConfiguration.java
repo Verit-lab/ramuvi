@@ -24,7 +24,7 @@ import java.util.UUID;
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnProperty(prefix = "app.student-identity.oidc", name = "enabled", havingValue = "true")
 public class StudentOidcConfiguration {
-    static final String GOOGLE_ISSUER = "https://accounts.google.com";
+    public static final String GOOGLE_ISSUER = "https://accounts.google.com";
     static final String GOOGLE_AUTHORIZATION = "https://accounts.google.com/o/oauth2/v2/auth";
     static final String GOOGLE_TOKEN = "https://oauth2.googleapis.com/token";
     static final String GOOGLE_JWKS = "https://www.googleapis.com/oauth2/v3/certs";

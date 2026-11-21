@@ -141,7 +141,7 @@ public class SessionJoinService {
         Instant deviceExpiresAt = null;
         if (rememberDevice) {
             Enrollment enrollment = getActiveEnrollment(session, participant.getStudent());
-            DeviceClaimService.IssuedDeviceClaim claim = deviceClaimService.issue(enrollment);
+            DeviceClaimService.IssuedDeviceClaim claim = deviceClaimService.issueForLiveSession(enrollment);
             deviceToken = claim.token();
             deviceExpiresAt = claim.expiresAt();
         }

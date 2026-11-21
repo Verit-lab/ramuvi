@@ -85,6 +85,10 @@ jobs:
       APP_TEACHER_PASSWORD: e2e-safe-password
       E2E_TEACHER_USERNAME: professor
       E2E_TEACHER_PASSWORD: e2e-safe-password
+      # Synthetic stack only (ADR-0075): exercises the explicit opt-in where a live
+      # remembered device may also study for 30 days (journey-gradual-release.spec.ts).
+      # Production default is false.
+      APP_STUDY_LIVE_DEVICE_CLAIM_STUDY_ENABLED: "true"
     steps:
       - name: Checkout
         uses: actions/checkout@v5

@@ -44,6 +44,12 @@ public class StudentAnonymizationService {
                 delete from student_enrollment_invites
                 where enrollment_id in (select id from enrollments where student_id = ?)
                 """, studentId);
+        // ADR-0074: join requests carry the provider display name/e-mail; erase them too.
+        jdbc.update("""
+                delete from classroom_join_requests
+                where account_id in (select id from student_accounts where student_id = ?)
+                   or resolved_student_id = ?
+                """, studentId, studentId);
         // Erase OIDC subjects and email-OTP addresses rather than retaining PII in a revoked credential.
         jdbc.update("""
                 delete from student_account_identities

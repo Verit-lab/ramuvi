@@ -57,7 +57,7 @@ test("release manifests and version derivation stay aligned", () => {
   const version = backendVersion();
 
   assert.equal(pkg.version, version);
-  assert.match(version, /^0\.12\.0$/);
+  assert.match(version, /^0\.12\.1$/);
 
   assert.equal(lock.version, version);
   assert.equal(lock.packages[""]?.version, version);

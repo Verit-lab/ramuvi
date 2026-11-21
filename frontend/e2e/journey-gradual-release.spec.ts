@@ -25,6 +25,7 @@ test("v0.11 / 11.6 — professor libera capítulos inteiros sem expor conteúdo 
   const api = await request.newContext({ baseURL: apiBase });
   const studentApi = await request.newContext({ baseURL: apiBase });
   let classroomId: string | undefined;
+  let sessionId: string | undefined;
   let teacherHeaders: Record<string, string> | undefined;
 
   try {
@@ -75,14 +76,34 @@ test("v0.11 / 11.6 — professor libera capítulos inteiros sem expor conteúdo 
     await ok(created, "Criar Jornada");
     const journey = (await created.json()) as { id: string; stages: Array<{ id: string }> };
     await ok(await api.post("/api/journeys/" + journey.id + "/publish", { headers: teacherHeaders }), "Publicar Jornada");
+    // ADR-0075: the public Journey bootstrap (code + typed identity) was removed.
+    // This isolated stack runs with APP_STUDY_LIVE_DEVICE_CLAIM_STUDY_ENABLED=true
+    // (explicit operator opt-in) so a live remembered device can read the projection.
+    const sessionResult = await api.post("/api/sessions", {
+      headers: teacherHeaders,
+      data: { classroomId, title: "Aula gradual " + suffix, presentStudentIds: [studentId] },
+    });
+    await ok(sessionResult, "Iniciar aula");
+    sessionId = ((await sessionResult.json()) as { id: string }).id;
+    const joinCodeResult = await api.get("/api/sessions/" + sessionId + "/join-code", { headers: teacherHeaders });
+    await ok(joinCodeResult, "Código da aula");
+    const { code: joinCode } = (await joinCodeResult.json()) as { code: string };
+    const joined = await studentApi.post("/api/join/" + joinCode, {
+      data: { identity: registration, rememberDevice: true },
+    });
+    await ok(joined, "Entrada sintética na aula");
+    const { deviceToken } = (await joined.json()) as { deviceToken: string };
+    expect(deviceToken).toBeTruthy();
     const codeResult = await api.post("/api/journeys/" + journey.id + "/redemption/enable", { headers: teacherHeaders });
     await ok(codeResult, "Gerar código");
     const { code } = (await codeResult.json()) as { code: string };
-    const bootstrap = await studentApi.post("/api/learn/journeys/redeem/bootstrap", {
+    const legacyBootstrap = await studentApi.post("/api/learn/journeys/redeem/bootstrap", {
       data: { code, identity: registration },
     });
-    await ok(bootstrap, "Resgate sintético");
-    const { deviceToken } = (await bootstrap.json()) as { deviceToken: string };
+    expect(legacyBootstrap.status()).toBe(410);
+    await ok(await studentApi.post("/api/learn/journeys/redeem", {
+      data: { code }, headers: { "X-Study-Token": deviceToken },
+    }), "Resgate com perfil autorizado");
     const studentHeaders = { "X-Study-Token": deviceToken };
     const projection = async () => {
       const response = await studentApi.get("/api/learn/journeys/" + journey.id, { headers: studentHeaders });
@@ -142,6 +163,9 @@ test("v0.11 / 11.6 — professor libera capítulos inteiros sem expor conteúdo 
     }), "Restaurar acesso");
     expect((await projection()).modules[1].contents[0].state).toBe("COMPLETED");
   } finally {
+    if (sessionId && teacherHeaders) {
+      await api.post("/api/sessions/" + sessionId + "/finish", { headers: teacherHeaders }).catch(() => undefined);
+    }
     if (classroomId && teacherHeaders) {
       await api.delete("/api/classrooms/" + classroomId, {
         headers: teacherHeaders, data: { confirmationName: "Turma gradual " + suffix },

@@ -17,7 +17,9 @@ import java.util.List;
 /**
  * Receives only a verified OIDC ID Token, after Spring has checked its JWT
  * signature, issuer, audience, nonce and Authorization Code state.
- * No claim-based teacher role, no email/registration auto-match.
+ * No teacher role from claims. Login NEVER links a student record by e-mail:
+ * without proof of a classroom (join link or individual invite) a matching
+ * address is not enough (ADR-0074). Linking happens in ClassroomJoinLinkService.
  */
 @Service
 @ConditionalOnProperty(prefix = "app.student-identity.oidc", name = "enabled", havingValue = "true")

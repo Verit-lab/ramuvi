@@ -17,6 +17,7 @@ export type JourneyStudySummary = {
   classroomId?: string;
   classroomName?: string;
   classroomCode?: string | null;
+  offlineAllowed?: boolean;
 };
 export type JourneyContentView = {
   id: string;
@@ -98,13 +99,6 @@ export function fetchStudyLiveSessions(token: string) {
 }
 export type JourneyRedemptionResult = { journeyId: string; title: string; description: string | null; alreadyAdded: boolean };
 export type JourneyRedemptionPreview = { journeyId: string; title: string; classroomId: string; classroomName: string };
-export type JourneyBootstrapRedemption = {
-  classroomId: string;
-  deviceToken: string;
-  deviceExpiresAt: string;
-  redemption: JourneyRedemptionResult;
-};
-
 export function previewJourneyCode(code: string) {
   return apiRequest<JourneyRedemptionPreview>(`/api/learn/journeys/redeem/${encodeURIComponent(code.trim().toUpperCase())}`, undefined, {
     credentials: "omit",
@@ -113,22 +107,9 @@ export function previewJourneyCode(code: string) {
   });
 }
 
-export async function bootstrapJourneyRedemption(code: string, identity: string): Promise<JourneyBootstrapRedemption> {
-  const result = await apiRequest<JourneyBootstrapRedemption>("/api/learn/journeys/redeem/bootstrap", {
-    method: "POST",
-    body: JSON.stringify({ code: code.trim().toUpperCase(), identity: identity.trim() }),
-  }, {
-    credentials: "omit",
-    errorMessage: (status) => `Não foi possível vincular a Jornada (${status}).`,
-    errorFactory: (message, status) => new StudyApiError(message, status),
-  });
-  window.localStorage.setItem(deviceClaimStorageKey(result.classroomId), result.deviceToken);
-  return result;
-}
-
 export async function redeemJourneyCode(code: string): Promise<JourneyRedemptionResult> {
   const claims = studyDeviceClaims();
-  if (!claims.length) throw new StudyApiError("Entre em uma aula ao vivo primeiro para criar seu perfil neste dispositivo.", 401);
+  if (!claims.length) throw new StudyApiError("Entre com sua conta em /learn para estudar as Jornadas da turma.", 401);
   let lastError: unknown;
   for (const claim of claims) {
     try {
@@ -167,11 +148,19 @@ export function studyDeviceClaims(): Array<{ classroomId: string; token: string 
 
 export async function fetchAllStudyLiveSessions(): Promise<LiveSessionSummary[]> {
   const claims = studyDeviceClaims();
-  const groups = await Promise.all(claims.map(async (claim) => {
-    try { return await fetchStudyLiveSessions(claim.token); } catch { return []; }
-  }));
+  if (!claims.length) return []; // No remembered code-based classrooms to consult.
+  const results = await Promise.allSettled(claims.map((claim) => fetchStudyLiveSessions(claim.token)));
+  // A total outage must not look like "no live classes". When at least one
+  // classroom answers, keep its sessions even if other saved claims are stale.
+  if (results.every((result) => result.status === "rejected")) {
+    throw new StudyApiError("Não foi possível consultar as aulas ao vivo. Verifique a conexão e tente novamente.", 503);
+  }
   const unique = new Map<string, LiveSessionSummary>();
-  groups.flat().forEach((session) => unique.set(session.sessionId, session));
+  results.forEach((result) => {
+    if (result.status === "fulfilled") {
+      result.value.forEach((session) => unique.set(session.sessionId, session));
+    }
+  });
   return [...unique.values()].sort((a, b) => b.startedAt.localeCompare(a.startedAt));
 }
 

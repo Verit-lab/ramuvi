@@ -76,16 +76,40 @@ test("public legal documents exist with route links and remain clearly marked as
   const landing = read("app/page.tsx");
   const student = read("components/student/StudentAccountAccess.tsx");
   const teacher = read("components/TeacherLogin.tsx");
+  // One shared, discreet line of legal links on every public entry screen.
   for (const source of [landing, student, teacher]) {
-    assert.ok(source.includes('href="/termos"'));
-    assert.ok(source.includes('href="/privacidade"'));
+    assert.match(source, /<LegalLinks /);
   }
+  const links = read("components/legal/LegalLinks.tsx");
+  assert.match(links, /LEGAL_ROUTES\.terms/);
+  assert.match(links, /LEGAL_ROUTES\.privacy/);
+  const brand = read("lib/brand.ts");
+  assert.match(brand, /terms: "\/termos"/);
+  assert.match(brand, /privacy: "\/privacidade"/);
+  // While the legal gate is open the pages stay out of search indexes.
+  assert.match(brand, /approved: false/);
   for (const page of ["termos", "privacidade"]) {
     const body = read("app/" + page + "/page.tsx");
-    assert.match(body, /robots: \{ index: false, follow: false \}/);
+    assert.match(body, /LEGAL_STATUS\.approved \? undefined : \{ index: false, follow: false \}/);
     assert.match(body, /LegalDocument/);
   }
   assert.match(read("components/legal/LegalDocument.tsx"), /Minuta em revisão/);
+});
+
+test("legal identity: only Verit / Verit Soluções Digitais LTDA, no unverified CNPJ", () => {
+  const sources = ["lib/brand.ts", "app/termos/page.tsx", "app/privacidade/page.tsx",
+    "components/legal/LegalDocument.tsx", "app/page.tsx"].map(read).join("\n");
+  assert.match(read("lib/brand.ts"), /company: "Verit Soluções Digitais LTDA"/);
+  assert.doesNotMatch(sources, /Verite/i);
+  // No CNPJ is published until it is confirmed in the official registry.
+  assert.doesNotMatch(sources, /\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/);
+});
+
+test("teacher login does not disclose the configured account or the .env file", () => {
+  const teacher = read("components/TeacherLogin.tsx");
+  assert.doesNotMatch(teacher, /\.env/);
+  assert.doesNotMatch(teacher, /useState\("professor"\)/);
+  assert.match(teacher, /role="alert"/);
 });
 
 test("Teach renders the existing teacher app; Learn keeps its shell and gets its own title", () => {
