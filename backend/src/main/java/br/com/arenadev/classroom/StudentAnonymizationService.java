@@ -50,6 +50,11 @@ public class StudentAnonymizationService {
                 where account_id in (select id from student_accounts where student_id = ?)
                    or resolved_student_id = ?
                 """, studentId, studentId);
+        // ADR-0076 D8 / LGPD: the personal collection belongs to the account being disabled.
+        jdbc.update("""
+                delete from student_library_items
+                where account_id in (select id from student_accounts where student_id = ?)
+                """, studentId);
         // Erase OIDC subjects and email-OTP addresses rather than retaining PII in a revoked credential.
         jdbc.update("""
                 delete from student_account_identities

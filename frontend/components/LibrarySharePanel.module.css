@@ -1,0 +1,115 @@
+.dialog {
+  max-height: min(92vh, 900px);
+  overflow-y: auto;
+}
+
+.choices {
+  display: grid;
+  gap: .5rem;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.choices legend {
+  margin-bottom: .35rem;
+  font-weight: 700;
+}
+
+.choice {
+  display: flex;
+  gap: .6rem;
+  align-items: flex-start;
+  padding: .7rem .8rem;
+  border: 1px solid var(--ds-border, var(--border));
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.choice input {
+  margin-top: .2rem;
+  min-width: 1.1rem;
+  min-height: 1.1rem;
+}
+
+.choice small {
+  display: block;
+  color: var(--ds-text-secondary, var(--muted));
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: .75rem;
+}
+
+.row label {
+  display: grid;
+  gap: .3rem;
+}
+
+.row input,
+.row select,
+.issued input {
+  min-height: 44px;
+  width: 100%;
+  min-width: 0;
+}
+
+.issued {
+  display: grid;
+  gap: .6rem;
+  padding: .9rem;
+  border: 1px solid var(--ds-success, #2f9e6e);
+  border-radius: 12px;
+}
+
+.issued img {
+  width: min(240px, 100%);
+  height: auto;
+  justify-self: center;
+  background: #fff;
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.list {
+  display: grid;
+  gap: .5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: .35rem 1rem;
+  padding: .6rem .75rem;
+  border: 1px solid var(--ds-border, var(--border));
+  border-radius: 10px;
+}
+
+.list li > div {
+  min-width: 0;
+}
+
+.list small {
+  display: block;
+  color: var(--ds-text-secondary, var(--muted));
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.actions button {
+  min-height: 44px;
+}
+
+.note {
+  font-size: .9rem;
+}

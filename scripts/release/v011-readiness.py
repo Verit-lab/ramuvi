@@ -39,7 +39,18 @@ V0121_REQUIRED = V012_REQUIRED + (
     "teacher_classroom_authorization_scope_decision",
 )
 
+V0122_REQUIRED = V0121_REQUIRED + (
+    "v73_representative_backup_restore_and_binary_rollback",
+    "classroom_hub_session_lifecycle_pilot_teacher",
+    "live_member_join_real_oidc_https_two_devices",
+    "library_share_token_privacy_copyright_review",
+    "personal_library_cross_device_lgpd_retention_decision",
+    "v0122_flags_off_until_cohort_acceptance",
+)
+
 def required_for_version(version: str) -> tuple[str, ...]:
+    if version == "0.12.2":
+        return V0122_REQUIRED
     if version == "0.12.1":
         return V0121_REQUIRED
     if version == "0.12.0":
@@ -121,7 +132,7 @@ def main() -> int:
     parser.add_argument("--candidate", help="Full 40-character exact candidate SHA")
     parser.add_argument("--ci-run-id", help="Required to claim GO")
     parser.add_argument("--repo", default="Verit-lab/ramuvi")
-    parser.add_argument("--expected-version", choices=("0.11.1", "0.12.0", "0.12.1"), default="0.11.1")
+    parser.add_argument("--expected-version", choices=("0.11.1", "0.12.0", "0.12.1", "0.12.2"), default="0.11.1")
     parser.add_argument("--check-template", action="store_true",
                         help="CI check: template must be deliberately incomplete")
     args = parser.parse_args()
@@ -135,7 +146,7 @@ def main() -> int:
         ids = [g.get("id") for g in gates if isinstance(g, dict)]
         required = required_for_version(args.expected_version)
         if (len(ids) != len(required) or set(ids) != set(required)
-                or (args.expected_version in ("0.12.0", "0.12.1")
+                or (args.expected_version in ("0.12.0", "0.12.1", "0.12.2")
                     and doc.get("version") != args.expected_version)
                 or doc.get("decision") != "NO-GO"
                 or any(g.get("status") != "PENDING" for g in gates)

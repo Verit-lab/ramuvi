@@ -27,6 +27,7 @@ import { OverviewView } from "@/components/teacher/OverviewView";
 import { fetchJourney } from "@/lib/journey-api";
 import { fetchDashboardBootstrap } from "@/lib/dashboard-bootstrap-api";
 import { fetchTeacherSession, logoutTeacher, type TeacherSession } from "@/lib/auth-api";
+import { fetchTeacherCapabilities, type TeacherCapabilities } from "@/lib/classroom-hub-api";
 import { activeSessionId, selectPreferredClassroomId } from "@/lib/app-state";
 import { rememberClassroomAccess } from "@/lib/classroom-overview";
 import type { ArenaData } from "@/lib/types";
@@ -65,6 +66,14 @@ export default function ArenaApp() {
   const [apiError, setApiError] = useState("");
   const [arenaActivityId, setArenaActivityId] = useState<string | undefined>();
   const [themePreference, setThemePreferenceState] = useState<ThemePreference>("system");
+  const [capabilities, setCapabilities] = useState<TeacherCapabilities>({ classroomHub: false, librarySharing: false });
+
+  useEffect(() => {
+    if (!teacherSession) return;
+    let cancelled = false;
+    void fetchTeacherCapabilities().then((loaded) => { if (!cancelled) setCapabilities(loaded); });
+    return () => { cancelled = true; };
+  }, [teacherSession]);
 
   useEffect(() => {
     let cancelled = false;
@@ -494,7 +503,7 @@ export default function ArenaApp() {
           {apiError && <div className="api-alert" role="alert" aria-live="assertive"><strong>API indisponível.</strong><span>{apiError}</span><button className="text-button" onClick={() => { void refreshClassroomDomain(); }}>Tentar novamente</button></div>}
 
           {view === "library" && (
-            <LibraryWorkspace classrooms={data.classrooms} notify={notify} />
+            <LibraryWorkspace classrooms={data.classrooms} notify={notify}  sharingEnabled={capabilities.librarySharing} />
           )}
 
           {view === "dashboard" && (
@@ -525,6 +534,7 @@ export default function ArenaApp() {
                     onOpenArena={() => setView("arena")}
                     onManageClassroom={() => openClassroomSettings(activeClassroom.id)}
                     onManageIntegration={() => setView("integrations")}
+                    hub={capabilities.classroomHub ? { refreshClassroomDomain, notify } : undefined}
                   />
                 )}
                 {classroomTab === "students" && (

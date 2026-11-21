@@ -27,12 +27,13 @@ import type { Classroom } from "@/lib/types";
 import { AnchoredMarkdown, ContentMapView, ContentOutlineView } from "./LibraryContentViews";
 import LibraryImportPanel from "./LibraryImportPanel";
 import styles from "./LibraryWorkspace.module.css";
+import LibrarySharePanel from "./LibrarySharePanel";
 import { DialogCloseButton } from "@/components/ui";
 import { useBodyScrollLock } from "@/lib/use-body-scroll-lock";
 import { useModalKeyboard } from "@/lib/use-modal-keyboard";
 import type { Notify } from "@/components/ui";
 
-type Props = { classrooms: Classroom[]; notify: Notify };
+type Props = { classrooms: Classroom[]; notify: Notify; sharingEnabled?: boolean };
 type ViewMode = "reading" | "structure" | "map";
 type Editor = {
   id?: string;
@@ -92,7 +93,8 @@ function sourceName(resource: LearningResource) {
   }[resource.sourceType];
 }
 
-export default function LibraryWorkspace({ classrooms, notify }: Props) {
+export default function LibraryWorkspace({ classrooms, notify, sharingEnabled = false }: Props) {
+  const [shareOpen, setShareOpen] = useState(false);
   const [resources, setResources] = useState<LearningResource[]>([]);
   const [facets, setFacets] = useState<LibraryFacets>(EMPTY_FACETS);
   const [query, setQuery] = useState("");
@@ -427,6 +429,7 @@ export default function LibraryWorkspace({ classrooms, notify }: Props) {
             {!archived ? <>
               <button type="button" onClick={() => openEditor(selected)}>Editar</button>
               <button className={styles.primary} type="button" onClick={() => void openReuse()}>Adicionar a uma Jornada</button>
+              {sharingEnabled && <button type="button" onClick={() => setShareOpen(true)} data-testid="library-share-open">Compartilhar</button>}
               {selected.body && <button type="button" onClick={() => exportMarkdown(selected)}>Exportar .md</button>}
               <button type="button" onClick={() => void archive(selected)}>Arquivar</button>
             </> : <button className={styles.primary} type="button" onClick={() => void restore(selected)}>Restaurar</button>}
@@ -473,6 +476,8 @@ export default function LibraryWorkspace({ classrooms, notify }: Props) {
               </article>
             )}</div>}
         </section>
+
+        {shareOpen && sharingEnabled && <LibrarySharePanel resourceId={selected.id} resourceTitle={selected.title} notify={notify} onClose={() => setShareOpen(false)} />}
 
         {reuseOpen && <div className={styles.modalBackdrop} role="presentation">
           <section ref={reuseDialogRef} tabIndex={-1} className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="reuse-title">

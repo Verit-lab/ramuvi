@@ -5,6 +5,8 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import StudyShell from "@/components/study/StudyShell";
 import StudentAccountAccess from "@/components/student/StudentAccountAccess";
+import MemberLiveClasses from "@/components/study/MemberLiveClasses";
+import { consumeShareResume } from "@/lib/student-library-api";
 import { fetchStudentOidcSession, StudentAccountSessionUnavailable, studentAccountWasSignedOut, type StudentOidcSession } from "@/lib/student-oidc-api";
 import { fetchAllStudyJourneys, fetchAllStudyLiveSessions, type LiveSessionSummary, type MultiClassroomJourneySummary } from "@/lib/study-api";
 import styles from "@/components/study/study.module.css";
@@ -86,6 +88,7 @@ function StudyDashboard() {
     <h1 className={styles.title}>{journeys.length ? "Continue de onde parou." : "Seu espaço de estudo"}</h1>
     <p className={styles.lead}>Retome seus estudos, acompanhe o progresso e acesse rapidamente o próximo conteúdo.</p>
 
+    <MemberLiveClasses />
     {liveLoading && <p className={styles.liveLoadStatus} role="status">Consultando aulas ao vivo...</p>}
     {!liveLoading && liveError && <div className={styles.liveLoadError} role="alert">
       <span>Não foi possível consultar suas aulas ao vivo. Confira sua conexão.</span>
@@ -133,6 +136,11 @@ function LearnEntry() {
     void fetchStudentOidcSession()
       .then((current) => {
         if (!active) return;
+        // A shared Library material that required login: return to it (token stays in this tab).
+        if (current && consumeShareResume()) {
+          window.location.replace("/learn/library/shared");
+          return;
+        }
         setSession(current);
         setSessionUnavailable(false);
         setSignedOut(false);

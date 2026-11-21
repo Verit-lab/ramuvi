@@ -1,0 +1,171 @@
+{
+  "version": "0.12.2",
+  "candidateSha": "",
+  "decision": "NO-GO",
+  "approvedBy": "",
+  "approvedAt": "",
+  "notes": "Template Ramuvi v0.12.2: NO-GO até todos os gates passarem no SHA integrado. Herda os 17 gates da v0.12.1 e acrescenta: backup/restauração V73 e rollback de binário, piloto docente da central da Turma, ingresso de membro com OIDC real em HTTPS e dois aparelhos, revisão de privacidade/direitos de links da Biblioteca, decisão de retenção/LGPD da Minha Biblioteca e flags v0.12.2 OFF até aceite por coorte. Não atribuir PASS sem prova.",
+  "gates": [
+    {
+      "id": "ios_safari_physical",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "android_pwa_upgrade",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "voiceover_keyboard_zoom",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "network_degraded_two_projectors",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "teacher_pedagogical_pilot",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "backup_restore_rollback",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "security_privacy_authorization",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "release_owner_go_nogo",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "student_oidc_disabled_or_verified_providers",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "v68_representative_restore",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "public_https_routing_and_secure_session",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "offline_journey_safari_android_cold_start_sync_revocation",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "onboarding_verified_google_scoped_join_link_xp_continuity",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "v71_v72_representative_backup_restore",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "legacy_device_claim_revocation_rollout_decision",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "join_link_google_oidc_https_csrf_and_teacher_approval",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "teacher_classroom_authorization_scope_decision",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "v73_representative_backup_restore_and_binary_rollback",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "classroom_hub_session_lifecycle_pilot_teacher",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "live_member_join_real_oidc_https_two_devices",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "library_share_token_privacy_copyright_review",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "personal_library_cross_device_lgpd_retention_decision",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    },
+    {
+      "id": "v0122_flags_off_until_cohort_acceptance",
+      "status": "PENDING",
+      "evidenceRef": "",
+      "verifiedBy": "",
+      "verifiedAt": ""
+    }
+  ]
+}

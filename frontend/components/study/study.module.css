@@ -581,3 +581,14 @@
 .offlineDownloadLink{display:inline-flex;align-items:center;justify-content:center;min-height:44px;justify-self:start;padding:0 12px;margin:0 0 7px;border:1px solid var(--study-tint-line-2);border-radius:8px;color:var(--study-accent-ink);font-size:.8rem;font-weight:800;text-decoration:none}
 .offlineDownloadLink:hover{background:var(--study-tint)}
 .offlineDownloadLink:focus-visible{outline:3px solid var(--study-accent-ink);outline-offset:3px}
+
+/* v0.12.2 I2 — member live classes (no code) */
+.memberLiveList{display:grid;gap:10px;margin:10px 0 0;padding:0;list-style:none}
+.memberLiveList li{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px}
+.memberLiveList li>div{min-width:0}
+.memberLiveList strong{overflow-wrap:anywhere}
+.memberLiveList .button{min-height:44px}
+@media(max-width:620px){.memberLiveList li{flex-direction:column;align-items:stretch}.memberLiveList .button{width:100%}}
+/* v0.12.2 I3a — public shared material: study theme without the student navigation */
+.publicShell{display:block}
+.publicShell>.main{width:min(100% - 28px,980px);margin:0 auto;padding:40px 0 88px}

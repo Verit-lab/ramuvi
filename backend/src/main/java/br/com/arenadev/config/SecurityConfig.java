@@ -99,7 +99,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(new CookieCsrfTokenRepository())
                         .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
-                        .ignoringRequestMatchers("/api/join/**", "/api/learn/**")
+                        .ignoringRequestMatchers("/api/join/**", "/api/learn/**", "/api/library/shares/preview")
                 )
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
@@ -118,6 +118,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/health", "/api/health/**", "/api/auth/csrf", "/api/auth/login", "/api/join/**", "/api/learn/**", "/api/projector/**", "/ws/**").permitAll()
                         .requestMatchers("/api/student-oidc/authorization/**", "/api/student-oidc/callback/**", "/api/student-account/providers").permitAll()
+                        // ADR-0076 D7: public preview of a share token (POST body); exists only with the flag ON.
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/library/shares/preview").permitAll()
                         .requestMatchers("/api/student-account/**").hasRole("STUDENT")
                         .requestMatchers("/api/**").hasRole("TEACHER")
                         .anyRequest().permitAll()

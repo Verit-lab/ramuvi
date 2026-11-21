@@ -1,7 +1,7 @@
 /* PWA shell only. The backend, student tokens and interaction state are NEVER cached. */
 // v0.12: Ramuvi identity; a new version and prefix invalidate the cached
 // pre-rebranding icons and offline page.
-const VERSION = "v0.12.1-offline-reader-1";
+const VERSION = "v0.12.2-library-1";
 const CACHE_PREFIX = "ramuvi-";
 // Caches created by releases before the rebranding. Still owned by this app,
 // so they are removed on activation instead of being orphaned.
