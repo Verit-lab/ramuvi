@@ -19,6 +19,10 @@ Objetivos a aprovar com o responsável operacional:
 4. `scripts/release/verify-backup.sh` verifica o dump em PostgreSQL 17 isolado, com contêiner sem acesso à rede, conferindo tabelas, Flyway, constraints e colunas de contrato. `BACKUP_REQUIRE_CHECKSUM=1` proíbe arquivo sem manifesto.
 5. `scripts/release/restore-postgres.sh` **é destrutivo**, exige `--confirm-replace`, confere checksum antes de tocar no banco, ensaia em PostgreSQL isolado e faz um backup de segurança do estado anterior. Arquivos sem checksum só podem ser recuperados com `BACKUP_ALLOW_UNVERIFIED=1`, exceção manual de alto risco. Falha durante a substituição mantém a aplicação parada para intervenção, sem declarar sucesso.
 
+## Destino escolhido: Google Drive da conta Gmail da Verit
+
+A configuração específica de OAuth próprio, scope drive.file, autorização local e configuração protegida do servidor está em [GOOGLE_DRIVE_GMAIL.md](GOOGLE_DRIVE_GMAIL.md). A autenticação e o agendamento não estão habilitados em produção.
+
 ## Configuração do agendamento (não instalada automaticamente)
 
 Dependências no servidor de backup: Docker Compose, `age`, `rclone`, `flock`, `sha256sum`, Python 3 e permissão estritamente controlada de operar os contêineres PostgreSQL. Acesso a Docker equivale, na prática, a privilégio elevado: delimitar a conta do serviço e auditar suas credenciais.
