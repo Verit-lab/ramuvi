@@ -58,7 +58,8 @@ public class SessionJoinService {
 
     @Transactional
     public JoinCodeView ensureCode(ClassSession session) {
-        SessionJoinCode entity = joinCodeRepository.findBySessionId(session.getId()).orElse(null);
+        // Row lock: serializes with a member join that renews the same expired code.
+        SessionJoinCode entity = joinCodeRepository.findBySessionIdForUpdate(session.getId()).orElse(null);
         Instant now = Instant.now();
         if (entity != null && entity.isUsableAt(now)) {
             return JoinCodeView.from(entity);
@@ -83,7 +84,7 @@ public class SessionJoinService {
     @Transactional
     public JoinCodeView rotate(UUID sessionId) {
         ClassSession session = getActiveSession(sessionId);
-        SessionJoinCode entity = joinCodeRepository.findBySessionId(sessionId).orElse(null);
+        SessionJoinCode entity = joinCodeRepository.findBySessionIdForUpdate(sessionId).orElse(null);
         String code = generateUniqueCode();
         Instant expiresAt = Instant.now().plus(CODE_TTL);
         if (entity == null) entity = new SessionJoinCode(session, code, expiresAt);
@@ -160,22 +161,42 @@ public class SessionJoinService {
      * SessionParticipant of the specific session; presence is recorded by this effective join.
      * The account proves ownership, so a previous device token of the same participant is
      * replaced (that device loses access) instead of requiring the teacher to release it.
+     *
+     * <p>The member's right to enter comes from the account + enrollment, not from the 12h TTL of
+     * the guest code. The live runtime (JoinAccessView / validateJoinAccess) is still keyed by the
+     * session code, so an EXPIRED code of an ACTIVE session is renewed here (new random code, new
+     * TTL — the same rotation the teacher's {@link #ensureCode(UUID)} performs). Serialization:
+     * session row FOR SHARE (a concurrent {@code finish} holds FOR UPDATE, so FINISHED is either
+     * observed or happens after this commit) and code row FOR UPDATE (concurrent renewals rotate
+     * once). An intentionally revoked code ({@code active = false}) is NEVER reactivated and a
+     * FINISHED session is never reopened: both answer the uniform 404.
      */
     @Transactional
     public JoinAccessView issueMemberAccess(UUID sessionId, UUID studentId) {
-        SessionJoinCode joinCode = joinCodeRepository.findBySessionIdAndActiveTrue(sessionId)
-                .filter(code -> code.isUsableAt(Instant.now()))
-                .filter(code -> code.getSession().getStatus() == SessionStatus.ACTIVE)
-                .orElseThrow(() -> new ResourceNotFoundException("Aula não encontrada ou indisponível."));
+        ClassSession session = sessionRepository.findByIdForShare(sessionId)
+                .filter(item -> item.getStatus() == SessionStatus.ACTIVE)
+                .orElseThrow(SessionJoinService::memberSessionUnavailable);
+        SessionJoinCode joinCode = joinCodeRepository.findBySessionIdForUpdate(session.getId())
+                .filter(SessionJoinCode::isActive)
+                .orElseThrow(SessionJoinService::memberSessionUnavailable);
+        Instant now = Instant.now();
+        if (!joinCode.isUsableAt(now)) {
+            joinCode.rotate(generateUniqueCode(), now.plus(CODE_TTL));
+            joinCodeRepository.saveAndFlush(joinCode);
+        }
         participantSync.ensureActiveEnrollments(sessionId);
         SessionParticipant participant = participantRepository.findBySessionIdForUpdate(sessionId).stream()
                 .filter(item -> item.getStudent().getId().equals(studentId))
                 .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException("Aula não encontrada ou indisponível."));
+                .orElseThrow(SessionJoinService::memberSessionUnavailable);
         if (participant.getAccessTokenHash() != null || participant.isConnected()) {
             participant.releaseDevice();
         }
         return issueParticipantAccess(joinCode, participant);
+    }
+
+    private static ResourceNotFoundException memberSessionUnavailable() {
+        return new ResourceNotFoundException("Aula não encontrada ou indisponível.");
     }
 
     @Transactional

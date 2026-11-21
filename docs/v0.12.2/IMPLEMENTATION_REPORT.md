@@ -54,7 +54,7 @@
 - `GET /api/student-account/live-sessions` e `POST …/{sessionId}/join`: o backend resolve
   `(issuer, sub)` e revalida em **uma consulta por requisição** identidade não revogada, conta ativa,
   aluno ativo e não anonimizado, matrícula ativa, turma ativa, sessão `ACTIVE` e código transitório
-  utilizável. O cliente não envia `accountId`/`studentId`/`enrollmentId`. Negações: 404 uniforme.
+  não revogado (o TTL do código não se aplica ao membro; ver §9). O cliente não envia `accountId`/`studentId`/`enrollmentId`. Negações: 404 uniforme.
 - O membro continua `SessionParticipant` da sessão específica; novo ingresso pela conta substitui o
   token de dispositivo anterior (outro aparelho perde o acesso). Nenhum `X-Study-Token` é emitido.
 - `/join` por código, claims `LIVE` e o bootstrap `410` (ADR-0075) permanecem intactos.
@@ -213,8 +213,11 @@ Limite: não usa dump da VPS nem mede RPO/RTO.
 - **Participante em runtime:** o token do participante continua válido até o fim da aula mesmo se a
   identidade for revogada depois do ingresso (mesmo comportamento do `/join`); as rotas de membro
   revalidam a cada chamada.
-- **Código transitório no runtime do membro:** o ingresso de membro exige código utilizável; numa aula
-  "esquecida" (código expirado) o membro só entra depois que o professor retomar a aula na Arena.
+- **Código transitório no runtime do membro:** corrigido na revisão final (§9). O runtime da aula
+  (`JoinAccessView`/`validateJoinAccess`) continua indexado pelo código; o token de participante emitido
+  segue válido só enquanto o código estiver utilizável, então após mais 12 h o aluno reentra por
+  **Ao vivo** (nova renovação) — não precisa digitar código. Quem já estava no runtime com o código
+  antigo vencido precisa reentrar pela conta (antes da correção também não funcionava).
 - **Rate limit em memória por instância** (igual ADR-0070/0074/0075).
 - **Links externos (`LINK`)** são referências; o destino pode mudar.
 - **Retenção de snapshots** sem política formal; exclusão excepcional é operação manual auditada.
@@ -231,3 +234,70 @@ real; aparelhos físicos; backup/restauração representativo com V73; decisões
 e retenção; e aceite formal no template `docs/v0.12.2/RELEASE_ACCEPTANCE_TEMPLATE.json`. Mesmo com GO,
 publicar com as quatro flags OFF e ligar por coorte (professor piloto → alunos piloto → Biblioteca →
 geral).
+
+## 9. Revisão final bloqueante — ingresso de membro com código expirado
+
+**Defeito confirmado (base `7681298`).** `MemberLiveSessionService.ELIGIBLE` exigia
+`session_join_codes.active AND expires_at > now()` e `SessionJoinService.issueMemberAccess()` exigia código
+utilizável. Numa aula `ACTIVE` que passou de 12 h, o aluno OIDC matriculado deixava de ver a aula em
+**Ao vivo** e recebia 404 ao entrar, contrariando a ADR-0076 D4 (entrar pela conta e matrícula, sem repetir
+código). Comprovado com IT: os dois testes novos de expiração **falham no código anterior** (404) e passam
+com a correção.
+
+**Correção (sem nova migration, sem mudança de rota/DTO):**
+- Descoberta: a consulta de elegibilidade passa a exigir só `j.active` (não revogado); o TTL deixa de
+  filtrar o membro. Identidade, conta, aluno, matrícula, turma e sessão `ACTIVE` continuam revalidados
+  em toda requisição.
+- Ingresso: `issueMemberAccess` trava a sessão com `FOR SHARE` (o `finish` usa `FOR UPDATE`, então ou o
+  ingresso termina antes do encerramento ou observa `FINISHED`) e o código com `FOR UPDATE`. Código
+  revogado (`active=false`) → 404 sem alteração; código expirado e ativo → `rotate` (novo valor aleatório,
+  novo TTL de 12 h — a mesma rotação que o `ensureCode` do professor já fazia); código válido → reutilizado.
+- `ensureCode`/`rotate` do professor passam a travar a mesma linha (`FOR UPDATE`), evitando que a renovação
+  do professor e a do membro gerem dois códigos (atualização perdida).
+- `/join` de convidado inalterado: código expirado continua recusado; o código antigo **não** volta a
+  valer após a renovação (passa a 404). Nenhum bootstrap por nome; bootstrap `410` preservado.
+
+**Evidências (PostgreSQL 17 Testcontainers, `LiveMemberJoinHttpIT`, 11/11):**
+
+| Teste novo | Verifica |
+| --- | --- |
+| `expiredGuestCodeDoesNotLockTheMemberOutOfAnActiveClass` | aula `ACTIVE` com código vencido: convidado recusado (400); membro lista e entra (200), código renovado ≠ antigo, `validateJoinAccess` aceita, presença registrada; código antigo 404; segundo membro reutiliza o código renovado |
+| `revokedCodeIsNeverReactivatedByAMemberJoin` | código `active=false` (válido ou vencido): lista vazia, 404 uniforme, linha do código idêntica, sem presença |
+| `finishedClassWithExpiredCodeIsNeverReopened` | sessão `FINISHED` com código vencido → 404; mesmo com a linha do código forçada para `active=true` (dado legado inconsistente) → 404; sessão segue `FINISHED`, código intacto |
+| `concurrentMemberJoinsRenewAnExpiredCodeExactlyOnce` | 4 membros + `ensureCode` do professor simultâneos sobre código vencido → todos 200, **um único** código novo |
+| `memberRenewalRacingWithFinishNeverReopensTheClass` | 3 rodadas de 3 membros × `finish` simultâneos → respostas 200/404, tokens emitidos inválidos após o encerramento, sessão `FINISHED`, código `active=false`, lista vazia |
+
+Comando: `cd backend && mvn -o -Dtest=NoSuchTest -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=LiveMemberJoinHttpIT verify`.
+Prova de regressão: mesma suíte com `src/main` revertido para `7681298` → **2 falhas** (os dois testes de
+expiração, 404).
+
+Suíte completa após a correção (`cd backend && mvn -o verify`, PostgreSQL 17 Testcontainers):
+**Surefire 222/0 falhas; Failsafe 249/0 falhas (244 anteriores + 5 novos); `BUILD SUCCESS`.**
+Frontend sem alteração (o cliente já usa o `code` devolvido pelo ingresso): `npm test` **472/0 falhas**,
+`npm run typecheck` OK.
+
+### 9.1 Revisão de IDOR, URLs e flags (sem defeito concreto encontrado)
+- **Biblioteca do professor** (`/api/library/**`): `ROLE_TEACHER` + CSRF; a aplicação tem um único
+  professor (`app.teacher.*`), então `resourceId`/`shareId` não cruzam titulares.
+- **Prévia pública**: única rota `permitAll` (só `POST`), token no corpo, busca por SHA-256 com
+  `revoked_at is null and expires_at > now() and resource_id is not null`; `SAVE` exige conta OIDC verificada
+  derivada do principal e revalidada no banco; rate limit por IP; `no-store`/`noindex`.
+- **Minha Biblioteca**: toda consulta/remoção filtra por `account_id` derivado do servidor
+  (`where id = ? and account_id = ?`), IDOR → 404 (coberto por `LibraryShareHttpIT`).
+- **URLs**: snapshot aceita só `http(s)` com host e sem credenciais; o front revalida o protocolo, abre com
+  `rel="noopener noreferrer"`; Markdown via `SafeMarkdown`; token só no fragmento `#acesso=`, removido da
+  barra antes de qualquer requisição; QR por `POST` com origem na lista permitida.
+- **Flags**: as quatro com padrão `false` em `application.yml`/`compose.yaml`; capacidades usam exatamente
+  as condições dos `@ConditionalOnProperty`; `V0122FlagsOffHttpIT` cobre a ausência das rotas.
+
+### 9.2 Riscos remanescentes desta correção
+- A renovação pelo membro troca o código exibido ao professor/projetor (o anterior já estava vencido);
+  o projetor/QR precisa recarregar o código, como já acontecia após `ensureCode`.
+- O membro recebe o código renovado em `JoinAccessView` (como já recebia o válido) e poderia repassá-lo a
+  convidados; é o mesmo escopo transitório do código projetado (ADR-0076 D5).
+- Sessão `ACTIVE` sem linha em `session_join_codes` (não ocorre pelo fluxo atual, que cria o código no
+  início) não é listada ao membro; o professor a regulariza ao abrir o código.
+- O descolamento completo do runtime em relação ao código (token de participante autossuficiente)
+  exigiria reestruturar `validateJoinAccess`, WebSocket e rotas `/api/join/{code}/…`; **não** foi feito
+  nesta correção e fica registrado como evolução.
+

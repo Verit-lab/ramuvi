@@ -14,8 +14,11 @@ import java.util.UUID;
  * ADR-0076 D4 / I2: live classes of a verified member, discovered in the backend from the
  * OIDC identity. Every request re-checks, in ONE query: identity not revoked, account ACTIVE,
  * linked Student active and not anonymized, enrollment active, classroom active, session ACTIVE
- * and its transitory join code still usable. The client never sends account/student/enrollment
- * ids; a session of another classroom is indistinguishable from a missing one (404).
+ * and its transitory join code not REVOKED. The code's 12h TTL governs guests (/join, D5), not
+ * members: an ACTIVE class whose code merely expired stays discoverable and joinable, and the
+ * join renews the code (SessionJoinService#issueMemberAccess). The client never sends
+ * account/student/enrollment ids; a session of another classroom is indistinguishable from a
+ * missing one (404).
  */
 @Service
 public class MemberLiveSessionService {
@@ -28,7 +31,7 @@ public class MemberLiveSessionService {
               join enrollments e on e.student_id = st.id and e.active
               join classrooms c on c.id = e.classroom_id and c.active
               join class_sessions s on s.classroom_id = c.id and s.status = 'ACTIVE'
-              join session_join_codes j on j.session_id = s.id and j.active and j.expires_at > now()
+              join session_join_codes j on j.session_id = s.id and j.active
              where i.issuer = ? and i.subject = ? and i.method = 'OIDC' and i.revoked_at is null
                and a.status = 'ACTIVE' and st.active and st.anonymized_at is null
             """;

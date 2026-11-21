@@ -95,6 +95,7 @@ permite salvar, mesmo com conta.
 | --- | --- |
 | `GET /api/student-account/live-sessions` | aulas ativas das matrículas ativas (`sessionId`, `classroomId`, `classroomName`, `sessionTitle`, `startedAt`); sem código, sem lista de alunos |
 | `POST /api/student-account/live-sessions/{sessionId}/join` | `JoinAccessView` (token de participante da sessão específica + código transitório para o runtime existente); `404` uniforme |
+| TTL do código × membro (correção da revisão final) | O TTL de 12 h do código vale para convidados (`/join`), não para o membro: aula `ACTIVE` com código **expirado** continua listada e o ingresso **renova** o código (novo valor aleatório + novo TTL, sob `FOR SHARE` da sessão e `FOR UPDATE` do código). Código **revogado** (`active=false`) nunca é reativado e sessão `FINISHED` nunca é reaberta: `404` uniforme |
 
 Um novo ingresso pela conta substitui o token de dispositivo anterior do mesmo participante (a conta prova
 titularidade; o aparelho antigo perde acesso). Isto é diferente do `/join` por nome, que continua exigindo

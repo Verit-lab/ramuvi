@@ -241,6 +241,160 @@ class LiveMemberJoinHttpIT extends OidcHttpSupport {
         assertThat(bootstrap.statusCode()).isEqualTo(410);
     }
 
+    @Test
+    void expiredGuestCodeDoesNotLockTheMemberOutOfAnActiveClass() throws Exception {
+        UUID room = room();
+        var first = student("google", sub(), null, null, "Olga Doze Horas");
+        UUID firstId = linkAndEnroll(first, room, "Olga Doze Horas");
+        var second = student("google", sub(), null, null, "Pedro Doze Horas");
+        UUID secondId = linkAndEnroll(second, room, "Pedro Doze Horas");
+        UUID session = sessions.start(room, "Aula longa", Set.of()).id();
+        expireCode(session);
+        String expired = codeOf(session);
+
+        // Guests (D5) still depend on the TTL: the expired code is refused.
+        var anonymous = new Browser(client(), null);
+        assertThat(send(anonymous.client(), "GET", "/api/join/" + expired, null, null).statusCode()).isEqualTo(400);
+
+        // The member discovers the ACTIVE class regardless of the code TTL...
+        assertThat(get(first, LIVE).body()).contains(session.toString());
+        var joined = post(first, LIVE + "/" + session + "/join", "{}");
+        assertThat(joined.statusCode()).as(joined.body()).isEqualTo(200);
+        // ...and the join renewed the code (new random value + new TTL) so the existing runtime works.
+        String renewed = field(joined.body(), "code");
+        assertThat(renewed).isNotEqualTo(expired).isEqualTo(codeOf(session));
+        assertThat(codeUsable(session)).isTrue();
+        assertThat(joins.validateJoinAccess(renewed, field(joined.body(), "token")).studentId()).isEqualTo(firstId);
+        assertThat(present(session, firstId)).isTrue();
+        assertThat(send(anonymous.client(), "GET", "/api/join/" + expired, null, null).statusCode())
+                .as("the old code is not revived").isEqualTo(404);
+
+        // A still-valid code is reused, never rotated again by a member join.
+        var other = post(second, LIVE + "/" + session + "/join", "{}");
+        assertThat(other.statusCode()).isEqualTo(200);
+        assertThat(field(other.body(), "code")).isEqualTo(renewed);
+        assertThat(present(session, secondId)).isTrue();
+    }
+
+    @Test
+    void revokedCodeIsNeverReactivatedByAMemberJoin() throws Exception {
+        UUID room = room();
+        var browser = student("google", sub(), null, null, "Quésia Revogada");
+        UUID studentId = linkAndEnroll(browser, room, "Quésia Revogada");
+        UUID session = sessions.start(room, "Aula", Set.of()).id();
+        for (boolean expired : new boolean[] {false, true}) {
+            jdbc.update("update session_join_codes set active = false where session_id = ?", session);
+            if (expired) expireCode(session);
+            var before = jdbc.queryForMap("select code, active, expires_at from session_join_codes where session_id = ?", session);
+
+            assertThat(get(browser, LIVE).body()).isEqualTo("[]");
+            var denied = post(browser, LIVE + "/" + session + "/join", "{}");
+            assertThat(denied.statusCode()).isEqualTo(404);
+            assertThat(field(denied.body(), "message")).isEqualTo("Aula não encontrada ou indisponível.");
+            assertThat(jdbc.queryForMap("select code, active, expires_at from session_join_codes where session_id = ?", session))
+                    .as("revoked code untouched (expired=%s)", expired).isEqualTo(before);
+            assertThat(present(session, studentId)).isFalse();
+        }
+    }
+
+    @Test
+    void finishedClassWithExpiredCodeIsNeverReopened() throws Exception {
+        UUID room = room();
+        var browser = student("google", sub(), null, null, "Rui Encerrado");
+        UUID studentId = linkAndEnroll(browser, room, "Rui Encerrado");
+        UUID session = sessions.start(room, "Aula", Set.of()).id();
+        expireCode(session);
+        sessions.finish(session);
+        var before = jdbc.queryForMap("select code, active, expires_at from session_join_codes where session_id = ?", session);
+
+        assertThat(get(browser, LIVE).body()).isEqualTo("[]");
+        assertThat(post(browser, LIVE + "/" + session + "/join", "{}").statusCode()).isEqualTo(404);
+        // Even a code still flagged active (inconsistent legacy row) must not reopen a FINISHED class.
+        jdbc.update("update session_join_codes set active = true where session_id = ?", session);
+        assertThat(post(browser, LIVE + "/" + session + "/join", "{}").statusCode()).isEqualTo(404);
+        jdbc.update("update session_join_codes set active = false where session_id = ?", session);
+        assertThat(jdbc.queryForMap("select code, active, expires_at from session_join_codes where session_id = ?", session))
+                .isEqualTo(before);
+        assertThat(jdbc.queryForObject("select status from class_sessions where id = ?", String.class, session))
+                .isEqualTo("FINISHED");
+        assertThat(present(session, studentId)).isFalse();
+    }
+
+    @Test
+    void concurrentMemberJoinsRenewAnExpiredCodeExactlyOnce() throws Exception {
+        UUID room = room();
+        List<Browser> members = new ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            var browser = student("google", sub(), null, null, "Sara Paralela " + i);
+            linkAndEnroll(browser, room, "Sara Paralela " + i);
+            members.add(browser);
+        }
+        UUID session = sessions.start(room, "Aula", Set.of()).id();
+        expireCode(session);
+        String expired = codeOf(session);
+        var pool = Executors.newFixedThreadPool(members.size() + 1);
+        var gate = new CountDownLatch(1);
+        List<Future<HttpResponse<String>>> futures = new ArrayList<>();
+        for (Browser member : members) {
+            futures.add(pool.submit(() -> { gate.await(); return post(member, LIVE + "/" + session + "/join", "{}"); }));
+        }
+        // The teacher's own ensureCode competes for the same row lock.
+        Future<String> teacherCode = pool.submit(() -> { gate.await(); return joins.ensureCode(session).code(); });
+        gate.countDown();
+        Set<String> codes = new java.util.HashSet<>();
+        for (var future : futures) {
+            var response = future.get();
+            assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
+            codes.add(field(response.body(), "code"));
+        }
+        codes.add(teacherCode.get());
+        pool.shutdown();
+        assertThat(codes).as("one serialized renewal").hasSize(1).doesNotContain(expired);
+        assertThat(codes).containsExactly(codeOf(session));
+        assertThat(codeUsable(session)).isTrue();
+    }
+
+    @Test
+    void memberRenewalRacingWithFinishNeverReopensTheClass() throws Exception {
+        for (int round = 0; round < 3; round++) {
+            UUID room = room();
+            List<Browser> members = new ArrayList<>();
+            for (int i = 0; i < 3; i++) {
+                var browser = student("google", sub(), null, null, "Téo Corrida " + i);
+                linkAndEnroll(browser, room, "Téo Corrida " + i);
+                members.add(browser);
+            }
+            UUID session = sessions.start(room, "Aula", Set.of()).id();
+            expireCode(session);
+            var pool = Executors.newFixedThreadPool(members.size() + 1);
+            var gate = new CountDownLatch(1);
+            List<Future<HttpResponse<String>>> futures = new ArrayList<>();
+            for (Browser member : members) {
+                futures.add(pool.submit(() -> { gate.await(); return post(member, LIVE + "/" + session + "/join", "{}"); }));
+            }
+            Future<?> finish = pool.submit(() -> { gate.await(); return sessions.finish(session); });
+            gate.countDown();
+            finish.get();
+            for (var future : futures) {
+                var response = future.get();
+                assertThat(response.statusCode()).as(response.body()).isIn(200, 404);
+                if (response.statusCode() == 200) {
+                    // Joined before the finish committed: its access dies with the session.
+                    assertThatThrownBy(() -> joins.validateParticipantToken(session, field(response.body(), "token")))
+                            .isInstanceOf(IllegalArgumentException.class);
+                }
+            }
+            pool.shutdown();
+            assertThat(jdbc.queryForObject("select status from class_sessions where id = ?", String.class, session))
+                    .isEqualTo("FINISHED");
+            assertThat(jdbc.queryForObject("select active from session_join_codes where session_id = ?", Boolean.class, session))
+                    .as("renewal never survives the finish").isFalse();
+            for (Browser member : members) {
+                assertThat(get(member, LIVE).body()).isEqualTo("[]");
+            }
+        }
+    }
+
     // ------------------------------------------------------------- helpers
 
     private UUID room() {
@@ -262,6 +416,16 @@ class LiveMemberJoinHttpIT extends OidcHttpSupport {
 
     private String codeOf(UUID session) {
         return jdbc.queryForObject("select code from session_join_codes where session_id = ?", String.class, session);
+    }
+
+    private void expireCode(UUID session) {
+        // A real 12h TTL elapsed while the class stayed ACTIVE.
+        jdbc.update("update session_join_codes set expires_at = now() - interval '1 hour' where session_id = ?", session);
+    }
+
+    private boolean codeUsable(UUID session) {
+        return Boolean.TRUE.equals(jdbc.queryForObject(
+                "select active and expires_at > now() from session_join_codes where session_id = ?", Boolean.class, session));
     }
 
     private boolean present(UUID session, UUID student) {
